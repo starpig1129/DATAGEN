@@ -82,6 +82,8 @@ LANGCHAIN_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 ## Usage
 
+### Using Jupyter Notebook
+
 1. Start Jupyter Notebook:
 
 2. Set YourDataName.csv in data_storage
@@ -93,6 +95,25 @@ LANGCHAIN_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 5. In the last cell, you can customize the research task by modifying the `userInput` variable.
 
 6. Run the final few cells to execute the research process and view the results.
+
+### Using Python Script
+
+You can also run the system directly using main.py:
+
+1. Place your data file (e.g., YourDataName.csv) in the data_storage directory
+
+2. Run the script:
+```bash
+python main.py
+```
+
+3. By default, it will process 'OnlineSalesData.csv'. To analyze a different dataset, modify the user_input variable in the main() function of main.py:
+```python
+user_input = '''
+datapath:YourDataName.csv
+Use machine learning to perform data analysis and write complete graphical reports
+'''
+```
 
 ## Main Components
 
