@@ -1,9 +1,9 @@
 from typing import Dict, Any
 from langgraph.graph import StateGraph, END, START
 from langgraph.checkpoint.memory import MemorySaver
-from state import State
-from node import agent_node, human_choice_node, note_agent_node, human_review_node, refiner_node
-from router import QualityReview_router, hypothesis_router, process_router
+from core.state import State
+from core.node import agent_node, human_choice_node, note_agent_node, human_review_node, refiner_node
+from core.router import QualityReview_router, hypothesis_router, process_router
 from agent.hypothesis_agent import create_hypothesis_agent
 from agent.process_agent import create_process_agent
 from agent.visualization_agent import create_visualization_agent

@@ -161,7 +161,7 @@ def create_supervisor(llm: ChatOpenAI, system_prompt: str, members: list[str]) -
         | JsonOutputFunctionsParser()
     )
 
-from state import NoteState
+from core.state import NoteState
 from langchain.output_parsers import PydanticOutputParser
 
 def create_note_agent(
