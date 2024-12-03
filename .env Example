@@ -5,7 +5,7 @@ DATA_STORAGE_PATH =./data_storage/
 CONDA_PATH = /home/user/anaconda3
 
 # Conda environment name(required)
-CONDA_ENV = envname
+CONDA_ENV = data_assistant
 
 # ChromeDriver executable path(required)
 CHROMEDRIVER_PATH =./chromedriver-linux64/chromedriver
