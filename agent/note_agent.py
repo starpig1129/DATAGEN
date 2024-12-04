@@ -1,4 +1,4 @@
-from create_agent import create_note_agent as base_create_note_agent
+from core.create_agent import create_note_agent as base_create_note_agent
 from tools.FileEdit import read_document
 
 def create_note_agent(json_llm):

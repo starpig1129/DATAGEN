@@ -1,4 +1,4 @@
-from create_agent import create_agent
+from core.create_agent import create_agent
 from tools.FileEdit import create_document, read_document, edit_document
 
 def create_quality_review_agent(llm, members, working_directory):

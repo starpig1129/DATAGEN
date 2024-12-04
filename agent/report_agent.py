@@ -1,4 +1,4 @@
-from create_agent import create_agent
+from core.create_agent import create_agent
 from tools.FileEdit import create_document, read_document, edit_document
 
 def create_report_agent(power_llm, members, working_directory):

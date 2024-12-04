@@ -1,4 +1,4 @@
-from create_agent import create_agent
+from core.create_agent import create_agent
 from tools.FileEdit import create_document, read_document, collect_data
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
