@@ -1,0 +1,217 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    grid-template-rows: 100vh;
+    background-color: #f5f5f5;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 20px;
+}
+
+.chat-container {
+    flex: 1;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.chat-input {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+    position: relative;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.chat-input input:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+}
+
+.chat-input button {
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.chat-input button:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.chat-input button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+}
+
+.loading-indicator {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #007bff;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 15px;
+    font-size: 12px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.sidebar {
+    background: white;
+    padding: 20px;
+    border-left: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.state-container, .files-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+h2 {
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 18px;
+    position: sticky;
+    top: 0;
+    background: white;
+    padding: 5px 0;
+    z-index: 1;
+}
+
+.state-item {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 5px;
+    background: #f8f9fa;
+}
+
+.state-label {
+    font-weight: bold;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.state-value {
+    font-size: 14px;
+    color: #333;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.file-item {
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #333;
+    transition: background-color 0.2s ease;
+}
+
+.file-item:hover {
+    background: #e9ecef;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 5px;
+    max-width: 80%;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.user-message {
+    background: #007bff;
+    color: white;
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.assistant-message {
+    background: #e9ecef;
+    color: #333;
+    align-self: flex-start;
+    margin-right: auto;
+}
+
+.decision-buttons {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+    justify-content: center;
+}
+
+.decision-buttons button {
+    padding: 10px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.decision-buttons button:hover {
+    background: #218838;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

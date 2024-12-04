@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-agent Data Analysis UI</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="main-content">
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <!-- Messages will be added here -->
+            </div>
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Type your message...">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+    <div class="sidebar">
+        <div class="state-container">
+            <h2>Current State</h2>
+            <div id="stateContent">
+                <!-- State items will be added here -->
+            </div>
+        </div>
+        <div class="files-container">
+            <h2>Data Storage Files</h2>
+            <div id="filesContent">
+                <!-- File items will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/state.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/files.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
