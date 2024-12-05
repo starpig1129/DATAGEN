@@ -12,7 +12,7 @@ class FileManager {
 
     async fetchFiles() {
         try {
-            const response = await fetch('http://localhost:5000/api/files');
+            const response = await fetch(`${window.apiConfig.apiBaseUrl}/api/files`);
             const data = await response.json();
             this.updateFiles(data.files);
         } catch (error) {

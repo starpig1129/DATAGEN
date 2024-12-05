@@ -14,7 +14,7 @@
             </div>
             <div class="chat-input">
                 <input type="text" id="messageInput" placeholder="Type your message...">
-                <button onclick="sendMessage()">Send</button>
+                <button id="sendButton">Send</button>
             </div>
         </div>
     </div>
@@ -33,6 +33,9 @@
         </div>
     </div>
 
+    <!-- Load config first -->
+    <script src="js/config.js"></script>
+    <!-- Then load other scripts -->
     <script src="js/state.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/files.js"></script>

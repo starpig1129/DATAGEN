@@ -84,6 +84,11 @@ def send_message():
         # Add process_decision if provided
         if process_decision:
             input_state["process_decision"] = process_decision
+            # Add system message to show the decision
+            decision_text = "Regenerate hypothesis" if process_decision == "1" else "Continue research"
+            input_state["messages"] = input_state["messages"] + [
+                HumanMessage(content=f"Selected option: {decision_text}")
+            ]
         
         # Run the system with input
         events = system.workflow_manager.get_graph().stream(
@@ -107,13 +112,19 @@ def send_message():
                     if isinstance(msg, (HumanMessage, AIMessage, dict, str))
                 ]
         
+        # Check if we need a process decision
+        needs_decision = (
+            not process_decision and 
+            "Please choose the next step:" in str(current_state.get("messages", []))
+        )
+        
         # Serialize state for response
         serialized_state = serialize_state(current_state)
         
         return jsonify({
             "status": "success",
             "state": serialized_state,
-            "needs_decision": current_state.get("process_decision") == ""
+            "needs_decision": needs_decision
         })
     except Exception as e:
         import traceback

@@ -2,6 +2,7 @@ class ChatManager {
     constructor() {
         this.messageInput = document.getElementById('messageInput');
         this.chatMessages = document.getElementById('chatMessages');
+        this.sendButton = document.getElementById('sendButton');
         this.isProcessing = false;
         
         // Bind event listeners
@@ -10,6 +11,9 @@ class ChatManager {
                 this.sendMessage();
             }
         });
+
+        // Bind the send button click event
+        this.sendButton.addEventListener('click', () => this.sendMessage());
 
         // Expose instance globally for state updates
         window.chatManager = this;
@@ -51,15 +55,24 @@ class ChatManager {
         if ((message || processDecision) && !this.isProcessing) {
             this.isProcessing = true;
             this.messageInput.disabled = true;
+            this.sendButton.disabled = true;
             
             if (message) {
                 this.addMessage(message, true);
                 this.messageInput.value = '';
             }
+
+            // Add loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message system-message';
+            loadingDiv.textContent = 'Processing...';
+            this.chatMessages.appendChild(loadingDiv);
             
             try {
-                // Send message to backend
-                const response = await fetch('http://localhost:5000/api/send_message', {
+                console.log('Sending request:', { message, process_decision: processDecision });
+                
+                // Send message to backend using dynamic base URL
+                const response = await fetch(`${window.apiConfig.apiBaseUrl}/api/send_message`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -70,7 +83,15 @@ class ChatManager {
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const result = await response.json();
+                console.log('Received response:', result);
+                
+                // Remove loading indicator
+                this.chatMessages.removeChild(loadingDiv);
                 
                 if (result.status === 'success') {
                     // Update state if provided in response
@@ -80,6 +101,7 @@ class ChatManager {
                     
                     // Check if we need to show decision buttons
                     if (result.needs_decision) {
+                        this.addMessage('Please choose the next step:');
                         this.addDecisionButtons();
                     }
                 } else {
@@ -88,10 +110,13 @@ class ChatManager {
                 }
             } catch (error) {
                 console.error('Error sending message:', error);
+                // Remove loading indicator
+                this.chatMessages.removeChild(loadingDiv);
                 this.addMessage('Error: Failed to send message. Please try again.');
             } finally {
                 this.isProcessing = false;
                 this.messageInput.disabled = false;
+                this.sendButton.disabled = false;
                 this.messageInput.focus();
             }
         }
@@ -115,6 +140,3 @@ class ChatManager {
 
 // Create global chat instance
 const chatManager = new ChatManager();
-
-// Expose sendMessage function globally for the button onclick
-window.sendMessage = () => chatManager.sendMessage();

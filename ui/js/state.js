@@ -21,7 +21,7 @@ class State {
 
     async fetchState() {
         try {
-            const response = await fetch('http://localhost:5000/api/state');
+            const response = await fetch(`${window.apiConfig.apiBaseUrl}/api/state`);
             const newState = await response.json();
             
             // Check if messages have changed
