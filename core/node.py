@@ -56,22 +56,37 @@ def agent_node(state: State, agent: AgentExecutor, name: str) -> State:
 def human_choice_node(state: State) -> State:
     """
     Handle human input to choose the next step in the process.
-    If regenerating hypothesis, prompt for specific areas to modify.
+    Supports both CMD and UI input methods.
     """
-    logger.info("Prompting for human choice")
-    print("Please choose the next step:")
-    print("1. Regenerate hypothesis")
-    print("2. Continue the research process")
+    logger.info("Processing human choice")
     
-    while True:
-        choice = input("Please enter your choice (1 or 2): ")
-        if choice in ["1", "2"]:
-            break
-        logger.warning(f"Invalid input received: {choice}")
-        print("Invalid input, please try again.")
+    # Check if we already have a process_decision from UI
+    if state.get("process_decision"):
+        choice = "2"  # Continue research
+        modification_areas = ""
+    else:
+        # Add prompt message for both UI and CMD
+        prompt_message = "Please choose the next step:\n1. Regenerate hypothesis\n2. Continue the research process"
+        state["messages"].append(AIMessage(content=prompt_message))
+        
+        # For CMD interface
+        if os.isatty(0):  # Check if running in terminal
+            while True:
+                choice = input("Please enter your choice (1 or 2): ")
+                if choice in ["1", "2"]:
+                    break
+                logger.warning(f"Invalid input received: {choice}")
+                print("Invalid input, please try again.")
+            
+            if choice == "1":
+                modification_areas = input("Please specify which parts of the hypothesis you want to modify: ")
+        else:
+            # For UI - return current state and wait for input
+            state["sender"] = "human_choice"
+            return state
     
+    # Process the choice
     if choice == "1":
-        modification_areas = input("Please specify which parts of the hypothesis you want to modify: ")
         content = f"Regenerate hypothesis. Areas to modify: {modification_areas}"
         state["hypothesis"] = ""
         state["modification_areas"] = modification_areas
@@ -83,9 +98,8 @@ def human_choice_node(state: State) -> State:
         logger.info("Continuing research process")
     
     human_message = HumanMessage(content=content)
-    
     state["messages"].append(human_message)
-    state["sender"] = 'human'
+    state["sender"] = "human"
     
     logger.info("Human choice processed")
     return state
@@ -159,36 +173,23 @@ def note_agent_node(state: State, agent: AgentExecutor, name: str) -> State:
         logger.error(f"Unexpected error in note_agent_node: {e}", exc_info=True)
         return _create_error_state(state, AIMessage(content=f"Unexpected error: {str(e)}", name=name), name, "Unexpected error")
 
-def _create_error_state(state: State, error_message: AIMessage, name: str, error_type: str) -> State:
-    """
-    Create an error state when an exception occurs.
-    """
-    logger.info(f"Creating error state for {name}: {error_type}")
-    error_state:State = {
-            "messages": state.get("messages", []) + [error_message],
-            "hypothesis": str(state.get("hypothesis", "")),
-            "process": str(state.get("process", "")),
-            "process_decision": str(state.get("process_decision", "")),
-            "visualization_state": str(state.get("visualization_state", "")),
-            "searcher_state": str(state.get("searcher_state", "")),
-            "code_state": str(state.get("code_state", "")),
-            "report_section": str(state.get("report_section", "")),
-            "quality_review": str(state.get("quality_review", "")),
-            "needs_revision": bool(state.get("needs_revision", False)),
-            "sender": 'note_agent'
-        }
-    return error_state
-
 def human_review_node(state: State) -> State:
     """
-    Display current state to the user and update the state based on user input.
-    Includes error handling for robustness.
+    Display current state and handle user input for additional analysis.
+    Supports both CMD and UI input methods.
     """
-    try:
-        print("Current research progress:")
-        print(state)
-        print("\nDo you need additional analysis or modifications?")
-        
+    logger.info("Starting human review")
+    
+    # Add state review message
+    review_message = "Current research progress:\n" + str(state)
+    state["messages"].append(AIMessage(content=review_message))
+    
+    # Add prompt for both UI and CMD
+    prompt_message = "\nDo you need additional analysis or modifications?"
+    state["messages"].append(AIMessage(content=prompt_message))
+    
+    # For CMD interface
+    if os.isatty(0):
         while True:
             user_input = input("Enter 'yes' to continue analysis, or 'no' to end the research: ").lower()
             if user_input in ['yes', 'no']:
@@ -205,18 +206,14 @@ def human_review_node(state: State) -> State:
                 print("Request cannot be empty. Please try again.")
         else:
             state["needs_revision"] = False
-        
-        state["sender"] = "human"
-        logger.info("Human review completed successfully.")
+    else:
+        # For UI - return current state and wait for input
+        state["sender"] = "human_review"
         return state
     
-    except KeyboardInterrupt:
-        logger.warning("Human review interrupted by user.")
-        return None
-    
-    except Exception as e:
-        logger.error(f"An error occurred during human review: {str(e)}", exc_info=True)
-        return None
+    state["sender"] = "human"
+    logger.info("Human review completed")
+    return state
     
 def refiner_node(state: State, agent: AgentExecutor, name: str) -> State:
     """
@@ -275,5 +272,25 @@ def refiner_node(state: State, agent: AgentExecutor, name: str) -> State:
         logger.error(f"Error occurred while processing refiner node: {str(e)}", exc_info=True)
         state["messages"].append(AIMessage(content=f"Error: {str(e)}", name=name))
         return state
+    
+def _create_error_state(state: State, error_message: AIMessage, name: str, error_type: str) -> State:
+    """
+    Create an error state when an exception occurs.
+    """
+    logger.info(f"Creating error state for {name}: {error_type}")
+    error_state:State = {
+            "messages": state.get("messages", []) + [error_message],
+            "hypothesis": str(state.get("hypothesis", "")),
+            "process": str(state.get("process", "")),
+            "process_decision": str(state.get("process_decision", "")),
+            "visualization_state": str(state.get("visualization_state", "")),
+            "searcher_state": str(state.get("searcher_state", "")),
+            "code_state": str(state.get("code_state", "")),
+            "report_section": str(state.get("report_section", "")),
+            "quality_review": str(state.get("quality_review", "")),
+            "needs_revision": bool(state.get("needs_revision", False)),
+            "sender": 'note_agent'
+        }
+    return error_state
     
 logger.info("Agent processing module initialized")
