@@ -154,6 +154,32 @@ You can customize the system behavior by modifying the agent creation and workfl
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
+## Strategic Partnership
+[![DATAGEN](https://img.shields.io/badge/CTL_GROUP-GitHub-blue)](https://github.com/ctlgroupdev)
+
+We are excited to announce our upcoming strategic partnership with CTL GROUP, an innovative AI-Powered Crypto Intelligence Platform currently in development. This collaboration will bring together advanced AI research capabilities with crypto market intelligence:
+
+### Upcoming Partnership Features
+- **AI Crypto Research Integration**
+  - Automated market research and analysis system
+  - Advanced whale tracking capabilities
+  - Real-time sentiment analysis tools
+  - Comprehensive trading insights and strategies
+
+- **Platform Features** (Coming Soon)
+  - State-of-the-art AI-powered crypto insights
+  - Smart trading strategy development
+  - Advanced whale & on-chain activity monitoring
+  - Interactive community engagement tools
+
+- **Token Integration Benefits** (Coming Soon)
+  - Dynamic staking rewards system
+  - Premium tools and features access
+  - Innovative passive income opportunities
+  - Exclusive platform privileges
+
+The platform is currently under development. Follow our progress on [GitHub](https://github.com/ctlgroupdev).
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
