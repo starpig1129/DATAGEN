@@ -1,7 +1,13 @@
-# AI-Driven Research Assistant
+# DATAGEN (Previously AI-Data-Analysis-MultiAgent)
+
+![DATAGEN Banner](DATAGEN.jpg "DATAGEN Banner")
+
+## About DATAGEN
+DATAGEN is a powerful brand name that represents our vision of leveraging artificial intelligence technology for data generation and analysis. The name combines "DATA" and "GEN"(generation), perfectly embodying the core functionality of this project - automated data analysis and research through a multi-agent system.
+
+Visit us at [DATAGEN Digital](https://datagen.digital/)(website under development) to learn more about our vision and services.
 
 ![System Architecture](Architecture.png)
-
 ## Overview
 
 This is an advanced AI-powered research assistant system that utilizes multiple specialized agents to assist in tasks such as data analysis, visualization, and report generation. The system employs LangChain, OpenAI's GPT models, and LangGraph to handle complex research processes, integrating diverse AI architectures for optimal performance.
@@ -42,7 +48,7 @@ The integration of a dedicated Note Taker agent sets this system apart from trad
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/starpig1129/ai-data-analysis-MulitAgent.git
+git clone https://github.com/starpig1129/DATAGEN.git
 ```
 2. Create and activate a Conda virtual environment:
 ```bash
@@ -186,7 +192,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=starpig1129/Multi-agent-DataAnalysis&type=Date)](https://star-history.com/#starpig1129/Multi-agent-DataAnalysis&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=starpig1129/DATAGEN&type=Date)](https://star-history.com/#starpig1129/DATAGEN&Date)
 
 ## Other Projects
 Here are some of my other notable projects:
