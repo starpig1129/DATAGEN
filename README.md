@@ -6,6 +6,32 @@
 
 This is an advanced AI-powered research assistant system that utilizes multiple specialized agents to assist in tasks such as data analysis, visualization, and report generation. The system employs LangChain, OpenAI's GPT models, and LangGraph to handle complex research processes, integrating diverse AI architectures for optimal performance.
 
+## Strategic Partnership
+[![DATAGEN](https://img.shields.io/badge/Coming_Soon-DATAGEN-blue)](https://datagen.digital/) [![$DGEN](https://img.shields.io/badge/Coming_Soon-$DGEN-green)](https://datagen.digital/)
+
+We are excited to announce our upcoming strategic partnership with DATAGEN, an innovative AI-Powered Crypto Intelligence Platform currently in development. This collaboration will bring together advanced AI research capabilities with crypto market intelligence:
+
+### Upcoming Partnership Features
+- **AI Crypto Research Integration**
+  - Automated market research and analysis system
+  - Advanced whale tracking capabilities
+  - Real-time sentiment analysis tools
+  - Comprehensive trading insights and strategies
+
+- **Platform Features** (Coming Soon)
+  - State-of-the-art AI-powered crypto insights
+  - Smart trading strategy development
+  - Advanced whale & on-chain activity monitoring
+  - Interactive community engagement tools
+
+- **$DGEN Token Benefits** (Coming Soon)
+  - Dynamic staking rewards system
+  - Premium tools and features access
+  - Innovative passive income opportunities
+  - Exclusive platform privileges
+
+The platform is currently under development. Stay tuned for the official launch at [DATAGEN's website](https://datagen.digital/).
+
 ## Key Features
 
 - Hypothesis generation and validation

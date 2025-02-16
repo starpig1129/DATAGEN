@@ -1,10 +1,9 @@
-from langchain_core.messages import BaseMessage
-from typing import Sequence,TypedDict
+from typing import Sequence, TypedDict, Dict, Any
 from dataclasses import dataclass,field
 class State(TypedDict):
     """Pydantic model for the entire state structure."""
     # The sequence of messages exchanged in the conversation
-    messages: Sequence[BaseMessage]
+    messages: Sequence[Dict[str, Any]]
 
     # The complete content of the research hypothesis
     hypothesis: str = ""
@@ -36,10 +35,18 @@ class State(TypedDict):
     # The identifier of the agent who sent the last message
     sender: str = ""
     
-from langchain_core.pydantic_v1 import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 class NoteState(BaseModel):
+    class Config:
+        arbitrary_types_allowed = True
+        
+    @classmethod
+    def model_json_schema(cls):
+        schema = cls.schema()
+        return schema
+
     """Pydantic model for the entire state structure."""
-    messages: Sequence[BaseMessage] = Field(default_factory=list,description="List of message dictionaries")
+    messages: Sequence[Dict[str, Any]] = Field(default_factory=list,description="List of message dictionaries")
     hypothesis: str = Field(default="", description="Current research hypothesis")
     process: str = Field(default="", description="Current research process")
     process_decision: str = Field(default="", description="Decision about the next process step")

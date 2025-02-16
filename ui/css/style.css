@@ -123,6 +123,36 @@ h2 {
     padding: 10px;
     border-radius: 5px;
     background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.active-agent {
+    background: #e3f2fd;
+    border-color: #90caf9;
+    position: relative;
+    padding-left: 15px;
+}
+
+.active-agent::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: #1976d2;
+    border-radius: 5px 0 0 5px;
+}
+
+.active-agent .state-label {
+    color: #1976d2;
+}
+
+.active-agent .state-value {
+    color: #1976d2;
+    font-weight: bold;
+    font-size: 16px;
 }
 
 .state-label {
@@ -155,11 +185,27 @@ h2 {
 
 .message {
     margin-bottom: 15px;
-    padding: 10px;
+    padding: 15px;
     border-radius: 5px;
     max-width: 80%;
     word-break: break-word;
     white-space: pre-wrap;
+    position: relative;
+}
+
+.message::before {
+    content: attr(data-sender);
+    position: absolute;
+    top: -8px;
+    left: 10px;
+    font-size: 12px;
+    background: white;
+    padding: 2px 10px;
+    border-radius: 12px;
+    color: #666;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    font-weight: 500;
 }
 
 .user-message {
@@ -167,13 +213,35 @@ h2 {
     color: white;
     align-self: flex-end;
     margin-left: auto;
+    border-radius: 15px 15px 0 15px;
+}
+
+.user-message::before {
+    right: 10px;
+    left: auto;
+    background: #f0f8ff;
+    color: #007bff;
+    border-color: #007bff;
 }
 
 .assistant-message {
-    background: #e9ecef;
+    background: #f8f9fa;
     color: #333;
     align-self: flex-start;
     margin-right: auto;
+    border-radius: 15px 15px 15px 0;
+    border: 1px solid #e9ecef;
+}
+
+.system-message {
+    background: #fff3cd;
+    color: #856404;
+    align-self: center;
+    margin: 10px auto;
+    border: 1px solid #ffeeba;
+    text-align: center;
+    font-size: 13px;
+    max-width: 60%;
 }
 
 .decision-buttons {

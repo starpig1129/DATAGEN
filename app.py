@@ -31,19 +31,22 @@ def serialize_message(msg):
     if isinstance(msg, (HumanMessage, AIMessage)):
         return {
             "content": msg.content,
-            "type": "human" if isinstance(msg, HumanMessage) else "assistant"
+            "type": "human" if isinstance(msg, HumanMessage) else "assistant",
+            "sender": getattr(msg, 'sender', None) or ('User' if isinstance(msg, HumanMessage) else 'Assistant')
         }
     elif isinstance(msg, dict):
         return msg
     elif isinstance(msg, str):
         return {
             "content": msg,
-            "type": "assistant"
+            "type": "assistant",
+            "sender": "Assistant"
         }
     else:
         return {
             "content": str(msg),
-            "type": "assistant"
+            "type": "assistant",
+            "sender": "Assistant"
         }
 
 def serialize_state(state):
@@ -57,6 +60,34 @@ def serialize_state(state):
         else:
             serialized[key] = str(value)
     return serialized
+
+def check_needs_decision(messages):
+    """Check if the current state needs user decision"""
+    if not messages:
+        return False
+    
+    # Get the last message
+    last_message = messages[-1]
+    content = ""
+    
+    if isinstance(last_message, (HumanMessage, AIMessage)):
+        content = last_message.content
+    elif isinstance(last_message, dict):
+        content = last_message.get('content', '')
+    elif isinstance(last_message, str):
+        content = last_message
+    
+    decision_phrases = [
+        "Please enter your choice",
+        "please enter your choice",
+        "Please choose",
+        "請選擇",
+        "Enter your choice",
+        "Choose between",
+        "Select an option"
+    ]
+    
+    return any(phrase in content for phrase in decision_phrases)
 
 @app.route('/')
 def index():
@@ -85,9 +116,9 @@ def send_message():
         if process_decision:
             input_state["process_decision"] = process_decision
             # Add system message to show the decision
-            decision_text = "Regenerate hypothesis" if process_decision == "1" else "Continue research"
+            decision_text = "重新生成假設" if process_decision == "1" else "繼續研究"
             input_state["messages"] = input_state["messages"] + [
-                HumanMessage(content=f"Selected option: {decision_text}")
+                HumanMessage(content=f"已選擇: {decision_text}")
             ]
         
         # Run the system with input
@@ -113,10 +144,7 @@ def send_message():
                 ]
         
         # Check if we need a process decision
-        needs_decision = (
-            not process_decision and 
-            "Please choose the next step:" in str(current_state.get("messages", []))
-        )
+        needs_decision = check_needs_decision(current_state.get("messages", []))
         
         # Serialize state for response
         serialized_state = serialize_state(current_state)

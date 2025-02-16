@@ -56,8 +56,27 @@ class State {
         
         stateContent.innerHTML = '';
 
+        // 首先顯示當前代理
+        if (this.data.sender) {
+            const activeAgentItem = document.createElement('div');
+            activeAgentItem.className = 'state-item active-agent';
+            
+            const agentLabel = document.createElement('div');
+            agentLabel.className = 'state-label';
+            agentLabel.textContent = 'ACTIVE AGENT';
+            
+            const agentValue = document.createElement('div');
+            agentValue.className = 'state-value';
+            agentValue.textContent = this.data.sender;
+            
+            activeAgentItem.appendChild(agentLabel);
+            activeAgentItem.appendChild(agentValue);
+            stateContent.appendChild(activeAgentItem);
+        }
+
+        // 然後顯示其他狀態
         Object.entries(this.data).forEach(([key, value]) => {
-            if (key !== 'messages') {  // Skip messages as they're shown in chat
+            if (key !== 'messages' && key !== 'sender') {  // Skip messages as they're shown in chat
                 const stateItem = document.createElement('div');
                 stateItem.className = 'state-item';
                 
