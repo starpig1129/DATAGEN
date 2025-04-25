@@ -13,6 +13,20 @@ if not os.path.exists(WORKING_DIRECTORY):
     os.makedirs(WORKING_DIRECTORY)
     logger.info(f"Created working directory: {WORKING_DIRECTORY}")
 
+def normalize_path(file_path: str) -> str:
+    """
+    Normalize file path for cross-platform compatibility.
+    
+    Args:
+    file_path (str): The file path to normalize
+    
+    Returns:
+    str: Normalized file path
+    """
+    if WORKING_DIRECTORY not in file_path:
+        file_path = os.path.join(WORKING_DIRECTORY, file_path)
+    return os.path.normpath(file_path)
+
 @tool
 def collect_data(data_path: Annotated[str, "Path to the CSV file"] = './data.csv'):
     """
@@ -26,10 +40,7 @@ def collect_data(data_path: Annotated[str, "Path to the CSV file"] = './data.csv
     Raises:
     ValueError: If unable to read the file with any of the provided encodings.
     """
-    if WORKING_DIRECTORY not in data_path:
-            data_path = os.path.join(WORKING_DIRECTORY, data_path)
-    else:
-        data_path = data_path
+    data_path = normalize_path(data_path)
     logger.info(f"Attempting to read CSV file: {data_path}")
     encodings = ['utf-8', 'latin1', 'iso-8859-1', 'cp1252']
     for encoding in encodings:
@@ -56,12 +67,9 @@ def create_document(
     str: A message indicating where the outline was saved or an error message.
     """
     try:
-        if WORKING_DIRECTORY not in file_name:
-            file_path = os.path.join(WORKING_DIRECTORY, file_name)
-        else:
-            file_path = file_name
+        file_path = normalize_path(file_name)
         logger.info(f"Creating document: {file_path}")
-        with open(file_path, "w") as file:
+        with open(file_path, "w", encoding='utf-8') as file:
             for i, point in enumerate(points):
                 file.write(f"{i + 1}. {point}\n")
         logger.info(f"Document created successfully: {file_path}")
@@ -86,12 +94,9 @@ def read_document(
     str: The content of the document or an error message.
     """
     try:
-        if WORKING_DIRECTORY not in file_name:
-            file_path = os.path.join(WORKING_DIRECTORY, file_name)
-        else:
-            file_path = file_name
+        file_path = normalize_path(file_name)
         logger.info(f"Reading document: {file_path}")
-        with open(file_path, "r") as file:
+        with open(file_path, "r", encoding='utf-8') as file:
             lines = file.readlines()
         if start is None:
             start = 0
@@ -116,12 +121,9 @@ def write_document(
     This function takes a string of content and writes it to a file.
     """
     try:
-        if WORKING_DIRECTORY not in file_name:
-            file_path = os.path.join(WORKING_DIRECTORY, file_name)
-        else:
-            file_path = file_name
+        file_path = normalize_path(file_name)
         logger.info(f"Writing document: {file_path}")
-        with open(file_path, "w") as file:
+        with open(file_path, "w", encoding='utf-8') as file:
             file.write(content)
         logger.info(f"Document written successfully: {file_path}")
         return f"Document saved to {file_path}"
@@ -158,12 +160,9 @@ def edit_document(
         # Output: "Document edited and saved to /path/to/example.txt"
     """
     try:
-        if WORKING_DIRECTORY not in file_name:
-            file_path = os.path.join(WORKING_DIRECTORY, file_name)
-        else:
-            file_path = file_name
+        file_path = normalize_path(file_name)
         logger.info(f"Editing document: {file_path}")
-        with open(file_path, "r") as file:
+        with open(file_path, "r", encoding='utf-8') as file:
             lines = file.readlines()
 
         sorted_inserts = sorted(inserts.items())
@@ -175,7 +174,7 @@ def edit_document(
                 logger.error(f"Line number out of range: {line_number}")
                 return f"Error: Line number {line_number} is out of range."
 
-        with open(file_path, "w") as file:
+        with open(file_path, "w", encoding='utf-8') as file:
             file.writelines(lines)
 
         logger.info(f"Document edited successfully: {file_path}")

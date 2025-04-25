@@ -1,7 +1,9 @@
-from typing import Sequence, TypedDict, Dict, Any
-from dataclasses import dataclass,field
+from langchain_core.messages import BaseMessage
+from typing import Sequence, TypedDict
+from pydantic import BaseModel, Field
+
 class State(TypedDict):
-    """Pydantic model for the entire state structure."""
+    """TypedDict for the entire state structure."""
     # The sequence of messages exchanged in the conversation
     messages: Sequence[Dict[str, Any]]
 
@@ -34,8 +36,6 @@ class State(TypedDict):
     
     # The identifier of the agent who sent the last message
     sender: str = ""
-    
-from pydantic.v1 import BaseModel, Field
 class NoteState(BaseModel):
     class Config:
         arbitrary_types_allowed = True
@@ -46,7 +46,7 @@ class NoteState(BaseModel):
         return schema
 
     """Pydantic model for the entire state structure."""
-    messages: Sequence[Dict[str, Any]] = Field(default_factory=list,description="List of message dictionaries")
+    messages: Sequence[BaseMessage] = Field(default_factory=list, description="List of message dictionaries")
     hypothesis: str = Field(default="", description="Current research hypothesis")
     process: str = Field(default="", description="Current research process")
     process_decision: str = Field(default="", description="Decision about the next process step")
@@ -57,3 +57,6 @@ class NoteState(BaseModel):
     quality_review: str = Field(default="", description="Feedback from quality review")
     needs_revision: bool = Field(default=False, description="Flag indicating if revision is needed")
     sender: str = Field(default="", description="Identifier of the last message sender")
+
+    class Config:
+        arbitrary_types_allowed = True  # Allow BaseMessage type without explicit validator

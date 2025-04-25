@@ -1,10 +1,16 @@
-# AI-Driven Research Assistant
+# DATAGEN (Previously AI-Data-Analysis-MultiAgent)
+
+![DATAGEN Banner](DATAGEN.jpg "DATAGEN Banner")
+
+## About DATAGEN
+DATAGEN is a powerful brand name that represents our vision of leveraging artificial intelligence technology for data generation and analysis. The name combines "DATA" and "GEN"(generation), perfectly embodying the core functionality of this project - automated data analysis and research through a multi-agent system.
+
+Visit us at [DATAGEN Digital](https://datagen.digital/)(website under development) to learn more about our vision and services.
 
 ![System Architecture](Architecture.png)
-
 ## Overview
 
-This is an advanced AI-powered research assistant system that utilizes multiple specialized agents to assist in tasks such as data analysis, visualization, and report generation. The system employs LangChain, OpenAI's GPT models, and LangGraph to handle complex research processes, integrating diverse AI architectures for optimal performance.
+DATAGEN is an advanced AI-powered data analysis and research platform that utilizes multiple specialized agents to streamline tasks such as data analysis, visualization, and report generation. Our platform leverages cutting-edge technologies including LangChain, OpenAI's GPT models, and LangGraph to handle complex research processes, integrating diverse AI architectures for optimal performance.
 
 ## Strategic Partnership
 [![DATAGEN](https://img.shields.io/badge/Coming_Soon-DATAGEN-blue)](https://datagen.digital/) [![$DGEN](https://img.shields.io/badge/Coming_Soon-$DGEN-green)](https://datagen.digital/)
@@ -34,30 +40,52 @@ The platform is currently under development. Stay tuned for the official launch 
 
 ## Key Features
 
-- Hypothesis generation and validation
-- Data processing and analysis
-- Visualization creation
-- Web search and information retrieval
-- Code generation and execution
-- Report writing
-- Quality review and revision
-- **Diverse Architectural Integration**: 
-  - Supervisor agents for overseeing the analysis process
-  - Chain-of-thought reasoning for complex problem-solving
-  - Critic agents for quality assurance and error checking
-- **Innovative Note Taker Agent**: 
-  - Continuously records the current state of the project
-  - Provides a more efficient alternative to transmitting complete historical information
-  - Enhances the system's ability to maintain context and continuity across different analysis stages
-- **Adaptive Workflow**: Dynamically adjusts its analysis approach based on the data and task at hand
+### Intelligent Analysis Core
+- **Advanced Hypothesis Engine**
+  - AI-driven hypothesis generation and validation
+  - Automated research direction optimization
+  - Real-time hypothesis refinement
+- **Enterprise Data Processing**
+  - Robust data cleaning and transformation
+  - Scalable analysis pipelines
+  - Automated quality assurance
+- **Dynamic Visualization Suite**
+  - Interactive data visualization
+  - Custom report generation
+  - Automated insight extraction
 
-## Why It's Unique
+### Advanced Technical Architecture
+- **Multi-Agent Intelligence** 
+  - Specialized agents for diverse tasks
+  - Intelligent task distribution
+  - Real-time coordination and optimization
+- **Smart Memory Management**
+  - State-of-the-art Note Taker agent
+  - Efficient context retention system
+  - Seamless workflow integration
+- **Adaptive Processing Pipeline**
+  - Dynamic workflow adjustment
+  - Automated resource optimization
+  - Real-time performance monitoring
 
-The integration of a dedicated Note Taker agent sets this system apart from traditional data analysis pipelines. By maintaining a concise yet comprehensive record of the project's state, the system can:
+## Why DATAGEN Stands Out
 
-1. Reduce computational overhead
-2. Improve context retention across different analysis phases
-3. Enable more coherent and consistent analysis outcomes
+DATAGEN revolutionizes data analysis through its innovative multi-agent architecture and intelligent automation capabilities:
+
+1. **Advanced Multi-Agent System**
+   - Specialized agents working in harmony
+   - Intelligent task distribution and coordination
+   - Real-time adaptation to complex analysis requirements
+
+2. **Smart Context Management**
+   - Pioneering Note Taker agent for state tracking
+   - Efficient memory utilization and context retention
+   - Seamless integration across analysis phases
+
+3. **Enterprise-Grade Performance**
+   - Robust and scalable architecture
+   - Consistent and reliable outcomes
+   - Production-ready implementation
 
 ## System Requirements
 
@@ -68,7 +96,7 @@ The integration of a dedicated Note Taker agent sets this system apart from trad
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/starpig1129/ai-data-analysis-MulitAgent.git
+git clone https://github.com/starpig1129/DATAGEN.git
 ```
 2. Create and activate a Conda virtual environment:
 ```bash
@@ -180,13 +208,39 @@ You can customize the system behavior by modifying the agent creation and workfl
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
+## Strategic Partnership
+[![CTL GROUP](https://img.shields.io/badge/DATAGEN-Strategic_Partner-blue)](https://datagen.digital/)
+
+We are excited to announce our upcoming strategic partnership with CTL GROUP, an innovative AI-Powered Crypto Intelligence Platform currently in development. This collaboration will bring together advanced AI research capabilities with crypto market intelligence:
+
+### Upcoming Partnership Features
+- **AI Crypto Research Integration**
+  - Automated market research and analysis system
+  - Advanced whale tracking capabilities
+  - Real-time sentiment analysis tools
+  - Comprehensive trading insights and strategies
+
+- **Platform Features** (Coming Soon)
+  - State-of-the-art AI-powered crypto insights
+  - Smart trading strategy development
+  - Advanced whale & on-chain activity monitoring
+  - Interactive community engagement tools
+
+- **Token Integration Benefits** (Coming Soon)
+  - Dynamic staking rewards system
+  - Premium tools and features access
+  - Innovative passive income opportunities
+  - Exclusive platform privileges
+
+The platform is currently under development. Follow our progress on [GitHub](https://github.com/ctlgroupdev).
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=starpig1129/Multi-agent-DataAnalysis&type=Date)](https://star-history.com/#starpig1129/Multi-agent-DataAnalysis&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=starpig1129/DATAGEN&type=Date)](https://star-history.com/#starpig1129/DATAGEN&Date)
 
 ## Other Projects
 Here are some of my other notable projects:
