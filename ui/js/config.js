@@ -1,8 +1,21 @@
-// API Configuration
+'use strict';
+
+/**
+ * @fileoverview Configuration for the API endpoint.
+ */
+
+/**
+ * API Configuration object.
+ * @const
+ */
 const config = {
-    // Dynamically get the base URL from the current window location
-    apiBaseUrl: `${window.location.protocol}//${window.location.host}`,
+  /**
+   * The base URL for API requests.
+   * Dynamically determined from the current window location.
+   * @type {string}
+   */
+  apiBaseUrl: `${window.location.protocol}//${window.location.host}`,
 };
 
-// Expose config globally
-window.apiConfig = config;
+// Export the configuration object for use in other modules.
+export {config};

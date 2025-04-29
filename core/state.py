@@ -1,5 +1,5 @@
 from langchain_core.messages import BaseMessage
-from typing import Sequence, TypedDict
+from typing import Sequence, TypedDict, Dict, Any
 from pydantic import BaseModel, Field
 
 class State(TypedDict):
@@ -40,11 +40,6 @@ class NoteState(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         
-    @classmethod
-    def model_json_schema(cls):
-        schema = cls.schema()
-        return schema
-
     """Pydantic model for the entire state structure."""
     messages: Sequence[BaseMessage] = Field(default_factory=list, description="List of message dictionaries")
     hypothesis: str = Field(default="", description="Current research hypothesis")

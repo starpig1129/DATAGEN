@@ -1,15 +1,26 @@
-from flask import Flask, request, jsonify, send_from_directory
+import json # Add json import
+from queue import Queue # Add Queue import
+from flask import Flask, request, jsonify, send_from_directory, Response # Add Response import
 from flask_cors import CORS
+# from flask_sse import sse # Remove Flask-SSE import
 import os
 from main import MultiAgentSystem
 from core.state import State
 from langchain_core.messages import HumanMessage, AIMessage
+import threading # Add threading import
 
-app = Flask(__name__, static_folder='ui')
+app = Flask(__name__, static_folder='ui', static_url_path='') # Serve static files from root URL path
 CORS(app)  # Enable CORS for all routes
+
+# Remove SSE blueprint configuration and registration
+# app.config["REDIS_URL"] = os.environ.get("REDIS_URL", "redis://localhost:6379")
+# app.register_blueprint(sse, url_prefix='/stream')
 
 # Initialize the multi-agent system
 system = MultiAgentSystem()
+
+# Create a thread-safe queue for SSE messages
+sse_queue = Queue()
 
 # Initialize state
 current_state = {
@@ -89,13 +100,70 @@ def check_needs_decision(messages):
     
     return any(phrase in content for phrase in decision_phrases)
 
+import traceback # Add traceback import for background error handling
+
+def process_message_background(input_state):
+    """Processes the message in a background thread."""
+    global current_state, sse_queue, system
+    try:
+        # Run the system with input (This is the blocking part)
+        events = system.workflow_manager.get_graph().stream(
+            input_state,
+            {"configurable": {"thread_id": "1"}, "recursion_limit": 3000},
+            stream_mode="values",
+            debug=False
+        )
+
+        # Update state with results
+        temp_state = input_state.copy() # Work on a copy within the thread initially
+        for event in events:
+            for key in temp_state:
+                if key != "messages" and key in event:
+                    temp_state[key] = event[key]
+            if "messages" in event and event["messages"]:
+                # Update messages carefully
+                temp_state["messages"] = [
+                    msg for msg in event["messages"]
+                    if isinstance(msg, (HumanMessage, AIMessage, dict, str))
+                ]
+
+            # Check if decision is needed after processing this event's messages
+            needs_decision = check_needs_decision(temp_state.get("messages", []))
+            if needs_decision:
+                temp_state['needs_decision'] = True
+                current_state = temp_state # Update global state immediately
+                serialized_state = serialize_state(current_state)
+                state_json = json.dumps(serialized_state)
+                sse_queue.put(state_json)
+                print("Decision needed, state pushed to SSE. Ending background thread.")
+                return # Exit the background function immediately
+
+        # --- Code after the loop (only runs if no decision was needed during the loop) ---
+        # If the loop completes without returning, it means no decision was needed.
+
+        # Safely update the global state
+        temp_state['needs_decision'] = False # Explicitly set to false as loop completed
+        current_state = temp_state # Update global state
+
+        # Serialize and push final state update via SSE
+        serialized_state = serialize_state(current_state)
+        state_json = json.dumps(serialized_state)
+        sse_queue.put(state_json)
+        print("Background processing complete (no decision needed), state pushed to SSE.") # Modified log
+
+    except Exception as e:
+        print(f"Error in background processing: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        # Optionally push an error state via SSE
+        error_state = {**serialize_state(current_state), "error": str(e)}
+        sse_queue.put(json.dumps(error_state))
+
+
 @app.route('/')
 def index():
     return send_from_directory('ui', 'index.html')
 
-@app.route('/<path:path>')
-def serve_static(path):
-    return send_from_directory('ui', path)
+# Flask will automatically handle static files based on static_folder and static_url_path
 
 @app.route('/api/send_message', methods=['POST'])
 def send_message():
@@ -121,38 +189,15 @@ def send_message():
                 HumanMessage(content=f"已選擇: {decision_text}")
             ]
         
-        # Run the system with input
-        events = system.workflow_manager.get_graph().stream(
-            input_state,
-            {"configurable": {"thread_id": "1"}, "recursion_limit": 3000},
-            stream_mode="values",
-            debug=False
-        )
-        
-        # Update state with results
-        for event in events:
-            # Update non-message state fields
-            for key in current_state:
-                if key != "messages" and key in event:
-                    current_state[key] = event[key]
-            
-            # Handle messages separately to maintain order
-            if "messages" in event and event["messages"]:
-                current_state["messages"] = [
-                    msg for msg in event["messages"]
-                    if isinstance(msg, (HumanMessage, AIMessage, dict, str))
-                ]
-        
-        # Check if we need a process decision
-        needs_decision = check_needs_decision(current_state.get("messages", []))
-        
-        # Serialize state for response
-        serialized_state = serialize_state(current_state)
-        
+        # Create and start the background thread
+        thread = threading.Thread(target=process_message_background, args=(input_state.copy(),)) # Pass a copy of input_state
+        thread.start()
+        print("Started background thread for message processing.") # Add log
+
+        # Immediately return a response indicating processing has started
         return jsonify({
-            "status": "success",
-            "state": serialized_state,
-            "needs_decision": needs_decision
+            "status": "processing",
+            "message": "訊息已收到，正在處理中..."
         })
     except Exception as e:
         import traceback
@@ -163,7 +208,12 @@ def send_message():
 @app.route('/api/state', methods=['GET'])
 def get_state():
     try:
-        return jsonify(serialize_state(current_state))
+        # Check if decision is needed based on current messages
+        needs_decision = check_needs_decision(current_state.get("messages", []))
+        serialized_state = serialize_state(current_state)
+        # Combine serialized state with the needs_decision flag
+        response_data = {**serialized_state, "needs_decision": needs_decision}
+        return jsonify(response_data)
     except Exception as e:
         import traceback
         print("Error:", str(e))
@@ -182,5 +232,25 @@ def get_files():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# New SSE endpoint using in-memory queue
+@app.route('/stream')
+def event_stream():
+    def generate():
+        while True:
+            try:
+                # Block until a message is available
+                message = sse_queue.get(timeout=None) # No timeout, wait indefinitely
+                # Format as SSE message
+                yield f"event: state_update\ndata: {message}\n\n"
+                sse_queue.task_done() # Mark message as processed
+            except Exception as e:
+                print(f"Error in SSE generator: {e}")
+                # Optionally break or handle specific errors
+                break # Exit loop on error to prevent infinite loops on persistent issues
+    response = Response(generate(), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['X-Accel-Buffering'] = 'no'
+    return response
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=5000)
+    app.run(host='0.0.0.0', debug=True, port=5001) # Change port to 5001
