@@ -60,12 +60,16 @@ def human_choice_node(state: State) -> State:
     """
     logger.info("Processing human choice")
     
-    # Check if we already have a process_decision from UI
-    if state.get("process_decision"):
-        choice = "2"  # Continue research
-        modification_areas = ""
+    # Check if we already have a process_decision from UI (e.g., user clicked a button)
+    ui_decision = state.get("process_decision")
+    if ui_decision:
+        choice = ui_decision # Use the decision from UI
+        modification_areas = "" # No modification areas needed if continuing
+        # Clear the decision immediately after reading it
+        state["process_decision"] = ""
+        logger.info(f"Received UI decision: {choice}")
     else:
-        # Add prompt message for both UI and CMD
+        # Add prompt message for both UI and CMD if no UI decision was passed
         prompt_message = "Please choose the next step:\n1. Regenerate hypothesis\n2. Continue the research process"
         state["messages"].append(AIMessage(content=prompt_message))
         
@@ -100,7 +104,9 @@ def human_choice_node(state: State) -> State:
     human_message = HumanMessage(content=content)
     state["messages"].append(human_message)
     state["sender"] = "human"
-    
+    # Ensure process_decision is cleared after processing any choice
+    state["process_decision"] = ""
+
     logger.info("Human choice processed")
     return state
 

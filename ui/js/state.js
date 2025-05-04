@@ -168,7 +168,9 @@ class State {
     eventSource.addEventListener('state_update', (event) => {
       try {
         const newState = JSON.parse(event.data);
+        // Add detailed logging for needs_decision
         console.log('Received state update via SSE:', newState);
+        console.log('Value of needs_decision in received state:', newState.needs_decision);
         this.update(newState);
       } catch (error) {
         console.error('Error parsing SSE data:', error, 'Raw data:', event.data);

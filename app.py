@@ -72,33 +72,10 @@ def serialize_state(state):
             serialized[key] = str(value)
     return serialized
 
-def check_needs_decision(messages):
-    """Check if the current state needs user decision"""
-    if not messages:
-        return False
-    
-    # Get the last message
-    last_message = messages[-1]
-    content = ""
-    
-    if isinstance(last_message, (HumanMessage, AIMessage)):
-        content = last_message.content
-    elif isinstance(last_message, dict):
-        content = last_message.get('content', '')
-    elif isinstance(last_message, str):
-        content = last_message
-    
-    decision_phrases = [
-        "Please enter your choice",
-        "please enter your choice",
-        "Please choose",
-        "請選擇",
-        "Enter your choice",
-        "Choose between",
-        "Select an option"
-    ]
-    
-    return any(phrase in content for phrase in decision_phrases)
+def check_needs_decision(state):
+    """Check if the current state needs user decision based on sender"""
+    sender = state.get("sender", "")
+    return sender == "human_choice" or sender == "human_review"
 
 import traceback # Add traceback import for background error handling
 
@@ -127,29 +104,43 @@ def process_message_background(input_state):
                     if isinstance(msg, (HumanMessage, AIMessage, dict, str))
                 ]
 
-            # Check if decision is needed after processing this event's messages
-            needs_decision = check_needs_decision(temp_state.get("messages", []))
+            # --- Start of modified SSE push logic ---
+            # Check if decision is needed based on the sender in the current event state
+            needs_decision = check_needs_decision(event) # Pass the event directly
             if needs_decision:
                 temp_state['needs_decision'] = True
+                temp_state['process_decision'] = "" # Clear process decision
+
+            # Serialize and push the current temp_state after processing each event
+            # This ensures intermediate updates are sent to the frontend
+            current_snapshot_state = temp_state.copy() # Take a snapshot for this push
+            # Ensure needs_decision reflects the check result for this specific snapshot
+            current_snapshot_state['needs_decision'] = needs_decision
+            serialized_state = serialize_state(current_snapshot_state)
+            state_json = json.dumps(serialized_state)
+            sse_queue.put(state_json)
+            print(f"Intermediate state pushed via SSE (needs_decision={needs_decision}).") # Log push
+
+            # If decision is needed, update global state and exit thread *after* pushing
+            if needs_decision:
                 current_state = temp_state # Update global state immediately
-                serialized_state = serialize_state(current_state)
-                state_json = json.dumps(serialized_state)
-                sse_queue.put(state_json)
-                print("Decision needed, state pushed to SSE. Ending background thread.")
+                print("Decision needed, state pushed. Ending background thread.")
                 return # Exit the background function immediately
+            # --- End of modified SSE push logic ---
 
         # --- Code after the loop (only runs if no decision was needed during the loop) ---
-        # If the loop completes without returning, it means no decision was needed.
+        # If the loop completes without returning, it means no decision was needed throughout the stream.
 
-        # Safely update the global state
-        temp_state['needs_decision'] = False # Explicitly set to false as loop completed
+        # Safely update the global state with the final accumulated state
+        temp_state['needs_decision'] = False # Explicitly set to false as loop completed without needing decision
         current_state = temp_state # Update global state
 
-        # Serialize and push final state update via SSE
+        # Serialize and push the final state update via SSE
+        # This ensures the final state with needs_decision=False is sent.
         serialized_state = serialize_state(current_state)
         state_json = json.dumps(serialized_state)
         sse_queue.put(state_json)
-        print("Background processing complete (no decision needed), state pushed to SSE.") # Modified log
+        print("Background processing complete (no decision needed), final state pushed to SSE.")
 
     except Exception as e:
         print(f"Error in background processing: {str(e)}")
@@ -208,11 +199,12 @@ def send_message():
 @app.route('/api/state', methods=['GET'])
 def get_state():
     try:
-        # Check if decision is needed based on current messages
-        needs_decision = check_needs_decision(current_state.get("messages", []))
+        # Check if decision is needed based on current sender
+        needs_decision = check_needs_decision(current_state) # Pass the whole state
         serialized_state = serialize_state(current_state)
         # Combine serialized state with the needs_decision flag
-        response_data = {**serialized_state, "needs_decision": needs_decision}
+        # Ensure needs_decision from the state itself is used if available, otherwise calculate
+        response_data = {**serialized_state, "needs_decision": current_state.get('needs_decision', needs_decision)}
         return jsonify(response_data)
     except Exception as e:
         import traceback
