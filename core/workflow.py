@@ -42,54 +42,63 @@ class WorkflowManager:
 
         # Create each agent using their respective creation functions and models from the manager
         agents["hypothesis_agent"] = create_hypothesis_agent(
-            self.model_manager.get_model(agent_name='hypothesis_agent'), # Use manager
-            self.members,
-            self.working_directory
+            language_model_manager=self.model_manager, # Use manager
+            agent_name="hypothesis_agent",
+            members=self.members,
+            working_directory=self.working_directory
         )
 
         agents["process_agent"] = create_process_agent(
-            self.model_manager.get_model(agent_name='process_agent') # Use manager
+            self.model_manager,
+            agent_name="process_agent"
         )
 
         agents["visualization_agent"] = create_visualization_agent(
-            self.model_manager.get_model(agent_name='visualization_agent'), # Use manager
-            self.members,
-            self.working_directory
+            language_model_manager=self.model_manager,
+            agent_name="visualization_agent",
+            members=self.members,
+            working_directory=self.working_directory
         )
 
         agents["code_agent"] = create_code_agent(
-            self.model_manager.get_model(agent_name='code_agent'), # Use manager
-            self.members,
-            self.working_directory
+            language_model_manager=self.model_manager,
+            agent_name="code_agent",
+            members=self.members,
+            working_directory=self.working_directory
         )
 
         # Renamed key from "searcher_agent" to "search_agent" for consistency
         agents["search_agent"] = create_search_agent(
-            self.model_manager.get_model(agent_name='search_agent'), # Use manager
-            self.members,
-            self.working_directory
+            language_model_manager=self.model_manager,
+            agent_name="search_agent",
+            members=self.members,
+            working_directory=self.working_directory
         )
 
         agents["report_agent"] = create_report_agent(
-            self.model_manager.get_model(agent_name='report_agent'), # Use manager
-            self.members,
-            self.working_directory
+            language_model_manager=self.model_manager,
+            agent_name="report_agent",
+            members=self.members,
+            working_directory=self.working_directory
         )
 
         agents["quality_review_agent"] = create_quality_review_agent(
-            self.model_manager.get_model(agent_name='quality_review_agent'), # Use manager
-            self.members,
-            self.working_directory
+            language_model_manager=self.model_manager,
+            agent_name="quality_review_agent",
+            members=self.members,
+            working_directory=self.working_directory
         )
 
         agents["note_agent"] = create_note_agent(
-            self.model_manager.get_json_model() # Use manager for JSON model
+            self.model_manager,
+            agent_name="note_agent",
         )
 
         agents["refiner_agent"] = create_refiner_agent(
-            self.model_manager.get_model(agent_name='refiner_agent'), # Use manager
-            self.members,
-            self.working_directory
+            language_model_manager=self.model_manager,
+            agent_name="refiner_agent",
+            members=self.members,
+            working_directory=self.working_directory
         )
 
         return agents

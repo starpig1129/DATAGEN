@@ -11,7 +11,7 @@ def create_refiner_agent(language_model_manager, agent_name: str, members, worki
 
     logger = setup_logger() # Get a logger instance
 
-    actual_llm = language_model_manager.get_model_for_agent(agent_name)
+    actual_llm = language_model_manager.get_model(agent_name)
 
     if actual_llm is None:
         error_msg = f"Failed to retrieve LLM for agent '{agent_name}'. Agent creation aborted."
