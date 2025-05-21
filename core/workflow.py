@@ -17,87 +17,77 @@ from agent.note_agent import create_note_agent
 from agent.refiner_agent import create_refiner_agent
 
 class WorkflowManager:
-    def __init__(self, lm_manager: LanguageModelManager, working_directory: str):
+    def __init__(self, model_manager, working_directory):
         """
-        Initialize the workflow manager with LanguageModelManager and working directory.
-        
+        Initialize the workflow manager with a language model manager and working directory.
+
         Args:
-            lm_manager (LanguageModelManager): Instance of LanguageModelManager
-            working_directory (str): Path to the working directory
+            model_manager (LanguageModelManager): Instance of the language model manager.
+            working_directory (str): Path to the working directory.
         """
-        self.lm_manager = lm_manager
+        self.model_manager = model_manager # Changed from language_models
         self.working_directory = working_directory
         self.workflow = None
         self.memory = None
         self.graph = None
+        # Ensure agent names here match keys in config.yaml if used for model selection
         self.members = ["Hypothesis", "Process", "Visualization", "Search", "Coder", "Report", "QualityReview", "Refiner"]
         self.agents = self.create_agents()
         self.setup_workflow()
 
     def create_agents(self):
-        """Create all system agents using LanguageModelManager"""
+        """Create all system agents using models from LanguageModelManager"""
+        # Create agents dictionary
         agents = {}
 
-        # Create each agent using their respective creation functions
-        # Pass self.lm_manager and the specific agent_name string
-        
+        # Create each agent using their respective creation functions and models from the manager
         agents["hypothesis_agent"] = create_hypothesis_agent(
-            self.lm_manager, 
-            "hypothesis_agent",
+            self.model_manager.get_model(agent_name='hypothesis_agent'), # Use manager
             self.members,
             self.working_directory
         )
 
         agents["process_agent"] = create_process_agent(
-            self.lm_manager,
-            "process_agent"
-            # Note: create_process_agent signature might need other args if they were implicitly from power_llm before
+            self.model_manager.get_model(agent_name='process_agent') # Use manager
         )
 
         agents["visualization_agent"] = create_visualization_agent(
-            self.lm_manager,
-            "visualization_agent",
+            self.model_manager.get_model(agent_name='visualization_agent'), # Use manager
             self.members,
             self.working_directory
         )
 
         agents["code_agent"] = create_code_agent(
-            self.lm_manager,
-            "code_agent",
+            self.model_manager.get_model(agent_name='code_agent'), # Use manager
             self.members,
             self.working_directory
         )
 
-        # Key "searcher_agent" uses "search_agent" from config
-        agents["searcher_agent"] = create_search_agent(
-            self.lm_manager,
-            "search_agent", 
+        # Renamed key from "searcher_agent" to "search_agent" for consistency
+        agents["search_agent"] = create_search_agent(
+            self.model_manager.get_model(agent_name='search_agent'), # Use manager
             self.members,
             self.working_directory
         )
 
         agents["report_agent"] = create_report_agent(
-            self.lm_manager,
-            "report_agent",
+            self.model_manager.get_model(agent_name='report_agent'), # Use manager
             self.members,
             self.working_directory
         )
 
         agents["quality_review_agent"] = create_quality_review_agent(
-            self.lm_manager,
-            "quality_review_agent",
+            self.model_manager.get_model(agent_name='quality_review_agent'), # Use manager
             self.members,
             self.working_directory
         )
 
         agents["note_agent"] = create_note_agent(
-            self.lm_manager,
-            "note_agent"
+            self.model_manager.get_json_model() # Use manager for JSON model
         )
 
         agents["refiner_agent"] = create_refiner_agent(
-            self.lm_manager,
-            "refiner_agent",
+            self.model_manager.get_model(agent_name='refiner_agent'), # Use manager
             self.members,
             self.working_directory
         )
@@ -107,12 +97,13 @@ class WorkflowManager:
     def setup_workflow(self):
         """Set up the workflow graph"""
         self.workflow = StateGraph(State)
-        
-        # Add nodes
+
+        # Add nodes - Ensure agent names match the keys in self.agents dictionary
         self.workflow.add_node("Hypothesis", lambda state: agent_node(state, self.agents["hypothesis_agent"], "hypothesis_agent"))
         self.workflow.add_node("Process", lambda state: agent_node(state, self.agents["process_agent"], "process_agent"))
         self.workflow.add_node("Visualization", lambda state: agent_node(state, self.agents["visualization_agent"], "visualization_agent"))
-        self.workflow.add_node("Search", lambda state: agent_node(state, self.agents["searcher_agent"], "searcher_agent"))
+        # Updated node name to match agent key
+        self.workflow.add_node("Search", lambda state: agent_node(state, self.agents["search_agent"], "search_agent"))
         self.workflow.add_node("Coder", lambda state: agent_node(state, self.agents["code_agent"], "code_agent"))
         self.workflow.add_node("Report", lambda state: agent_node(state, self.agents["report_agent"], "report_agent"))
         self.workflow.add_node("QualityReview", lambda state: agent_node(state, self.agents["quality_review_agent"], "quality_review_agent"))

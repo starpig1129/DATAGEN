@@ -10,5 +10,8 @@ selenium==4.27.1
 wikipedia==1.4.0
 firecrawl-py==0.0.20
 openai==1.55.3
-langchain-anthropic==0.3.13
-langchain-google-genai==2.1.4
+
+langchain-anthropic
+langchain-google-genai
+
+PyYAML>=6.0.1

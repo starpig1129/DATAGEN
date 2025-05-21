@@ -108,6 +108,39 @@ OPENAI_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 # Used for monitoring the processing
 LANGCHAIN_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
+5. Configure Language Models (`config.yaml`):
+   This file allows you to specify which Large Language Models (LLMs) to use for different parts of the system, such as individual agents.
+
+   - **Create the configuration file:**
+     Copy the example configuration file:
+     ```bash
+     cp config.yaml.example config.yaml
+     ```
+   - **File Structure:**
+     The `config.yaml` file has the following main sections:
+       - `default_model`: Specifies the default LLM provider and model name to use if a specific agent doesn't have one defined.
+       - `agents`: Allows you to assign specific LLM providers and models to individual agents (e.g., `hypothesis_agent`, `code_agent`).
+
+     Example structure (refer to `config.yaml.example` for details):
+     ```yaml
+     default_model:
+       provider: openai
+       model_name: gpt-4o
+
+     agents:
+       hypothesis_agent:
+         provider: anthropic
+         model_name: claude-3-opus-20240229
+       code_agent:
+         provider: google
+         model_name: gemini-1.5-pro-latest
+       # ... other agents
+     ```
+   - **Supported Providers:**
+     Currently supported providers include: `openai`, `anthropic`, `google`, `ollama`.
+   - **API Keys and Services:**
+     - Remember to set the corresponding API keys in your `.env` file for the providers you choose (e.g., `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`). The `OPENAI_API_KEY` is still required for core functionalities.
+     - If using `ollama`, ensure the Ollama service is running locally on your machine.
 ## Usage
 
 ### Using Jupyter Notebook

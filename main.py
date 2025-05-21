@@ -13,9 +13,11 @@ class MultiAgentSystem:
     def __init__(self):
         self.logger = setup_logger()
         self.setup_environment()
+        # Initialize the LanguageModelManager (reads config internally)
         self.lm_manager = LanguageModelManager()
+        # Pass the manager instance to WorkflowManager
         self.workflow_manager = WorkflowManager(
-            lm_manager=self.lm_manager, # Pass the LanguageModelManager instance directly
+            model_manager=self.lm_manager, # Pass the manager instance
             working_directory=WORKING_DIRECTORY
         )
 
