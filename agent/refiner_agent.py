@@ -4,9 +4,20 @@ from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from tools.internet import google_search, scrape_webpages_with_fallback
 from langchain.agents import load_tools
+from logger import setup_logger # Import for logging
 
-def create_refiner_agent(power_llm, members, working_directory):
-    """Create the refiner agent"""
+def create_refiner_agent(language_model_manager, agent_name: str, members, working_directory):
+    """Create the refiner agent using LanguageModelManager"""
+
+    logger = setup_logger() # Get a logger instance
+
+    actual_llm = language_model_manager.get_model_for_agent(agent_name)
+
+    if actual_llm is None:
+        error_msg = f"Failed to retrieve LLM for agent '{agent_name}'. Agent creation aborted."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
     wikipedia = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())
     tools = [
         create_document, 
@@ -37,7 +48,7 @@ def create_refiner_agent(power_llm, members, working_directory):
     After refining the report, submit it for final human review, ensuring it is ready for publication or presentation.
     '''
     return create_agent(
-        power_llm,
+        actual_llm, # Use the fetched LLM
         tools,
         system_prompt,
         members,

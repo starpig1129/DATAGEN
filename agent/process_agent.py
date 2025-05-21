@@ -1,7 +1,18 @@
 from create_agent import create_supervisor
+from logger import setup_logger # Import for logging
 
-def create_process_agent(power_llm):
-    """Create the process/supervisor agent"""
+def create_process_agent(language_model_manager, agent_name: str):
+    """Create the process/supervisor agent using LanguageModelManager"""
+
+    logger = setup_logger() # Get a logger instance
+
+    actual_llm = language_model_manager.get_model_for_agent(agent_name)
+
+    if actual_llm is None:
+        error_msg = f"Failed to retrieve LLM for agent '{agent_name}'. Agent creation aborted."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
     system_prompt = """
     You are a research supervisor responsible for overseeing and coordinating a comprehensive data analysis project, resulting in a complete and cohesive research report. Your primary tasks include:
 
@@ -50,7 +61,7 @@ def create_process_agent(power_llm):
     
     member = ["Visualization", "Search", "Coder", "Report"]
     return create_supervisor(
-        power_llm,
+        actual_llm, # Use the fetched LLM
         system_prompt,
         member
     )

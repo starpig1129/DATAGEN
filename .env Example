@@ -21,3 +21,19 @@ OPENAI_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 # LangChain API key (optional)
 # Used for monitoring the processing
 LANGCHAIN_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# For Anthropic (Claude)
+ANTHROPIC_API_KEY="your_anthropic_api_key_here"
+
+# For Google (Gemini)
+GOOGLE_API_KEY="your_google_api_key_here"
+
+# For Ollama
+OLLAMA_BASE_URL="http://localhost:11434" # Default Ollama API endpoint
+# Add specific Ollama model names if you intend to preload or specify them via environment.
+# Otherwise, model names will be taken from agent_model_config.json
+OLLAMA_MODEL_NAME_NOTE_AGENT="llama3" # Example for note_agent
+OLLAMA_MODEL_NAME_VISUALIZATION_AGENT="llama2" # Example for visualization_agent
+
+# Path to the agent model configuration file (if not hardcoded)
+# AGENT_MODEL_CONFIG_PATH="agent_model_config.json" # Assuming it's in the root

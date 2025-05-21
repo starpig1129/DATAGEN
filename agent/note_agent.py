@@ -1,8 +1,19 @@
 from create_agent import create_note_agent as base_create_note_agent
 from tools.FileEdit import read_document
+from logger import setup_logger # Import for logging
 
-def create_note_agent(json_llm):
-    """Create the note agent"""
+def create_note_agent(language_model_manager, agent_name: str):
+    """Create the note agent using LanguageModelManager"""
+
+    logger = setup_logger() # Get a logger instance
+
+    actual_llm = language_model_manager.get_model_for_agent(agent_name)
+
+    if actual_llm is None:
+        error_msg = f"Failed to retrieve LLM for agent '{agent_name}'. Agent creation aborted."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+        
     tools = [read_document]
     system_prompt = '''
     You are a meticulous research process note-taker. Your main responsibility is to observe, summarize, and document the actions and findings of the research team. Your tasks include:
@@ -16,7 +27,7 @@ def create_note_agent(json_llm):
     Your output should be well-organized and easy to integrate with other project documentation.
     '''
     return base_create_note_agent(
-        json_llm,
+        actual_llm, # Use the fetched LLM
         tools,
         system_prompt    
         )

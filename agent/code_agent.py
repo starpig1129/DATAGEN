@@ -1,9 +1,24 @@
 from create_agent import create_agent
 from tools.basetool import execute_code, execute_command
 from tools.FileEdit import read_document
+from logger import setup_logger # Import for logging
 
-def create_code_agent(power_llm, members, working_directory):
-    """Create the code agent"""
+# Initialize logger for this module if needed, or rely on LMM's logger
+# For simplicity here, errors will be raised, LMM already logs failures.
+# logger = setup_logger(__name__) 
+
+def create_code_agent(language_model_manager, agent_name: str, members, working_directory):
+    """Create the code agent using LanguageModelManager"""
+    
+    logger = setup_logger() # Get a logger instance
+
+    actual_llm = language_model_manager.get_model_for_agent(agent_name)
+    
+    if actual_llm is None:
+        error_msg = f"Failed to retrieve LLM for agent '{agent_name}'. Agent creation aborted."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
     tools = [read_document, execute_code, execute_command]
     system_prompt = """
     You are an expert Python programmer specializing in data processing and analysis. Your main responsibilities include:
@@ -19,7 +34,7 @@ def create_code_agent(power_llm, members, working_directory):
     - Avoid unnecessary complexity; prioritize readability and efficiency.
     """
     return create_agent(
-        power_llm,
+        actual_llm, # Use the fetched LLM
         tools,
         system_prompt,
         members,

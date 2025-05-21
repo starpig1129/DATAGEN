@@ -1,8 +1,19 @@
 from create_agent import create_agent
 from tools.FileEdit import create_document, read_document, edit_document
+from logger import setup_logger # Import for logging
 
-def create_report_agent(power_llm, members, working_directory):
-    """Create the report agent"""
+def create_report_agent(language_model_manager, agent_name: str, members, working_directory):
+    """Create the report agent using LanguageModelManager"""
+
+    logger = setup_logger() # Get a logger instance
+
+    actual_llm = language_model_manager.get_model_for_agent(agent_name)
+
+    if actual_llm is None:
+        error_msg = f"Failed to retrieve LLM for agent '{agent_name}'. Agent creation aborted."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
     tools = [create_document, read_document, edit_document]
     
     system_prompt = """
@@ -20,7 +31,7 @@ def create_report_agent(power_llm, members, working_directory):
     - Cite all sources using APA style and ensure that all findings are supported by evidence.
     """
     return create_agent(
-        power_llm,
+        actual_llm, # Use the fetched LLM
         tools,
         system_prompt,
         members,

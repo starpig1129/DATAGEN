@@ -1,6 +1,8 @@
 from typing import Dict, Any
 from langgraph.graph import StateGraph, END, START
 from langgraph.checkpoint.memory import MemorySaver
+# Import LanguageModelManager for type hinting
+from .language_models import LanguageModelManager 
 from core.state import State
 from core.node import agent_node, human_choice_node, note_agent_node, human_review_node, refiner_node
 from core.router import QualityReview_router, hypothesis_router, process_router
@@ -15,15 +17,15 @@ from agent.note_agent import create_note_agent
 from agent.refiner_agent import create_refiner_agent
 
 class WorkflowManager:
-    def __init__(self, language_models, working_directory):
+    def __init__(self, lm_manager: LanguageModelManager, working_directory: str):
         """
-        Initialize the workflow manager with language models and working directory.
+        Initialize the workflow manager with LanguageModelManager and working directory.
         
         Args:
-            language_models (dict): Dictionary containing language model instances
+            lm_manager (LanguageModelManager): Instance of LanguageModelManager
             working_directory (str): Path to the working directory
         """
-        self.language_models = language_models
+        self.lm_manager = lm_manager
         self.working_directory = working_directory
         self.workflow = None
         self.memory = None
@@ -33,58 +35,69 @@ class WorkflowManager:
         self.setup_workflow()
 
     def create_agents(self):
-        """Create all system agents"""
-        # Get language models
-        llm = self.language_models["llm"]
-        power_llm = self.language_models["power_llm"]
-        json_llm = self.language_models["json_llm"]
-
-        # Create agents dictionary
+        """Create all system agents using LanguageModelManager"""
         agents = {}
 
         # Create each agent using their respective creation functions
+        # Pass self.lm_manager and the specific agent_name string
+        
         agents["hypothesis_agent"] = create_hypothesis_agent(
-            llm, 
+            self.lm_manager, 
+            "hypothesis_agent",
             self.members,
             self.working_directory
         )
 
-        agents["process_agent"] = create_process_agent(power_llm)
+        agents["process_agent"] = create_process_agent(
+            self.lm_manager,
+            "process_agent"
+            # Note: create_process_agent signature might need other args if they were implicitly from power_llm before
+        )
 
         agents["visualization_agent"] = create_visualization_agent(
-            llm,
+            self.lm_manager,
+            "visualization_agent",
             self.members,
             self.working_directory
         )
 
         agents["code_agent"] = create_code_agent(
-            power_llm,
+            self.lm_manager,
+            "code_agent",
             self.members,
             self.working_directory
         )
 
+        # Key "searcher_agent" uses "search_agent" from config
         agents["searcher_agent"] = create_search_agent(
-            llm,
+            self.lm_manager,
+            "search_agent", 
             self.members,
             self.working_directory
         )
 
         agents["report_agent"] = create_report_agent(
-            power_llm,
+            self.lm_manager,
+            "report_agent",
             self.members,
             self.working_directory
         )
 
         agents["quality_review_agent"] = create_quality_review_agent(
-            llm,
+            self.lm_manager,
+            "quality_review_agent",
             self.members,
             self.working_directory
         )
 
-        agents["note_agent"] = create_note_agent(json_llm)
+        agents["note_agent"] = create_note_agent(
+            self.lm_manager,
+            "note_agent"
+        )
 
         agents["refiner_agent"] = create_refiner_agent(
-            power_llm,
+            self.lm_manager,
+            "refiner_agent",
             self.members,
             self.working_directory
         )
