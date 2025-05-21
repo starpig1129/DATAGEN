@@ -211,9 +211,11 @@ def create_supervisor(
 
         # Add specific checks for empty or invalid content
         if not raw_content.strip():
-            logger.warning("LLM output content is empty or whitespace only.")
+            logger.error("LLM output content is empty or whitespace only. Raising ValueError.")
+            raise ValueError("LLM output is empty or contains only whitespace.")
         elif not raw_content.strip().startswith(("{", "[")): # Basic check for JSON start
-             logger.warning(f"LLM output content does not appear to start with valid JSON: {raw_content[:100]}...") # Log first 100 chars
+             logger.error(f"LLM output content does not appear to start with valid JSON: {raw_content[:100]}... Raising ValueError.")
+             raise ValueError(f"LLM output does not appear to be valid JSON. Starts with: {raw_content[:100]}")
 
         return input_data # Return the original data for the next step in the chain
 
