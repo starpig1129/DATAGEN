@@ -18,8 +18,8 @@ export interface MessageMetadata {
   agentType?: string
   confidence?: number
   processingTime?: number
-  sources?: string[]
-  attachments?: string[]
+  sources?: readonly string[]
+  attachments?: readonly string[]
 }
 
 export interface Message {

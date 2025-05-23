@@ -55,7 +55,7 @@
               :class="agent.status"
             >
               <div class="agent-avatar">
-                <el-icon><Robot /></el-icon>
+                <el-icon><Monitor /></el-icon>
               </div>
               <div class="agent-info">
                 <div class="agent-name">{{ agent.name }}</div>
@@ -133,7 +133,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  Robot,
+  Monitor,
   TrendCharts,
   ChatDotRound,
   View,
@@ -142,7 +142,6 @@ import {
   Setting,
   ArrowUp,
   ArrowDown,
-  Monitor,
   DocumentCopy,
   Connection
 } from '@element-plus/icons-vue'
@@ -160,7 +159,7 @@ const systemStats = ref([
     change: '+2',
     trend: 'positive',
     color: '#67c23a',
-    icon: Robot,
+    icon: Monitor,
     trendIcon: ArrowUp
   },
   {
