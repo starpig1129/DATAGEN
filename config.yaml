@@ -1,0 +1,23 @@
+# Example configuration for selecting language models
+
+# Default model settings used if a specific agent/part doesn't have its own configuration
+default_model:
+  provider: openai # Options: 'openai', 'anthropic', 'google', 'ollama'
+  model_name: gpt-4o-mini # Specify the exact model name for the provider
+
+# Specific model configurations for different agents or system parts
+# agents:
+#   code_agent:
+#     provider: anthropic
+#     model_name: claude-3-7-sonnet
+#   report_agent:
+#     provider: google
+#     model_name: gemini-2.0-flash
+#   hypothesis_agent:
+#     provider: google
+#     model_name: gemini-2.0-flash
+  # Add configurations for other agents as needed
+  # e.g.,
+  # search_agent:
+  #   provider: ollama
+  #   model_name: llama3
