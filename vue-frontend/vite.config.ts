@@ -3,7 +3,6 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -82,16 +81,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ['vue', 'vue-router'],
           pinia: ['pinia'],
-          apollo: ['@apollo/client', {
-          '@vue/apollo-composable': [
-            'useQuery',
-            'useMutation',
-            'useSubscription',
-            'useApolloClient',
-            'useResult',
-            'useLoading'
-          ]
-        }, 'graphql'],
+          apollo: ['@apollo/client', '@vue/apollo-composable', 'graphql'],
           ui: ['element-plus', '@element-plus/icons-vue'],
           visualization: ['plotly.js', 'd3'],
           utils: ['marked', 'dompurify', 'dayjs', 'lodash-es']
@@ -113,10 +103,5 @@ export default defineConfig({
         additionalData: `@use "@/assets/styles/variables.scss" as *;`
       }
     }
-  },
-
-  test: {
-    globals: true,
-    environment: 'jsdom'
   }
 })

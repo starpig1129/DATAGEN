@@ -13,16 +13,16 @@
       <!-- 儀表板 -->
       <el-menu-item index="/dashboard" route="/">
         <el-icon><DataBoard /></el-icon>
-        <span>儀表板</span>
+        <span>{{ $t('navigation.dashboard') }}</span>
       </el-menu-item>
 
       <!-- 聊天界面 -->
       <el-menu-item index="/chat" route="/chat">
         <el-icon><ChatDotRound /></el-icon>
-        <span>聊天界面</span>
-        <el-badge 
-          v-if="unreadCount > 0" 
-          :value="unreadCount" 
+        <span>{{ $t('navigation.chat') }}</span>
+        <el-badge
+          v-if="unreadCount > 0"
+          :value="unreadCount"
           :hidden="isCollapsed"
           class="menu-badge"
         />
@@ -32,22 +32,22 @@
       <el-sub-menu index="agents">
         <template #title>
           <el-icon><Monitor /></el-icon>
-          <span>代理管理</span>
+          <span>{{ $t('navigation.agents.title') }}</span>
         </template>
         
         <el-menu-item index="/agents" route="/agents">
           <el-icon><View /></el-icon>
-          <span>代理監控</span>
+          <span>{{ $t('navigation.agents.monitor') }}</span>
         </el-menu-item>
         
         <el-menu-item index="/agents/workflow">
           <el-icon><Connection /></el-icon>
-          <span>工作流</span>
+          <span>{{ $t('navigation.agents.workflow') }}</span>
         </el-menu-item>
         
         <el-menu-item index="/agents/performance">
           <el-icon><TrendCharts /></el-icon>
-          <span>性能分析</span>
+          <span>{{ $t('navigation.agents.performance') }}</span>
         </el-menu-item>
       </el-sub-menu>
 
@@ -55,35 +55,35 @@
       <el-sub-menu index="visualization">
         <template #title>
           <el-icon><PieChart /></el-icon>
-          <span>數據視覺化</span>
+          <span>{{ $t('navigation.visualization.title') }}</span>
         </template>
         
         <el-menu-item index="/visualization" route="/visualization">
           <el-icon><DataAnalysis /></el-icon>
-          <span>圖表分析</span>
+          <span>{{ $t('navigation.visualization.charts') }}</span>
         </el-menu-item>
         
         <el-menu-item index="/visualization/dashboard">
           <el-icon><Grid /></el-icon>
-          <span>儀表板</span>
+          <span>{{ $t('navigation.visualization.dashboard') }}</span>
         </el-menu-item>
         
         <el-menu-item index="/visualization/reports">
           <el-icon><Document /></el-icon>
-          <span>報告生成</span>
+          <span>{{ $t('navigation.visualization.reports') }}</span>
         </el-menu-item>
       </el-sub-menu>
 
       <!-- 文件管理 -->
       <el-menu-item index="/files" route="/files">
         <el-icon><Folder /></el-icon>
-        <span>文件管理</span>
+        <span>{{ $t('navigation.files') }}</span>
       </el-menu-item>
 
       <!-- 系統設置 -->
       <el-menu-item index="/settings" route="/settings">
         <el-icon><Setting /></el-icon>
-        <span>系統設置</span>
+        <span>{{ $t('navigation.settings') }}</span>
       </el-menu-item>
     </el-menu>
 
@@ -100,7 +100,7 @@
 
     <!-- 代理狀態指示器 -->
     <div v-if="!isCollapsed" class="agent-status-panel">
-      <div class="status-title">代理狀態</div>
+      <div class="status-title">{{ $t('navigation.agentStatus') }}</div>
       <div class="status-list">
         <div
           v-for="agent in agentStatus"
@@ -108,7 +108,7 @@
           class="status-item"
         >
           <div class="status-indicator" :class="agent.status"></div>
-          <span class="agent-name">{{ agent.name }}</span>
+          <span class="agent-name">{{ $t(`agents.names.${agent.nameKey}`) }}</span>
         </div>
       </div>
     </div>
@@ -147,14 +147,14 @@ const activeMenuKey = computed(() => route.path)
 
 // 模擬代理狀態數據
 const agentStatus = ref([
-  { id: '1', name: '處理代理', status: 'active' },
-  { id: '2', name: '假設代理', status: 'idle' },
-  { id: '3', name: '搜索代理', status: 'processing' },
-  { id: '4', name: '代碼代理', status: 'idle' },
-  { id: '5', name: '視覺化代理', status: 'active' },
-  { id: '6', name: '報告代理', status: 'idle' },
-  { id: '7', name: '品質審查代理', status: 'idle' },
-  { id: '8', name: '優化代理', status: 'idle' }
+  { id: '1', nameKey: 'processing', status: 'active' },
+  { id: '2', nameKey: 'hypothesis', status: 'idle' },
+  { id: '3', nameKey: 'search', status: 'processing' },
+  { id: '4', nameKey: 'code', status: 'idle' },
+  { id: '5', nameKey: 'visualization', status: 'active' },
+  { id: '6', nameKey: 'report', status: 'idle' },
+  { id: '7', nameKey: 'qualityReview', status: 'idle' },
+  { id: '8', nameKey: 'optimization', status: 'idle' }
 ])
 
 // 方法

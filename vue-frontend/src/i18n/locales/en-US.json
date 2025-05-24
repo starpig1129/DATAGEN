@@ -23,15 +23,54 @@
     "filter": "Filter",
     "export": "Export",
     "import": "Import",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "search": "Search...",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "logout": "Logout"
+  },
+  "app": {
+    "title": "Multi-Agent Data Analysis System"
   },
   "navigation": {
     "dashboard": "Dashboard",
     "chat": "Chat Interface",
     "files": "File Management",
-    "agents": "Agent Monitor",
-    "visualization": "Data Visualization",
-    "settings": "Settings"
+    "agents": {
+      "title": "Agent Management",
+      "monitor": "Agent Monitoring",
+      "workflow": "Workflow",
+      "performance": "Performance Analysis"
+    },
+    "visualization": {
+      "title": "Data Visualization",
+      "charts": "Chart Analysis",
+      "dashboard": "Dashboard",
+      "reports": "Report Generation"
+    },
+    "settings": "System Settings",
+    "agentStatus": "Agent Status",
+    "collapse": "Collapse",
+    "expand": "Expand"
+  },
+  "agents": {
+    "status": {
+      "title": "Agent Status",
+      "active": "Active",
+      "idle": "Idle",
+      "processing": "Processing",
+      "error": "Error"
+    },
+    "names": {
+      "processing": "Processing Agent",
+      "hypothesis": "Hypothesis Agent",
+      "search": "Search Agent",
+      "code": "Code Agent",
+      "visualization": "Visualization Agent",
+      "report": "Report Agent",
+      "qualityReview": "Quality Review Agent",
+      "optimization": "Optimization Agent"
+    }
   },
   "settings": {
     "title": "System Settings",

@@ -23,15 +23,54 @@
     "filter": "篩選",
     "export": "匯出",
     "import": "匯入",
-    "refresh": "重新整理"
+    "refresh": "重新整理",
+    "search": "搜索...",
+    "notifications": "通知",
+    "profile": "個人資料",
+    "logout": "登出"
+  },
+  "app": {
+    "title": "多代理數據分析系統"
   },
   "navigation": {
     "dashboard": "儀表板",
     "chat": "聊天界面",
     "files": "文件管理",
-    "agents": "代理監控",
-    "visualization": "數據視覺化",
-    "settings": "系統設定"
+    "agents": {
+      "title": "代理管理",
+      "monitor": "代理監控",
+      "workflow": "工作流",
+      "performance": "性能分析"
+    },
+    "visualization": {
+      "title": "數據視覺化",
+      "charts": "圖表分析",
+      "dashboard": "儀表板",
+      "reports": "報告生成"
+    },
+    "settings": "系統設置",
+    "agentStatus": "代理狀態",
+    "collapse": "摺疊",
+    "expand": "展開"
+  },
+  "agents": {
+    "status": {
+      "title": "代理狀態",
+      "active": "運行中",
+      "idle": "空閒",
+      "processing": "處理中",
+      "error": "錯誤"
+    },
+    "names": {
+      "processing": "處理代理",
+      "hypothesis": "假設代理",
+      "search": "搜索代理",
+      "code": "代碼代理",
+      "visualization": "視覺化代理",
+      "report": "報告代理",
+      "qualityReview": "品質審查代理",
+      "optimization": "優化代理"
+    }
   },
   "settings": {
     "title": "系統設定",

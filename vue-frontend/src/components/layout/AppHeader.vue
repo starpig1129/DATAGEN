@@ -13,7 +13,7 @@
       <!-- Logo 和標題 -->
       <div class="logo-section">
         <img src="/logo.svg" alt="Logo" class="logo" />
-        <h1 class="app-title">多代理數據分析系統</h1>
+        <h1 class="app-title">{{ $t('app.title') }}</h1>
       </div>
     </div>
 
@@ -21,7 +21,7 @@
       <!-- 搜索框 -->
       <el-input
         v-model="searchQuery"
-        placeholder="搜索..."
+        :placeholder="$t('common.search')"
         :prefix-icon="Search"
         class="search-input"
         clearable
@@ -52,15 +52,15 @@
           <el-dropdown-menu>
             <el-dropdown-item command="profile">
               <el-icon><User /></el-icon>
-              個人資料
+              {{ $t('common.profile') }}
             </el-dropdown-item>
             <el-dropdown-item command="settings">
               <el-icon><Setting /></el-icon>
-              設置
+              {{ $t('navigation.settings') }}
             </el-dropdown-item>
             <el-dropdown-item divided command="logout">
               <el-icon><SwitchButton /></el-icon>
-              登出
+              {{ $t('common.logout') }}
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -70,7 +70,7 @@
     <!-- 通知抽屜 -->
     <el-drawer
       v-model="notificationDrawer"
-      title="通知"
+      :title="$t('common.notifications')"
       direction="rtl"
       size="320px"
     >
