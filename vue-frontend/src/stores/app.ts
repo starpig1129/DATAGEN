@@ -1,6 +1,17 @@
 import { defineStore } from 'pinia'
 import type { AppConfig, User } from '@/types'
 
+// 通知類型定義
+export interface Notification {
+  id: string
+  type: 'success' | 'error' | 'warning' | 'info'
+  title: string
+  message: string
+  duration?: number
+  persistent?: boolean
+  timestamp: number
+}
+
 interface AppState {
   // 應用程式配置
   config: AppConfig
@@ -26,6 +37,9 @@ interface AppState {
   
   // 錯誤狀態
   error: string | null
+  
+  // 通知系統
+  notifications: Notification[]
 }
 
 export const useAppStore = defineStore('app', {
@@ -53,7 +67,8 @@ export const useAppStore = defineStore('app', {
     },
     
     theme: 'light',
-    error: null
+    error: null,
+    notifications: []
   }),
 
   getters: {
@@ -165,7 +180,7 @@ export const useAppStore = defineStore('app', {
         }
         
         const savedLanguage = localStorage.getItem('app_language')
-        if (savedLanguage) {
+        if (savedLanguage && (savedLanguage === 'zh-TW' || savedLanguage === 'en-US')) {
           this.config.language = savedLanguage
         }
       } catch (error) {
@@ -213,6 +228,43 @@ export const useAppStore = defineStore('app', {
       
       // 重定向到登入頁面或首頁
       // router.push('/')
+    },
+    
+    // 通知管理
+    addNotification(notification: Omit<Notification, 'id' | 'timestamp'>) {
+      const id = `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      const newNotification: Notification = {
+        ...notification,
+        id,
+        timestamp: Date.now(),
+        duration: notification.duration ?? 5000
+      }
+      
+      this.notifications.push(newNotification)
+      
+      // 自動移除非持久化通知
+      if (!newNotification.persistent && newNotification.duration && newNotification.duration > 0) {
+        setTimeout(() => {
+          this.removeNotification(id)
+        }, newNotification.duration)
+      }
+      
+      return id
+    },
+    
+    removeNotification(id: string) {
+      const index = this.notifications.findIndex(n => n.id === id)
+      if (index > -1) {
+        this.notifications.splice(index, 1)
+      }
+    },
+    
+    clearAllNotifications() {
+      this.notifications = []
+    },
+    
+    clearNotificationsByType(type: Notification['type']) {
+      this.notifications = this.notifications.filter(n => n.type !== type)
     }
   }
 })

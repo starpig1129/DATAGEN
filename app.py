@@ -4,6 +4,10 @@ from flask import Flask, request, jsonify, send_from_directory, Response # Add R
 from flask_cors import CORS
 # from flask_sse import sse # Remove Flask-SSE import
 import os
+import shutil
+import mimetypes
+from werkzeug.utils import secure_filename
+from datetime import datetime
 from main import MultiAgentSystem
 from core.state import State
 from langchain_core.messages import HumanMessage, AIMessage
@@ -316,15 +320,226 @@ def get_state():
         print("Traceback:", traceback.format_exc())
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# 文件管理API端點
+UPLOAD_FOLDER = 'data_storage'
+ALLOWED_EXTENSIONS = {'txt', 'csv', 'json', 'pdf', 'xlsx', 'xls', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'md', 'py', 'js', 'html', 'css'}
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_file_info(filepath):
+    """獲取文件詳細信息"""
+    try:
+        stat = os.stat(filepath)
+        filename = os.path.basename(filepath)
+        name, ext = os.path.splitext(filename)
+        
+        return {
+            'name': filename,
+            'size': stat.st_size,
+            'extension': ext.lstrip('.'),
+            'mimeType': mimetypes.guess_type(filepath)[0] or 'application/octet-stream',
+            'createdAt': datetime.fromtimestamp(stat.st_ctime).isoformat(),
+            'updatedAt': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            'type': get_file_type(ext.lstrip('.'))
+        }
+    except Exception as e:
+        print(f"Error getting file info for {filepath}: {e}")
+        return None
+
+def get_file_type(extension):
+    """根據副檔名判斷文件類型"""
+    extension = extension.lower()
+    
+    if extension in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+        return 'image'
+    elif extension in ['pdf']:
+        return 'document'
+    elif extension in ['txt', 'md', 'json', 'csv', 'py', 'js', 'html', 'css']:
+        return 'text'
+    elif extension in ['mp4', 'avi', 'mov', 'webm']:
+        return 'video'
+    elif extension in ['mp3', 'wav', 'ogg']:
+        return 'audio'
+    elif extension in ['zip', 'rar', '7z', 'tar', 'gz']:
+        return 'archive'
+    else:
+        return 'other'
+
 @app.route('/api/files', methods=['GET'])
 def get_files():
     try:
-        # List files in data_storage directory
-        if os.path.exists('data_storage'):
-            files = os.listdir('data_storage')
-            return jsonify({"files": files})
-        else:
+        # 確保data_storage目錄存在
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
             return jsonify({"files": []})
+        
+        files = []
+        for filename in os.listdir(UPLOAD_FOLDER):
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            if os.path.isfile(filepath):
+                file_info = get_file_info(filepath)
+                if file_info:
+                    file_info['id'] = f"file_{len(files)}"
+                    file_info['path'] = f"/{UPLOAD_FOLDER}/{filename}"
+                    files.append(file_info)
+        
+        return jsonify({"files": files})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/files/upload', methods=['POST'])
+def upload_files():
+    try:
+        # 確保data_storage目錄存在
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
+        
+        if 'file' not in request.files:
+            return jsonify({"status": "error", "message": "沒有文件被上傳"}), 400
+        
+        uploaded_files = []
+        files = request.files.getlist('file')
+        
+        for file in files:
+            if file.filename == '':
+                continue
+                
+            if not allowed_file(file.filename):
+                return jsonify({
+                    "status": "error",
+                    "message": f"不支援的文件格式: {file.filename}"
+                }), 400
+            
+            # 檢查文件大小
+            file.seek(0, os.SEEK_END)
+            file_size = file.tell()
+            file.seek(0)
+            
+            if file_size > MAX_FILE_SIZE:
+                return jsonify({
+                    "status": "error",
+                    "message": f"文件 {file.filename} 超過大小限制"
+                }), 400
+            
+            # 安全的文件名
+            filename = secure_filename(file.filename)
+            
+            # 處理文件名衝突
+            counter = 1
+            original_filename = filename
+            while os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
+                name, ext = os.path.splitext(original_filename)
+                filename = f"{name}_{counter}{ext}"
+                counter += 1
+            
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(filepath)
+            uploaded_files.append(filename)
+        
+        return jsonify({
+            "status": "success",
+            "message": f"成功上傳 {len(uploaded_files)} 個文件",
+            "files": uploaded_files
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/files/download/<filename>', methods=['GET'])
+def download_file(filename):
+    try:
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if not os.path.exists(filepath):
+            return jsonify({"status": "error", "message": "文件不存在"}), 404
+        
+        return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/files/<filename>', methods=['DELETE'])
+def delete_file(filename):
+    try:
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if not os.path.exists(filepath):
+            return jsonify({"status": "error", "message": "文件不存在"}), 404
+        
+        os.remove(filepath)
+        return jsonify({"status": "success", "message": f"文件 {filename} 已刪除"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/files/<filename>/rename', methods=['PUT'])
+def rename_file(filename):
+    try:
+        data = request.get_json()
+        new_name = data.get('newName')
+        
+        if not new_name:
+            return jsonify({"status": "error", "message": "新文件名不能為空"}), 400
+        
+        # 安全的文件名
+        new_name = secure_filename(new_name)
+        
+        old_path = os.path.join(UPLOAD_FOLDER, filename)
+        new_path = os.path.join(UPLOAD_FOLDER, new_name)
+        
+        if not os.path.exists(old_path):
+            return jsonify({"status": "error", "message": "文件不存在"}), 404
+        
+        if os.path.exists(new_path):
+            return jsonify({"status": "error", "message": "目標文件名已存在"}), 400
+        
+        os.rename(old_path, new_path)
+        return jsonify({"status": "success", "message": f"文件已重命名為 {new_name}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/files/preview/<filename>', methods=['GET'])
+def preview_file(filename):
+    try:
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if not os.path.exists(filepath):
+            return jsonify({"status": "error", "message": "文件不存在"}), 404
+        
+        # 獲取文件類型
+        _, ext = os.path.splitext(filename)
+        file_type = get_file_type(ext.lstrip('.'))
+        
+        if file_type == 'image':
+            return send_from_directory(UPLOAD_FOLDER, filename)
+        else:
+            return jsonify({"status": "error", "message": "不支援預覽此文件類型"}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/files/content/<filename>', methods=['GET'])
+def get_file_content(filename):
+    try:
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if not os.path.exists(filepath):
+            return jsonify({"status": "error", "message": "文件不存在"}), 404
+        
+        # 獲取文件類型
+        _, ext = os.path.splitext(filename)
+        file_type = get_file_type(ext.lstrip('.'))
+        
+        if file_type == 'text':
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return Response(content, mimetype='text/plain')
+        else:
+            return jsonify({"status": "error", "message": "不支援讀取此文件類型"}), 400
+    except UnicodeDecodeError:
+        try:
+            # 嘗試其他編碼
+            with open(filepath, 'r', encoding='gbk') as f:
+                content = f.read()
+            return Response(content, mimetype='text/plain')
+        except:
+            return jsonify({"status": "error", "message": "無法讀取文件內容"}), 400
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
