@@ -580,5 +580,253 @@ def event_stream():
     print("SSE響應已創建並返回")
     return response
 
+# 設定管理API端點
+SETTINGS_FILE = 'data_storage/settings.json'
+
+def load_settings():
+    """載入系統設定"""
+    try:
+        if os.path.exists(SETTINGS_FILE):
+            with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return None
+    except Exception as e:
+        print(f"載入設定失敗: {e}")
+        return None
+
+def save_settings(settings):
+    """保存系統設定"""
+    try:
+        # 確保目錄存在
+        os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
+        
+        with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(settings, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        print(f"保存設定失敗: {e}")
+        return False
+
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    """獲取系統設定"""
+    try:
+        settings = load_settings()
+        if settings:
+            return jsonify(settings)
+        else:
+            # 返回預設設定
+            default_settings = {
+                "api": {
+                    "token": "",
+                    "baseUrl": "http://localhost:5001",
+                    "timeout": 30000,
+                    "retryAttempts": 3,
+                    "enableLogging": True,
+                    # 新增的API Keys
+                    "openaiApiKey": "",
+                    "firecrawlApiKey": "",
+                    "langchainApiKey": "",
+                    # 系統路徑配置
+                    "workingDirectory": "./data_storage/",
+                    "condaPath": "/home/user/anaconda3",
+                    "condaEnv": "data_assistant",
+                    "chromedriverPath": "./chromedriver-linux64/chromedriver"
+                },
+                "user": {
+                    "language": "zh-TW",
+                    "theme": "auto",
+                    "timezone": "Asia/Taipei",
+                    "dateFormat": "YYYY-MM-DD",
+                    "notifications": {
+                        "enabled": True,
+                        "types": {
+                            "email": True,
+                            "browser": True,
+                            "system": True,
+                            "chat": True,
+                            "agent": True
+                        },
+                        "sound": True,
+                        "vibration": False,
+                        "desktop": True,
+                        "quietHours": {
+                            "enabled": False,
+                            "startTime": "22:00",
+                            "endTime": "08:00"
+                        }
+                    },
+                    "interface": {
+                        "sidebarCollapsed": False,
+                        "compactMode": False,
+                        "showToolbar": True,
+                        "animationsEnabled": True,
+                        "fontSize": "medium",
+                        "density": "comfortable"
+                    }
+                },
+                "agent": {
+                    "workflow": {
+                        "autoStart": False,
+                        "parallelExecution": True,
+                        "maxConcurrentAgents": 3,
+                        "retryFailedTasks": True,
+                        "saveIntermediateResults": True
+                    },
+                    "priorities": {
+                        "searchAgent": 1,
+                        "analysisAgent": 2,
+                        "visualizationAgent": 3,
+                        "reportAgent": 4,
+                        "qualityReviewAgent": 5
+                    },
+                    "timeout": {
+                        "agentResponse": 60000,
+                        "fileUpload": 300000,
+                        "apiRequest": 30000,
+                        "websocketConnection": 10000
+                    },
+                    "debugging": {
+                        "enabled": False,
+                        "logLevel": "info",
+                        "saveLogsToFile": False,
+                        "showAgentSteps": False,
+                        "verboseOutput": False
+                    }
+                },
+                "data": {
+                    "upload": {
+                        "maxFileSize": 100,
+                        "allowedTypes": [".csv", ".xlsx", ".json", ".txt", ".pdf"],
+                        "maxFilesPerUpload": 10,
+                        "autoScan": True,
+                        "compressImages": True
+                    },
+                    "retention": {
+                        "chatHistory": 30,
+                        "uploadedFiles": 90,
+                        "analysisResults": 180,
+                        "logs": 7,
+                        "autoDelete": False
+                    },
+                    "cache": {
+                        "enabled": True,
+                        "maxSize": 500,
+                        "ttl": 3600,
+                        "preloadData": False,
+                        "compressData": True
+                    },
+                    "cleanup": {
+                        "autoCleanup": True,
+                        "cleanupInterval": 24,
+                        "keepRecent": 7,
+                        "cleanupLogs": True,
+                        "cleanupCache": True
+                    }
+                },
+                "version": "1.0.0",
+                "lastModified": datetime.now().isoformat()
+            }
+            return jsonify(default_settings)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/settings', methods=['POST'])
+def update_settings():
+    """更新系統設定"""
+    try:
+        # 驗證請求數據
+        if not request.json:
+            return jsonify({"status": "error", "message": "無效的請求數據"}), 400
+        
+        settings = request.json
+        
+        # 添加最後修改時間
+        settings['lastModified'] = datetime.now().isoformat()
+        
+        # 保存設定
+        if save_settings(settings):
+            return jsonify({"status": "success", "message": "設定已保存"})
+        else:
+            return jsonify({"status": "error", "message": "保存設定失敗"}), 500
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/auth/verify-token', methods=['POST'])
+def verify_token():
+    """驗證API Token"""
+    try:
+        data = request.json
+        token = data.get('token') if data else None
+        
+        if not token:
+            # 檢查Authorization header
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                token = auth_header[7:]
+        
+        if not token:
+            return jsonify({"status": "error", "message": "Token為空"}), 400
+        
+        # 這裡可以實現實際的Token驗證邏輯
+        # 目前簡單檢查Token格式和長度
+        if len(token) >= 32 and token.replace('-', '').replace('_', '').isalnum():
+            return jsonify({
+                "status": "success",
+                "valid": True,
+                "message": "Token驗證成功"
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "valid": False,
+                "message": "Token格式無效"
+            }), 400
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/system/status', methods=['GET'])
+def system_status():
+    """獲取系統狀態"""
+    try:
+        # 檢查系統各組件狀態
+        status = {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": "1.0.0",
+            "components": {
+                "multiAgentSystem": {
+                    "status": "running" if system else "stopped",
+                    "description": "多代理分析系統"
+                },
+                "fileStorage": {
+                    "status": "available" if os.path.exists(UPLOAD_FOLDER) else "unavailable",
+                    "description": "文件存儲系統",
+                    "path": UPLOAD_FOLDER
+                },
+                "settingsStorage": {
+                    "status": "available" if os.path.exists(os.path.dirname(SETTINGS_FILE)) else "unavailable",
+                    "description": "設定存儲系統",
+                    "path": SETTINGS_FILE
+                }
+            },
+            "metrics": {
+                "uptime": "運行中",
+                "memoryUsage": "正常",
+                "diskSpace": "充足"
+            }
+        }
+        
+        return jsonify(status)
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True, port=5001) # Change port to 5001

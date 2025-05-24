@@ -81,6 +81,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   Menu,
   Search,
@@ -91,17 +92,22 @@ import {
   Setting,
   SwitchButton
 } from '@element-plus/icons-vue'
+import { useSettingsStore } from '@/stores/settings'
 import NotificationList from '@/components/common/NotificationList.vue'
+
+// Store 和路由
+const settingsStore = useSettingsStore()
+const router = useRouter()
 
 // 響應式數據
 const searchQuery = ref('')
 const notificationDrawer = ref(false)
 const notificationCount = ref(3)
-const isDarkMode = ref(false)
 
 // 計算屬性
 const isMobileDevice = computed(() => window.innerWidth < 768)
 const userAvatar = computed(() => 'https://avatars.githubusercontent.com/u/1?v=4')
+const isDarkMode = computed(() => settingsStore.currentTheme === 'dark')
 
 // 事件處理
 const emit = defineEmits<{
@@ -124,9 +130,8 @@ const showNotifications = () => {
 }
 
 const toggleTheme = () => {
-  isDarkMode.value = !isDarkMode.value
-  // 實現主題切換邏輯
-  document.documentElement.classList.toggle('dark', isDarkMode.value)
+  const newTheme = settingsStore.currentTheme === 'dark' ? 'light' : 'dark'
+  settingsStore.setTheme(newTheme)
 }
 
 const handleUserCommand = (command: string) => {
@@ -135,7 +140,7 @@ const handleUserCommand = (command: string) => {
       console.log('打開個人資料')
       break
     case 'settings':
-      console.log('打開設置')
+      router.push('/settings')
       break
     case 'logout':
       console.log('登出')
@@ -151,9 +156,13 @@ const handleUserCommand = (command: string) => {
   justify-content: space-between;
   height: 64px;
   padding: 0 16px;
-  background-color: var(--el-bg-color);
+  background: var(--el-bg-color);
   border-bottom: 1px solid var(--el-border-color-light);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1000;
 }
 
 .header-left {
@@ -171,6 +180,11 @@ const handleUserCommand = (command: string) => {
 .logo {
   width: 32px;
   height: 32px;
+  transition: transform 0.3s ease;
+}
+
+.logo:hover {
+  transform: rotate(360deg);
 }
 
 .app-title {
@@ -178,6 +192,10 @@ const handleUserCommand = (command: string) => {
   font-weight: 600;
   color: var(--el-text-color-primary);
   margin: 0;
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .header-center {
@@ -199,13 +217,25 @@ const handleUserCommand = (command: string) => {
   gap: 12px;
 }
 
+.theme-toggle {
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+}
+
 .user-avatar {
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
 }
 
 .user-avatar:hover {
   transform: scale(1.1);
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 15px rgba(64, 158, 255, 0.3);
 }
 
 .mobile-menu-btn {
@@ -241,9 +271,39 @@ const handleUserCommand = (command: string) => {
   }
 }
 
-/* 深色主題 */
+/* 深色主題增強 */
 .dark .app-header {
-  background-color: var(--el-bg-color);
-  border-bottom-color: var(--el-border-color-dark);
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.9), rgba(55, 65, 81, 0.9));
+  border-bottom: 1px solid rgba(75, 85, 99, 0.5);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark .app-title {
+  background: linear-gradient(135deg, #60a5fa, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .theme-toggle:hover {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+.dark .user-avatar:hover {
+  border-color: #60a5fa;
+  box-shadow: 0 0 15px rgba(96, 165, 250, 0.4);
+}
+
+/* 毛玻璃效果 */
+.app-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: inherit;
+  backdrop-filter: blur(10px);
+  z-index: -1;
 }
 </style>

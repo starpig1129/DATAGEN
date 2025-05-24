@@ -7,12 +7,30 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAppStore } from '@/stores/app'
+import { useSettingsStore } from '@/stores/settings'
+import { setLocale } from '@/i18n'
 
 // 應用程式 store
 const appStore = useAppStore()
+const settingsStore = useSettingsStore()
+
+// 監聽設定變更，全域應用
+watch(() => settingsStore.currentLanguage, async (newLanguage) => {
+  try {
+    await setLocale(newLanguage)
+    console.log('全域語言已切換為:', newLanguage)
+  } catch (error) {
+    console.error('全域語言切換失敗:', error)
+  }
+})
+
+watch(() => settingsStore.currentTheme, (newTheme) => {
+  settingsStore.applyTheme()
+  console.log('全域主題已切換為:', newTheme)
+})
 
 // 初始化應用程式
 onMounted(() => {

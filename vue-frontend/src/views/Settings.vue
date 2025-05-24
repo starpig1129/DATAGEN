@@ -1,96 +1,1288 @@
 <template>
-  <div class="settings">
+  <div class="settings-page">
+    <!-- 頁面頭部 -->
     <div class="page-header">
-      <h1 class="page-title">系統設置</h1>
-      <p class="page-description">配置系統參數和個人偏好</p>
+      <div class="header-content">
+        <h1 class="page-title">{{ $t('settings.title') }}</h1>
+        <p class="page-description">{{ $t('settings.description') }}</p>
+      </div>
+      
+      <div class="header-actions">
+        <el-button
+          v-if="settingsStore.isDirty"
+          type="primary"
+          :loading="saving"
+          @click="saveSettings"
+        >
+          <el-icon class="mr-1"><Check /></el-icon>
+          {{ $t('settings.actions.save') }}
+        </el-button>
+        
+        <el-dropdown @command="handleCommand">
+          <el-button>
+            <el-icon class="mr-1"><More /></el-icon>
+            更多操作
+            <el-icon class="ml-1"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="reset">
+                <el-icon><RefreshLeft /></el-icon>
+                {{ $t('settings.actions.reset') }}
+              </el-dropdown-item>
+              <el-dropdown-item command="export">
+                <el-icon><Download /></el-icon>
+                {{ $t('settings.actions.export') }}
+              </el-dropdown-item>
+              <el-dropdown-item command="import">
+                <el-icon><Upload /></el-icon>
+                {{ $t('settings.actions.import') }}
+              </el-dropdown-item>
+              <el-dropdown-item divided command="backup">
+                <el-icon><FolderAdd /></el-icon>
+                {{ $t('settings.actions.backup') }}
+              </el-dropdown-item>
+              <el-dropdown-item command="restore">
+                <el-icon><FolderOpened /></el-icon>
+                {{ $t('settings.actions.restore') }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
     </div>
-
-    <div class="settings-container">
-      <el-card class="settings-card" shadow="never">
-        <div class="coming-soon">
-          <el-icon :size="80" color="#909399">
-            <Setting />
-          </el-icon>
-          <h2>系統設置功能開發中</h2>
-          <p>個性化設置和系統配置界面即將上線</p>
-          <div class="features">
-            <el-tag v-for="feature in features" :key="feature" type="info" class="feature-tag">
-              {{ feature }}
-            </el-tag>
+    
+    <!-- 主要內容 -->
+    <div class="settings-content">
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
+        label-position="top"
+        class="settings-form"
+        @submit.prevent="saveSettings"
+      >
+        <!-- API配置區域 -->
+        <SettingsSection
+          :title="$t('settings.sections.api')"
+          :description="$t('settings.api.description')"
+          :icon="Connection"
+          class="mb-6"
+        >
+          <template #actions>
+            <ConnectionTest
+              :disabled="!settingsStore.isApiConfigured"
+              @test-complete="handleConnectionTest"
+            />
+          </template>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- OpenAI API Key (必填) -->
+            <div class="col-span-1 lg:col-span-2">
+              <el-form-item
+                :label="$t('settings.api.openaiApiKey.label')"
+                prop="api.openaiApiKey"
+                :required="true"
+              >
+                <el-input
+                  v-model="formData.api.openaiApiKey"
+                  type="password"
+                  :placeholder="$t('settings.api.openaiApiKey.placeholder')"
+                  show-password
+                  clearable
+                />
+                <div class="form-help">
+                  <el-text size="small" type="info">
+                    {{ $t('settings.api.openaiApiKey.help') }}
+                  </el-text>
+                </div>
+              </el-form-item>
+            </div>
+            
+            <!-- Firecrawl API Key (可選) -->
+            <el-form-item
+              :label="$t('settings.api.firecrawlApiKey.label')"
+              prop="api.firecrawlApiKey"
+            >
+              <el-input
+                v-model="formData.api.firecrawlApiKey"
+                type="password"
+                :placeholder="$t('settings.api.firecrawlApiKey.placeholder')"
+                show-password
+                clearable
+              />
+              <div class="form-help">
+                <el-text size="small" type="info">
+                  {{ $t('settings.api.firecrawlApiKey.help') }}
+                </el-text>
+              </div>
+            </el-form-item>
+            
+            <!-- LangChain API Key (可選) -->
+            <el-form-item
+              :label="$t('settings.api.langchainApiKey.label')"
+              prop="api.langchainApiKey"
+            >
+              <el-input
+                v-model="formData.api.langchainApiKey"
+                type="password"
+                :placeholder="$t('settings.api.langchainApiKey.placeholder')"
+                show-password
+                clearable
+              />
+              <div class="form-help">
+                <el-text size="small" type="info">
+                  {{ $t('settings.api.langchainApiKey.help') }}
+                </el-text>
+              </div>
+            </el-form-item>
+            
+            <el-form-item
+              :label="$t('settings.api.baseUrl.label')"
+              prop="api.baseUrl"
+            >
+              <el-input
+                v-model="formData.api.baseUrl"
+                :placeholder="$t('settings.api.baseUrl.placeholder')"
+                clearable
+              />
+              <div class="form-help">
+                <el-text size="small" type="info">
+                  {{ $t('settings.api.baseUrl.help') }}
+                </el-text>
+              </div>
+            </el-form-item>
+            
+            <el-form-item 
+              :label="$t('settings.api.timeout.label')" 
+              prop="api.timeout"
+            >
+              <el-input-number
+                v-model="formData.api.timeout"
+                :min="1000"
+                :max="300000"
+                :step="1000"
+                controls-position="right"
+                class="w-full"
+              />
+              <div class="form-help">
+                <el-text size="small" type="info">
+                  {{ $t('settings.api.timeout.help') }} ({{ $t('settings.api.timeout.unit') }})
+                </el-text>
+              </div>
+            </el-form-item>
+            
+            <el-form-item 
+              :label="$t('settings.api.retryAttempts.label')" 
+              prop="api.retryAttempts"
+            >
+              <el-input-number
+                v-model="formData.api.retryAttempts"
+                :min="0"
+                :max="10"
+                controls-position="right"
+                class="w-full"
+              />
+              <div class="form-help">
+                <el-text size="small" type="info">
+                  {{ $t('settings.api.retryAttempts.help') }}
+                </el-text>
+              </div>
+            </el-form-item>
+            
+            <el-form-item 
+              :label="$t('settings.api.enableLogging.label')" 
+              prop="api.enableLogging"
+            >
+              <el-switch
+                v-model="formData.api.enableLogging"
+                :active-text="$t('common.yes')"
+                :inactive-text="$t('common.no')"
+              />
+              <div class="form-help">
+                <el-text size="small" type="info">
+                  {{ $t('settings.api.enableLogging.help') }}
+                </el-text>
+              </div>
+            </el-form-item>
           </div>
-        </div>
-      </el-card>
+        </SettingsSection>
+        
+        <!-- 系統路徑配置區域 -->
+        <SettingsSection
+          :title="$t('settings.sections.system')"
+          :description="$t('settings.system.description')"
+          :icon="Setting"
+          class="mb-6"
+        >
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <el-form-item
+              :label="$t('settings.system.workingDirectory.label')"
+              prop="api.workingDirectory"
+            >
+              <el-input
+                v-model="formData.api.workingDirectory"
+                :placeholder="$t('settings.system.workingDirectory.placeholder')"
+                clearable
+              />
+              <div class="form-help">
+                <el-text size="small" type="info">
+                  {{ $t('settings.system.workingDirectory.help') }}
+                </el-text>
+              </div>
+            </el-form-item>
+            
+            <el-form-item
+              :label="$t('settings.system.condaPath.label')"
+              prop="api.condaPath"
+            >
+              <el-input
+                v-model="formData.api.condaPath"
+                :placeholder="$t('settings.system.condaPath.placeholder')"
+                clearable
+              />
+              <div class="form-help">
+                <el-text size="small" type="info">
+                  {{ $t('settings.system.condaPath.help') }}
+                </el-text>
+              </div>
+            </el-form-item>
+            
+            <el-form-item
+              :label="$t('settings.system.condaEnv.label')"
+              prop="api.condaEnv"
+            >
+              <el-input
+                v-model="formData.api.condaEnv"
+                :placeholder="$t('settings.system.condaEnv.placeholder')"
+                clearable
+              />
+              <div class="form-help">
+                <el-text size="small" type="info">
+                  {{ $t('settings.system.condaEnv.help') }}
+                </el-text>
+              </div>
+            </el-form-item>
+            
+            <el-form-item
+              :label="$t('settings.system.chromedriverPath.label')"
+              prop="api.chromedriverPath"
+            >
+              <el-input
+                v-model="formData.api.chromedriverPath"
+                :placeholder="$t('settings.system.chromedriverPath.placeholder')"
+                clearable
+              />
+              <div class="form-help">
+                <el-text size="small" type="info">
+                  {{ $t('settings.system.chromedriverPath.help') }}
+                </el-text>
+              </div>
+            </el-form-item>
+          </div>
+        </SettingsSection>
+        
+        <!-- 用戶偏好區域 -->
+        <SettingsSection
+          :title="$t('settings.sections.user')"
+          :description="$t('settings.user.description')"
+          :icon="User"
+          class="mb-6"
+        >
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="col-span-1 lg:col-span-2">
+              <LanguageSelector
+                v-model="formData.user.language"
+                prop="user.language"
+                @change="handleLanguageChange"
+              />
+            </div>
+            
+            <div class="col-span-1 lg:col-span-2">
+              <ThemeToggle
+                v-model="formData.user.theme"
+                prop="user.theme"
+                @change="handleThemeChange"
+              />
+            </div>
+            
+            <el-form-item 
+              :label="$t('settings.user.timezone.label')" 
+              prop="user.timezone"
+            >
+              <el-select
+                v-model="formData.user.timezone"
+                filterable
+                :placeholder="$t('settings.user.timezone.help')"
+                class="w-full"
+              >
+                <el-option
+                  v-for="tz in availableTimezones"
+                  :key="tz.value"
+                  :value="tz.value"
+                  :label="tz.label"
+                />
+              </el-select>
+            </el-form-item>
+            
+            <el-form-item 
+              :label="$t('settings.user.dateFormat.label')" 
+              prop="user.dateFormat"
+            >
+              <el-select
+                v-model="formData.user.dateFormat"
+                :placeholder="$t('settings.user.dateFormat.help')"
+                class="w-full"
+              >
+                <el-option
+                  v-for="format in availableDateFormats"
+                  :key="format.value"
+                  :value="format.value"
+                  :label="format.label"
+                />
+              </el-select>
+            </el-form-item>
+          </div>
+          
+          <!-- 通知設定 -->
+          <div class="mt-8">
+            <h4 class="section-subtitle">{{ $t('settings.user.notifications.title') }}</h4>
+            
+            <div class="notification-settings">
+              <el-form-item prop="user.notifications.enabled">
+                <el-switch
+                  v-model="formData.user.notifications.enabled"
+                  :active-text="$t('settings.user.notifications.enabled')"
+                  :inactive-text="$t('common.no')"
+                  inline-prompt
+                />
+              </el-form-item>
+              
+              <div v-if="formData.user.notifications.enabled" class="notification-types">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <el-form-item
+                    v-for="(label, type) in notificationTypeLabels"
+                    :key="type"
+                    :prop="`user.notifications.types.${type}`"
+                  >
+                    <el-checkbox
+                      v-model="formData.user.notifications.types[type]"
+                      :label="label"
+                    />
+                  </el-form-item>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                  <el-form-item prop="user.notifications.sound">
+                    <el-checkbox
+                      v-model="formData.user.notifications.sound"
+                      :label="$t('settings.user.notifications.sound')"
+                    />
+                  </el-form-item>
+                  
+                  <el-form-item prop="user.notifications.vibration">
+                    <el-checkbox
+                      v-model="formData.user.notifications.vibration"
+                      :label="$t('settings.user.notifications.vibration')"
+                    />
+                  </el-form-item>
+                  
+                  <el-form-item prop="user.notifications.desktop">
+                    <el-checkbox
+                      v-model="formData.user.notifications.desktop"
+                      :label="$t('settings.user.notifications.desktop')"
+                    />
+                  </el-form-item>
+                </div>
+                
+                <!-- 靜音時段 -->
+                <div class="quiet-hours mt-6">
+                  <el-form-item prop="user.notifications.quietHours.enabled">
+                    <el-checkbox
+                      v-model="formData.user.notifications.quietHours.enabled"
+                      :label="$t('settings.user.notifications.quietHours.title')"
+                    />
+                  </el-form-item>
+                  
+                  <div v-if="formData.user.notifications.quietHours.enabled" class="grid grid-cols-2 gap-4 mt-4">
+                    <el-form-item 
+                      :label="$t('settings.user.notifications.quietHours.startTime')"
+                      prop="user.notifications.quietHours.startTime"
+                    >
+                      <el-time-picker
+                        v-model="formData.user.notifications.quietHours.startTime"
+                        format="HH:mm"
+                        value-format="HH:mm"
+                        :placeholder="$t('settings.user.notifications.quietHours.startTime')"
+                        class="w-full"
+                      />
+                    </el-form-item>
+                    
+                    <el-form-item 
+                      :label="$t('settings.user.notifications.quietHours.endTime')"
+                      prop="user.notifications.quietHours.endTime"
+                    >
+                      <el-time-picker
+                        v-model="formData.user.notifications.quietHours.endTime"
+                        format="HH:mm"
+                        value-format="HH:mm"
+                        :placeholder="$t('settings.user.notifications.quietHours.endTime')"
+                        class="w-full"
+                      />
+                    </el-form-item>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 界面設定 -->
+          <div class="mt-8">
+            <h4 class="section-subtitle">{{ $t('settings.user.interface.title') }}</h4>
+            
+            <div class="interface-settings grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <el-form-item prop="user.interface.sidebarCollapsed">
+                <el-checkbox
+                  v-model="formData.user.interface.sidebarCollapsed"
+                  :label="$t('settings.user.interface.sidebarCollapsed')"
+                />
+              </el-form-item>
+              
+              <el-form-item prop="user.interface.compactMode">
+                <el-checkbox
+                  v-model="formData.user.interface.compactMode"
+                  :label="$t('settings.user.interface.compactMode')"
+                />
+              </el-form-item>
+              
+              <el-form-item prop="user.interface.showToolbar">
+                <el-checkbox
+                  v-model="formData.user.interface.showToolbar"
+                  :label="$t('settings.user.interface.showToolbar')"
+                />
+              </el-form-item>
+              
+              <el-form-item prop="user.interface.animationsEnabled">
+                <el-checkbox
+                  v-model="formData.user.interface.animationsEnabled"
+                  :label="$t('settings.user.interface.animationsEnabled')"
+                />
+              </el-form-item>
+              
+              <el-form-item 
+                :label="$t('settings.user.interface.fontSize.label')"
+                prop="user.interface.fontSize"
+              >
+                <el-select
+                  v-model="formData.user.interface.fontSize"
+                  class="w-full"
+                >
+                  <el-option
+                    value="small"
+                    :label="$t('settings.user.interface.fontSize.small')"
+                  />
+                  <el-option
+                    value="medium"
+                    :label="$t('settings.user.interface.fontSize.medium')"
+                  />
+                  <el-option
+                    value="large"
+                    :label="$t('settings.user.interface.fontSize.large')"
+                  />
+                </el-select>
+              </el-form-item>
+              
+              <el-form-item 
+                :label="$t('settings.user.interface.density.label')"
+                prop="user.interface.density"
+              >
+                <el-select
+                  v-model="formData.user.interface.density"
+                  class="w-full"
+                >
+                  <el-option
+                    value="comfortable"
+                    :label="$t('settings.user.interface.density.comfortable')"
+                  />
+                  <el-option
+                    value="compact"
+                    :label="$t('settings.user.interface.density.compact')"
+                  />
+                  <el-option
+                    value="spacious"
+                    :label="$t('settings.user.interface.density.spacious')"
+                  />
+                </el-select>
+              </el-form-item>
+            </div>
+          </div>
+        </SettingsSection>
+        
+        <!-- 代理設定區域 -->
+        <SettingsSection
+          :title="$t('settings.sections.agent')"
+          :description="$t('settings.agent.description')"
+          :icon="Robot"
+          class="mb-6"
+        >
+          <AgentSettings
+            v-model="formData.agent"
+            @change="handleAgentSettingsChange"
+          />
+        </SettingsSection>
+        
+        <!-- 數據設定區域 -->
+        <SettingsSection
+          :title="$t('settings.sections.data')"
+          :description="$t('settings.data.description')"
+          :icon="Database"
+          class="mb-6"
+        >
+          <DataSettings
+            v-model="formData.data"
+            @change="handleDataSettingsChange"
+          />
+        </SettingsSection>
+      </el-form>
     </div>
+    
+    <!-- 固定底部操作欄 -->
+    <div v-if="settingsStore.isDirty" class="fixed-actions">
+      <div class="actions-content">
+        <div class="actions-info">
+          <el-icon><InfoFilled /></el-icon>
+          <span>您有未保存的修改</span>
+        </div>
+        <div class="actions-buttons">
+          <el-button @click="cancelChanges">
+            {{ $t('settings.actions.cancel') }}
+          </el-button>
+          <el-button 
+            type="primary" 
+            :loading="saving"
+            @click="saveSettings"
+          >
+            {{ $t('settings.actions.save') }}
+          </el-button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 文件上傳輸入 -->
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept=".json"
+      style="display: none"
+      @change="handleFileImport"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { Setting } from '@element-plus/icons-vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
+import {
+  Check,
+  More,
+  ArrowDown,
+  RefreshLeft,
+  Download,
+  Upload,
+  FolderAdd,
+  FolderOpened,
+  Connection,
+  User,
+  InfoFilled,
+  Setting
+} from '@element-plus/icons-vue'
+import { Setting as Robot, DataBoard as Database } from '@element-plus/icons-vue'
+import { useSettingsStore } from '@/stores/settings'
+import { setLocale, getCurrentLocale } from '@/i18n'
+import type { Settings, LanguageCode, NotificationType } from '@/types/settings'
 
-const features = [
-  '主題設置',
-  '語言切換',
-  '通知配置',
-  '用戶偏好',
-  '系統參數'
+// 組件
+import SettingsSection from '@/components/settings/SettingsSection.vue'
+import LanguageSelector from '@/components/settings/LanguageSelector.vue'
+import ThemeToggle from '@/components/settings/ThemeToggle.vue'
+import ConnectionTest from '@/components/settings/ConnectionTest.vue'
+import AgentSettings from '@/components/settings/AgentSettings.vue'
+import DataSettings from '@/components/settings/DataSettings.vue'
+
+const { t } = useI18n()
+const settingsStore = useSettingsStore()
+
+// 表單引用
+const formRef = ref<FormInstance>()
+const fileInputRef = ref<HTMLInputElement>()
+
+// 狀態
+const saving = ref(false)
+const loading = ref(false)
+
+// 表單數據
+const formData = reactive<Settings>({ ...settingsStore.settings })
+
+// 同步設定到表單
+watch(() => settingsStore.settings, (newSettings) => {
+  Object.assign(formData, newSettings)
+}, { deep: true })
+
+// 監聽表單變化標記為髒數據（防抖處理）
+let markDirtyTimeout: number | null = null
+watch(formData, () => {
+  if (markDirtyTimeout) {
+    clearTimeout(markDirtyTimeout)
+  }
+  markDirtyTimeout = setTimeout(() => {
+    settingsStore.markDirty()
+  }, 300) // 300ms防抖
+}, { deep: true })
+
+// 語言變更通過LanguageSelector組件的@change事件處理，避免重複監聽
+
+// 監聽主題變更，即時應用
+watch(() => formData.user.theme, (newTheme) => {
+  settingsStore.setTheme(newTheme)
+  console.log('主題已切換為:', newTheme)
+})
+
+// 可用時區
+const availableTimezones = computed(() => {
+  // 常用時區列表
+  const commonTimezones = [
+    'Asia/Taipei',
+    'Asia/Shanghai',
+    'Asia/Hong_Kong',
+    'Asia/Tokyo',
+    'Asia/Seoul',
+    'America/New_York',
+    'America/Los_Angeles',
+    'Europe/London',
+    'Europe/Paris',
+    'UTC'
+  ]
+  
+  return commonTimezones.map((tz: string) => ({
+    value: tz,
+    label: tz.replace(/_/g, ' ')
+  }))
+})
+
+// 可用日期格式
+const availableDateFormats = [
+  { value: 'YYYY-MM-DD', label: '2024-01-15 (YYYY-MM-DD)' },
+  { value: 'DD/MM/YYYY', label: '15/01/2024 (DD/MM/YYYY)' },
+  { value: 'MM/DD/YYYY', label: '01/15/2024 (MM/DD/YYYY)' },
+  { value: 'DD-MM-YYYY', label: '15-01-2024 (DD-MM-YYYY)' }
 ]
+
+// 通知類型標籤
+const notificationTypeLabels = computed(() => ({
+  email: t('settings.user.notifications.types.email'),
+  browser: t('settings.user.notifications.types.browser'),
+  system: t('settings.user.notifications.types.system'),
+  chat: t('settings.user.notifications.types.chat'),
+  agent: t('settings.user.notifications.types.agent')
+}))
+
+// 表單驗證規則
+const formRules = {
+  'api.openaiApiKey': [
+    { required: true, message: t('settings.validation.required'), trigger: 'blur' },
+    { min: 32, message: t('settings.api.token.tooShort'), trigger: 'blur' },
+    { pattern: /^sk-[A-Za-z0-9]+$/, message: t('settings.api.token.invalidFormat'), trigger: 'blur' }
+  ],
+  'api.baseUrl': [
+    { required: true, message: t('settings.validation.required'), trigger: 'blur' },
+    { pattern: /^https?:\/\/.+/, message: t('settings.validation.invalidUrl'), trigger: 'blur' }
+  ]
+}
+
+// 保存設定
+const saveSettings = async () => {
+  if (!formRef.value) return
+
+  try {
+    // 跳過表單驗證，直接保存
+    saving.value = true
+    
+    console.log('保存設定數據:', formData)
+    
+    // 更新設定store
+    settingsStore.updateApiConfig(formData.api)
+    settingsStore.updateUserPreferences(formData.user)
+    settingsStore.updateAgentSettings(formData.agent)
+    settingsStore.updateDataSettings(formData.data)
+    
+    // 應用語言變更
+    if (formData.user.language !== settingsStore.currentLanguage) {
+      await setLocale(formData.user.language)
+    }
+    
+    // 保存到本地和服務器
+    await settingsStore.saveSettings()
+    
+    // 清除防抖計時器
+    if (markDirtyTimeout) {
+      clearTimeout(markDirtyTimeout)
+      markDirtyTimeout = null
+    }
+    
+    ElMessage.success(t('settings.messages.saveSuccess'))
+  } catch (error) {
+    console.error('保存設定失敗:', error)
+    ElMessage.error(t('settings.messages.saveFailed', {
+      error: error instanceof Error ? error.message : '未知錯誤'
+    }))
+  } finally {
+    saving.value = false
+  }
+}
+
+// 取消修改
+const cancelChanges = () => {
+  // 清除防抖計時器
+  if (markDirtyTimeout) {
+    clearTimeout(markDirtyTimeout)
+    markDirtyTimeout = null
+  }
+  Object.assign(formData, settingsStore.settings)
+  settingsStore.isDirty = false
+}
+
+// 處理命令
+const handleCommand = async (command: string) => {
+  switch (command) {
+    case 'reset':
+      await handleReset()
+      break
+    case 'export':
+      handleExport()
+      break
+    case 'import':
+      handleImport()
+      break
+    case 'backup':
+      handleBackup()
+      break
+    case 'restore':
+      await handleRestore()
+      break
+  }
+}
+
+// 重置設定
+const handleReset = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '確定要重置所有設定為預設值嗎？此操作無法撤銷。',
+      '重置設定',
+      {
+        type: 'warning',
+        confirmButtonText: '確定重置',
+        cancelButtonText: '取消'
+      }
+    )
+    
+    settingsStore.resetToDefaults()
+    Object.assign(formData, settingsStore.settings)
+    ElMessage.success(t('settings.messages.resetSuccess'))
+  } catch {
+    // 用戶取消
+  }
+}
+
+// 匯出設定
+const handleExport = () => {
+  const exportData = settingsStore.exportSettings()
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
+    type: 'application/json' 
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `settings-export-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success(t('settings.messages.exportSuccess'))
+}
+
+// 匯入設定
+const handleImport = () => {
+  fileInputRef.value?.click()
+}
+
+// 處理文件匯入
+const handleFileImport = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (!file) return
+  
+  try {
+    const text = await file.text()
+    const importData = JSON.parse(text)
+    
+    await settingsStore.importSettings(importData)
+    Object.assign(formData, settingsStore.settings)
+    
+    ElMessage.success(t('settings.messages.importSuccess'))
+  } catch (error) {
+    ElMessage.error(t('settings.messages.importFailed', { 
+      error: error instanceof Error ? error.message : '文件格式錯誤' 
+    }))
+  } finally {
+    // 清除文件輸入
+    target.value = ''
+  }
+}
+
+// 創建備份
+const handleBackup = () => {
+  settingsStore.createBackup()
+  ElMessage.success(t('settings.messages.backupCreated'))
+}
+
+// 恢復備份
+const handleRestore = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '確定要從備份恢復設定嗎？當前設定將被覆蓋。',
+      '恢復備份',
+      {
+        type: 'warning',
+        confirmButtonText: '確定恢復',
+        cancelButtonText: '取消'
+      }
+    )
+    
+    const restored = settingsStore.restoreBackup()
+    if (restored) {
+      Object.assign(formData, settingsStore.settings)
+      ElMessage.success(t('settings.messages.backupRestored'))
+    } else {
+      ElMessage.warning('未找到備份文件')
+    }
+  } catch {
+    // 用戶取消
+  }
+}
+
+// 處理連接測試
+const handleConnectionTest = (result: any) => {
+  console.log('Connection test result:', result)
+}
+
+
+// 處理語言切換
+const handleLanguageChange = async (language: LanguageCode) => {
+  try {
+    await setLocale(language)
+    settingsStore.setLanguage(language)
+    console.log('語言已切換為:', language)
+    ElMessage.success(`語言已切換為${language}`)
+  } catch (error) {
+    console.error('語言切換失敗:', error)
+    ElMessage.error('語言切換失敗')
+  }
+}
+
+// 處理主題切換
+const handleThemeChange = (theme: string) => {
+  settingsStore.applyTheme()
+  ElMessage.success(`主題已切換為${theme}`)
+}
+
+// 處理代理設定變更
+const handleAgentSettingsChange = (agentSettings: typeof formData.agent) => {
+  console.log('Agent settings changed:', agentSettings)
+}
+
+// 處理數據設定變更
+const handleDataSettingsChange = (dataSettings: typeof formData.data) => {
+  console.log('Data settings changed:', dataSettings)
+}
+
+// 頁面離開前提醒
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (settingsStore.isDirty) {
+    e.preventDefault()
+    e.returnValue = t('settings.messages.unsavedChanges')
+  }
+}
+
+// 生命週期
+onMounted(async () => {
+  loading.value = true
+  try {
+    await settingsStore.initialize()
+    Object.assign(formData, settingsStore.settings)
+    
+    // 確保語言設定正確應用
+    if (formData.user.language) {
+      await setLocale(formData.user.language)
+    }
+    
+    // 確保主題設定正確應用
+    settingsStore.applyTheme()
+  } catch (error) {
+    ElMessage.error('設定初始化失敗')
+  } finally {
+    loading.value = false
+  }
+  
+  // 監聽頁面離開
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
 </script>
 
 <style scoped>
-.settings {
-  padding: 0;
+.settings-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding-bottom: 120px; /* 為固定底部操作欄留出更多空間 */
+  transition: all 0.3s ease;
 }
 
 .page-header {
-  margin-bottom: 24px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 24px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.header-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 16px;
 }
 
 .page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  margin: 0 0 8px 0;
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .page-description {
-  color: var(--el-text-color-regular);
-  margin: 0;
+  color: #64748b;
+  margin-top: 8px;
+  margin-bottom: 0;
+  font-size: 1.1rem;
 }
 
-.settings-container {
-  height: calc(100vh - 200px);
-}
-
-.settings-card {
-  height: 100%;
+.header-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
 }
 
-.coming-soon {
-  text-align: center;
-  padding: 48px;
+.settings-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
 }
 
-.coming-soon h2 {
-  margin: 24px 0 16px 0;
-  color: var(--el-text-color-primary);
-}
-
-.coming-soon p {
-  color: var(--el-text-color-regular);
-  margin-bottom: 32px;
-}
-
-.features {
+.settings-form {
   display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 32px;
 }
 
-.feature-tag {
-  margin: 4px;
+.section-subtitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+}
+
+.form-help {
+  margin-top: 4px;
+}
+
+.form-help .el-text {
+  color: #64748b;
+}
+
+.notification-settings,
+.interface-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.notification-types {
+  margin-top: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.05), rgba(103, 194, 58, 0.05));
+  border-radius: 12px;
+  border: 1px solid rgba(64, 158, 255, 0.1);
+  backdrop-filter: blur(5px);
+}
+
+.quiet-hours {
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1));
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  backdrop-filter: blur(5px);
+}
+
+.fixed-actions {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 16px 24px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  min-height: 80px;
+}
+
+.actions-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.actions-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 深色主題增強 */
+.dark .settings-page {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.dark .page-header {
+  background: rgba(30, 41, 59, 0.95);
+  border-bottom-color: rgba(75, 85, 99, 0.5);
+}
+
+.dark .page-title {
+  background: linear-gradient(135deg, #60a5fa, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .page-description {
+  color: #94a3b8;
+}
+
+.dark .section-subtitle {
+  background: linear-gradient(135deg, #60a5fa, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .notification-types {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(52, 211, 153, 0.1));
+  border-color: rgba(96, 165, 250, 0.2);
+}
+
+.dark .quiet-hours {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(16, 185, 129, 0.15));
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.dark .fixed-actions {
+  background: rgba(30, 41, 59, 0.98);
+  border-top-color: rgba(75, 85, 99, 0.5);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.dark .actions-info {
+  color: #fbbf24;
+}
+
+/* 深色模式下的字體顏色修復 */
+.dark .form-help :deep(.el-text) {
+  color: #94a3b8 !important;
+}
+
+.dark :deep(.el-form-item__label) {
+  color: #f1f5f9 !important;
+}
+
+.dark :deep(.el-input__inner) {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #f9fafb !important;
+}
+
+.dark :deep(.el-input__inner::placeholder) {
+  color: #9ca3af !important;
+}
+
+.dark :deep(.el-select .el-input__inner) {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #f9fafb !important;
+}
+
+.dark :deep(.el-checkbox__label) {
+  color: #f1f5f9 !important;
+}
+
+.dark :deep(.el-text) {
+  color: #94a3b8 !important;
+}
+
+.dark :deep(.el-text--info) {
+  color: #94a3b8 !important;
+}
+
+.dark :deep(.el-text--success) {
+  color: #34d399 !important;
+}
+
+.dark :deep(.el-text--danger) {
+  color: #f87171 !important;
+}
+
+.dark :deep(.el-radio__label) {
+  color: #f1f5f9 !important;
+}
+
+.dark :deep(.el-switch__label) {
+  color: #f1f5f9 !important;
+}
+
+.dark :deep(.el-input-number .el-input__inner) {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #f9fafb !important;
+}
+
+.dark :deep(.el-time-picker .el-input__inner) {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #f9fafb !important;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+  .page-header {
+    padding: 16px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .header-actions {
+    align-self: stretch;
+  }
+  
+  .settings-content {
+    padding: 16px;
+  }
+  
+  .page-title {
+    font-size: 1.75rem;
+  }
+  
+  .actions-content {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .actions-buttons {
+    align-self: stretch;
+  }
+  
+  .fixed-actions {
+    padding: 12px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .settings-form {
+    gap: 24px;
+  }
+  
+  .notification-types,
+  .quiet-hours {
+    padding: 16px;
+  }
+}
+
+/* 過渡動畫 */
+.settings-page * {
+  transition: all 0.3s ease;
+}
+
+/* 美化按鈕 */
+.header-actions .el-button {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.header-actions .el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+}
+
+.actions-buttons .el-button {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 12px 24px;
+  transition: all 0.3s ease;
+}
+
+.actions-buttons .el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+}
+
+.actions-buttons .el-button--primary {
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  border: none;
+}
+
+.actions-buttons .el-button--primary:hover {
+  background: linear-gradient(135deg, #66b1ff, #85ce61);
 }
 </style>

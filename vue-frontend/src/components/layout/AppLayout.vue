@@ -59,7 +59,8 @@ defineExpose({
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background-color: var(--el-bg-color);
+  background: var(--el-bg-color);
+  transition: background-color 0.3s ease;
 }
 
 .app-body {
@@ -72,7 +73,8 @@ defineExpose({
   flex: 1;
   overflow: auto;
   padding: 16px;
-  background-color: var(--el-bg-color-page);
+  background: var(--el-bg-color-page);
+  transition: background-color 0.3s ease;
 }
 
 /* 移動端適配 */
@@ -82,12 +84,50 @@ defineExpose({
   }
 }
 
-/* 深色主題支持 */
+/* 深色主題優化配色 */
 .dark .app-layout {
-  background-color: var(--el-bg-color);
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
 }
 
 .dark .app-main {
-  background-color: var(--el-bg-color-page);
+  background: rgba(31, 41, 55, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+/* 滾動條美化 */
+.app-main::-webkit-scrollbar {
+  width: 8px;
+}
+
+.app-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-main::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.app-main::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+.dark .app-main::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.6);
+}
+
+.dark .app-main::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.8);
+}
+
+/* 移動端抽屜優化 */
+.mobile-sidebar {
+  --el-drawer-bg-color: var(--el-bg-color);
+}
+
+.dark .mobile-sidebar {
+  --el-drawer-bg-color: rgba(31, 41, 55, 0.95);
+  backdrop-filter: blur(20px);
 }
 </style>

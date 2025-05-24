@@ -30,14 +30,14 @@ export default defineConfig({
           ]
         }
       ],
-      resolvers: [ElementPlusResolver()],
+      // 移除 ElementPlusResolver 避免自動導入衝突
       dts: true,
       eslintrc: {
         enabled: true
       }
     }),
     Components({
-      resolvers: [ElementPlusResolver()],
+      // 移除 ElementPlusResolver 避免自動導入衝突
       dts: true
     })
   ],

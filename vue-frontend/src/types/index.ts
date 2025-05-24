@@ -5,6 +5,7 @@ export * from './agent'
 export * from './chat'
 export * from './file'
 export * from './visualization'
+export * from './settings'
 
 // 系統狀態相關類型
 export interface SystemState {

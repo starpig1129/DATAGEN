@@ -167,11 +167,25 @@ const toggleCollapse = () => {
 .app-sidebar {
   width: 260px;
   height: 100%;
-  background-color: var(--el-bg-color);
+  background: var(--el-bg-color);
   border-right: 1px solid var(--el-border-color-light);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s ease;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(64, 158, 255, 0.05) 100%);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
 }
 
 .app-sidebar.collapsed {
@@ -181,32 +195,79 @@ const toggleCollapse = () => {
 .sidebar-menu {
   flex: 1;
   border-right: none;
+  background: transparent !important;
 }
 
 .sidebar-menu .el-menu-item {
   position: relative;
+  margin: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-menu .el-menu-item:hover {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.1), rgba(103, 194, 58, 0.1)) !important;
+  transform: translateX(4px);
+}
+
+.sidebar-menu .el-menu-item.is-active {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.15), rgba(103, 194, 58, 0.15)) !important;
+  border-left: 3px solid var(--el-color-primary);
+}
+
+.sidebar-menu .el-sub-menu .el-sub-menu__title {
+  margin: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-menu .el-sub-menu .el-sub-menu__title:hover {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.1), rgba(103, 194, 58, 0.1)) !important;
+  transform: translateX(4px);
 }
 
 .menu-badge {
   position: absolute;
   top: 8px;
   right: 16px;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
 }
 
 .sidebar-footer {
   padding: 16px;
   text-align: center;
   border-top: 1px solid var(--el-border-color-lighter);
+  background: rgba(64, 158, 255, 0.05);
 }
 
 .collapse-btn {
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  border: none;
+  color: white;
+}
+
+.collapse-btn:hover {
+  transform: scale(1.1) rotate(180deg);
 }
 
 .agent-status-panel {
   padding: 16px;
   border-top: 1px solid var(--el-border-color-lighter);
-  background-color: var(--el-bg-color-page);
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.05), rgba(103, 194, 58, 0.05));
+  backdrop-filter: blur(5px);
 }
 
 .status-title {
@@ -214,6 +275,10 @@ const toggleCollapse = () => {
   font-weight: 600;
   color: var(--el-text-color-primary);
   margin-bottom: 12px;
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .status-list {
@@ -227,6 +292,14 @@ const toggleCollapse = () => {
   align-items: center;
   gap: 8px;
   font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.status-item:hover {
+  background: rgba(64, 158, 255, 0.1);
+  transform: translateX(2px);
 }
 
 .status-indicator {
@@ -234,24 +307,50 @@ const toggleCollapse = () => {
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+  position: relative;
+}
+
+.status-indicator::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 50%;
+  opacity: 0.3;
+  background: inherit;
+  animation: ripple 2s infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
 
 .status-indicator.active {
-  background-color: var(--el-color-success);
-  box-shadow: 0 0 4px var(--el-color-success);
+  background-color: #67c23a;
+  box-shadow: 0 0 8px rgba(103, 194, 58, 0.5);
 }
 
 .status-indicator.processing {
-  background-color: var(--el-color-warning);
+  background-color: #e6a23c;
   animation: pulse 2s infinite;
 }
 
 .status-indicator.idle {
-  background-color: var(--el-color-info);
+  background-color: #909399;
 }
 
 .status-indicator.error {
-  background-color: var(--el-color-danger);
+  background-color: #f56c6c;
+  box-shadow: 0 0 8px rgba(245, 108, 108, 0.5);
 }
 
 .agent-name {
@@ -259,14 +358,21 @@ const toggleCollapse = () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.3s ease;
+}
+
+.status-item:hover .agent-name {
+  color: var(--el-text-color-primary);
 }
 
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
+    transform: scale(1);
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.7;
+    transform: scale(1.1);
   }
 }
 
@@ -283,15 +389,54 @@ const toggleCollapse = () => {
   display: none;
 }
 
-/* 深色主題 */
+/* 深色主題增強 */
 .dark .app-sidebar {
-  background-color: var(--el-bg-color);
-  border-right-color: var(--el-border-color-dark);
+  background: linear-gradient(180deg, rgba(31, 41, 55, 0.95), rgba(55, 65, 81, 0.95));
+  border-right: 1px solid rgba(75, 85, 99, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.dark .app-sidebar::before {
+  background: linear-gradient(180deg, transparent 0%, rgba(96, 165, 250, 0.1) 100%);
+}
+
+.dark .sidebar-menu .el-menu-item:hover {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(52, 211, 153, 0.15)) !important;
+}
+
+.dark .sidebar-menu .el-menu-item.is-active {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.2), rgba(52, 211, 153, 0.2)) !important;
+  border-left-color: #60a5fa;
+}
+
+.dark .sidebar-footer {
+  border-top-color: rgba(75, 85, 99, 0.5);
+  background: rgba(96, 165, 250, 0.1);
+}
+
+.dark .collapse-btn {
+  background: linear-gradient(135deg, #60a5fa, #34d399);
 }
 
 .dark .agent-status-panel {
-  background-color: var(--el-bg-color-page);
-  border-top-color: var(--el-border-color-dark);
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(52, 211, 153, 0.1));
+  border-top-color: rgba(75, 85, 99, 0.5);
+}
+
+.dark .status-title {
+  background: linear-gradient(135deg, #60a5fa, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .status-item:hover {
+  background: rgba(96, 165, 250, 0.15);
+}
+
+.dark .status-indicator.active {
+  background-color: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
 }
 
 /* 響應式設計 */
@@ -308,6 +453,7 @@ const toggleCollapse = () => {
   
   .app-sidebar.mobile-open {
     transform: translateX(0);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
   }
 }
 </style>

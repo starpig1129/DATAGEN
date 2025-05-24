@@ -1,0 +1,320 @@
+{
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "新增",
+    "remove": "移除",
+    "reset": "重置",
+    "confirm": "确认",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "loading": "加载中...",
+    "success": "成功",
+    "error": "错误",
+    "warning": "警告",
+    "info": "信息",
+    "yes": "是",
+    "no": "否",
+    "ok": "确定",
+    "search": "搜索",
+    "filter": "筛选",
+    "export": "导出",
+    "import": "导入",
+    "refresh": "刷新"
+  },
+  "navigation": {
+    "dashboard": "仪表板",
+    "chat": "聊天界面",
+    "files": "文件管理",
+    "agents": "代理监控",
+    "visualization": "数据可视化",
+    "settings": "系统设置"
+  },
+  "settings": {
+    "title": "系统设置",
+    "description": "配置系统参数和个人偏好",
+    "sections": {
+      "api": "API配置",
+      "user": "用户偏好",
+      "agent": "代理设置",
+      "data": "数据设置",
+      "system": "系统路径"
+    },
+    "api": {
+      "title": "API配置",
+      "description": "配置后端服务连接设置",
+      "token": {
+        "label": "API Token",
+        "placeholder": "请输入您的API Token",
+        "help": "用于身份验证的API Token",
+        "validate": "验证Token",
+        "valid": "Token有效",
+        "invalid": "Token无效",
+        "required": "Token为必填项",
+        "tooShort": "Token长度不足",
+        "invalidFormat": "Token格式无效"
+      },
+      "baseUrl": {
+        "label": "基础URL",
+        "placeholder": "http://localhost:5001",
+        "help": "后端API服务的基础地址",
+        "invalid": "URL格式无效"
+      },
+      "timeout": {
+        "label": "请求超时",
+        "help": "API请求超时时间（毫秒）",
+        "unit": "毫秒"
+      },
+      "retryAttempts": {
+        "label": "重试次数",
+        "help": "请求失败时的重试次数"
+      },
+      "enableLogging": {
+        "label": "启用日志",
+        "help": "记录API请求和响应日志"
+      },
+      "openaiApiKey": {
+        "label": "OpenAI API Key",
+        "placeholder": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "help": "OpenAI API密钥，用于AI模型调用（必填）"
+      },
+      "firecrawlApiKey": {
+        "label": "Firecrawl API Key",
+        "placeholder": "fc-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "help": "Firecrawl API密钥，用于网页爬取功能（可选）"
+      },
+      "langchainApiKey": {
+        "label": "LangChain API Key",
+        "placeholder": "lc-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "help": "LangChain API密钥，用于处理监控（可选）"
+      },
+      "testConnection": "测试连接",
+      "connectionTest": {
+        "testing": "测试连接中...",
+        "success": "连接成功",
+        "failed": "连接失败",
+        "status": "状态：{status}",
+        "message": "消息：{message}"
+      }
+    },
+    "user": {
+      "title": "用户偏好",
+      "description": "个性化设置和偏好配置",
+      "language": {
+        "label": "语言",
+        "help": "选择界面语言"
+      },
+      "theme": {
+        "label": "主题模式",
+        "help": "选择界面主题",
+        "light": "浅色",
+        "dark": "深色",
+        "auto": "跟随系统"
+      },
+      "timezone": {
+        "label": "时区",
+        "help": "选择您的时区"
+      },
+      "dateFormat": {
+        "label": "日期格式",
+        "help": "选择日期显示格式"
+      },
+      "notifications": {
+        "title": "通知设置",
+        "enabled": "启用通知",
+        "types": {
+          "title": "通知类型",
+          "email": "邮件通知",
+          "browser": "浏览器通知",
+          "system": "系统通知",
+          "chat": "聊天通知",
+          "agent": "代理通知"
+        },
+        "sound": "音效提示",
+        "vibration": "震动提醒",
+        "desktop": "桌面通知",
+        "quietHours": {
+          "title": "静音时段",
+          "enabled": "启用静音时段",
+          "startTime": "开始时间",
+          "endTime": "结束时间"
+        }
+      },
+      "interface": {
+        "title": "界面设置",
+        "sidebarCollapsed": "收起侧边栏",
+        "compactMode": "紧凑模式",
+        "showToolbar": "显示工具栏",
+        "animationsEnabled": "启用动画",
+        "fontSize": {
+          "label": "字体大小",
+          "small": "小",
+          "medium": "中",
+          "large": "大"
+        },
+        "density": {
+          "label": "界面密度",
+          "comfortable": "舒适",
+          "compact": "紧凑",
+          "spacious": "宽松"
+        }
+      }
+    },
+    "system": {
+      "title": "系统路径配置",
+      "description": "配置系统运行所需的路径和环境",
+      "workingDirectory": {
+        "label": "工作目录",
+        "placeholder": "./data_storage/",
+        "help": "数据存储的工作目录路径"
+      },
+      "condaPath": {
+        "label": "Conda路径",
+        "placeholder": "/home/user/anaconda3",
+        "help": "Anaconda安装路径"
+      },
+      "condaEnv": {
+        "label": "Conda环境",
+        "placeholder": "data_assistant",
+        "help": "使用的Conda环境名称"
+      },
+      "chromedriverPath": {
+        "label": "ChromeDriver路径",
+        "placeholder": "./chromedriver-linux64/chromedriver",
+        "help": "ChromeDriver可执行文件路径"
+      }
+    },
+    "agent": {
+      "title": "代理设置",
+      "description": "配置多代理系统参数",
+      "workflow": {
+        "title": "工作流程",
+        "autoStart": "自动启动",
+        "parallelExecution": "并行执行",
+        "maxConcurrentAgents": "最大并发代理数",
+        "retryFailedTasks": "重试失败任务",
+        "saveIntermediateResults": "保存中间结果"
+      },
+      "priorities": {
+        "title": "代理优先级",
+        "searchAgent": "搜索代理",
+        "analysisAgent": "分析代理",
+        "visualizationAgent": "可视化代理",
+        "reportAgent": "报告代理",
+        "qualityReviewAgent": "质量审查代理"
+      },
+      "timeout": {
+        "title": "超时设置",
+        "agentResponse": "代理响应超时",
+        "fileUpload": "文件上传超时",
+        "apiRequest": "API请求超时",
+        "websocketConnection": "WebSocket连接超时",
+        "unit": "毫秒"
+      },
+      "debugging": {
+        "title": "调试设置",
+        "enabled": "启用调试模式",
+        "logLevel": {
+          "label": "日志级别",
+          "debug": "调试",
+          "info": "信息",
+          "warn": "警告",
+          "error": "错误"
+        },
+        "saveLogsToFile": "保存日志到文件",
+        "showAgentSteps": "显示代理步骤",
+        "verboseOutput": "详细输出"
+      }
+    },
+    "data": {
+      "title": "数据设置",
+      "description": "数据管理和存储配置",
+      "upload": {
+        "title": "上传设置",
+        "maxFileSize": {
+          "label": "最大文件大小",
+          "unit": "MB"
+        },
+        "allowedTypes": "允许的文件类型",
+        "maxFilesPerUpload": "单次上传最大文件数",
+        "autoScan": "自动扫描文件",
+        "compressImages": "压缩图片"
+      },
+      "retention": {
+        "title": "数据保留",
+        "chatHistory": "聊天记录保留期",
+        "uploadedFiles": "上传文件保留期",
+        "analysisResults": "分析结果保留期",
+        "logs": "日志保留期",
+        "unit": "天",
+        "autoDelete": "自动删除过期数据"
+      },
+      "cache": {
+        "title": "缓存设置",
+        "enabled": "启用缓存",
+        "maxSize": {
+          "label": "最大缓存大小",
+          "unit": "MB"
+        },
+        "ttl": {
+          "label": "缓存有效期",
+          "unit": "秒"
+        },
+        "preloadData": "预加载数据",
+        "compressData": "压缩数据"
+      },
+      "cleanup": {
+        "title": "清理设置",
+        "autoCleanup": "自动清理",
+        "cleanupInterval": {
+          "label": "清理间隔",
+          "unit": "小时"
+        },
+        "keepRecent": {
+          "label": "保留近期数据",
+          "unit": "天"
+        },
+        "cleanupLogs": "清理日志",
+        "cleanupCache": "清理缓存"
+      }
+    },
+    "actions": {
+      "save": "保存设置",
+      "cancel": "取消修改",
+      "reset": "重置为默认值",
+      "export": "导出设置",
+      "import": "导入设置",
+      "backup": "创建备份",
+      "restore": "恢复备份"
+    },
+    "validation": {
+      "required": "此字段为必填项",
+      "invalidFormat": "格式无效",
+      "tooShort": "长度不足",
+      "tooLong": "长度过长",
+      "outOfRange": "数值超出范围",
+      "invalidUrl": "URL格式无效",
+      "invalidEmail": "邮件地址格式无效"
+    },
+    "messages": {
+      "saveSuccess": "设置已成功保存",
+      "saveFailed": "保存设置失败：{error}",
+      "resetSuccess": "设置已重置为默认值",
+      "exportSuccess": "设置已导出",
+      "importSuccess": "设置导入成功",
+      "importFailed": "导入设置失败：{error}",
+      "backupCreated": "备份已创建",
+      "backupRestored": "已从备份恢复设置",
+      "connectionSuccess": "连接测试成功",
+      "connectionFailed": "连接测试失败",
+      "tokenValid": "Token验证成功",
+      "tokenInvalid": "Token验证失败",
+      "syncSuccess": "设置已同步到服务器",
+      "syncFailed": "同步到服务器失败：{error}",
+      "unsavedChanges": "您有未保存的修改，是否要离开？"
+    }
+  }
+}

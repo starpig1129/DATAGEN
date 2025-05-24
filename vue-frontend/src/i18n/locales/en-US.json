@@ -1,0 +1,320 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "remove": "Remove",
+    "reset": "Reset",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "refresh": "Refresh"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "chat": "Chat Interface",
+    "files": "File Management",
+    "agents": "Agent Monitor",
+    "visualization": "Data Visualization",
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "System Settings",
+    "description": "Configure system parameters and personal preferences",
+    "sections": {
+      "api": "API Configuration",
+      "user": "User Preferences",
+      "agent": "Agent Settings",
+      "data": "Data Settings",
+      "system": "System Paths"
+    },
+    "api": {
+      "title": "API Configuration",
+      "description": "Configure backend service connection settings",
+      "token": {
+        "label": "API Token",
+        "placeholder": "Enter your API Token",
+        "help": "API Token for authentication",
+        "validate": "Validate Token",
+        "valid": "Token is valid",
+        "invalid": "Token is invalid",
+        "required": "Token is required",
+        "tooShort": "Token is too short",
+        "invalidFormat": "Token format is invalid"
+      },
+      "baseUrl": {
+        "label": "Base URL",
+        "placeholder": "http://localhost:5001",
+        "help": "Base address of the backend API service",
+        "invalid": "URL format is invalid"
+      },
+      "timeout": {
+        "label": "Request Timeout",
+        "help": "API request timeout in milliseconds",
+        "unit": "ms"
+      },
+      "retryAttempts": {
+        "label": "Retry Attempts",
+        "help": "Number of retries on request failure"
+      },
+      "enableLogging": {
+        "label": "Enable Logging",
+        "help": "Log API requests and responses"
+      },
+      "openaiApiKey": {
+        "label": "OpenAI API Key",
+        "placeholder": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "help": "OpenAI API key for AI model calls (required)"
+      },
+      "firecrawlApiKey": {
+        "label": "Firecrawl API Key",
+        "placeholder": "fc-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "help": "Firecrawl API key for web scraping functionality (optional)"
+      },
+      "langchainApiKey": {
+        "label": "LangChain API Key",
+        "placeholder": "lc-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "help": "LangChain API key for processing monitoring (optional)"
+      },
+      "testConnection": "Test Connection",
+      "connectionTest": {
+        "testing": "Testing connection...",
+        "success": "Connection successful",
+        "failed": "Connection failed",
+        "status": "Status: {status}",
+        "message": "Message: {message}"
+      }
+    },
+    "user": {
+      "title": "User Preferences",
+      "description": "Personalization settings and preference configuration",
+      "language": {
+        "label": "Language",
+        "help": "Select interface language"
+      },
+      "theme": {
+        "label": "Theme Mode",
+        "help": "Select interface theme",
+        "light": "Light",
+        "dark": "Dark",
+        "auto": "Follow System"
+      },
+      "timezone": {
+        "label": "Timezone",
+        "help": "Select your timezone"
+      },
+      "dateFormat": {
+        "label": "Date Format",
+        "help": "Select date display format"
+      },
+      "notifications": {
+        "title": "Notification Settings",
+        "enabled": "Enable Notifications",
+        "types": {
+          "title": "Notification Types",
+          "email": "Email Notifications",
+          "browser": "Browser Notifications",
+          "system": "System Notifications",
+          "chat": "Chat Notifications",
+          "agent": "Agent Notifications"
+        },
+        "sound": "Sound Alerts",
+        "vibration": "Vibration",
+        "desktop": "Desktop Notifications",
+        "quietHours": {
+          "title": "Quiet Hours",
+          "enabled": "Enable Quiet Hours",
+          "startTime": "Start Time",
+          "endTime": "End Time"
+        }
+      },
+      "interface": {
+        "title": "Interface Settings",
+        "sidebarCollapsed": "Collapse Sidebar",
+        "compactMode": "Compact Mode",
+        "showToolbar": "Show Toolbar",
+        "animationsEnabled": "Enable Animations",
+        "fontSize": {
+          "label": "Font Size",
+          "small": "Small",
+          "medium": "Medium",
+          "large": "Large"
+        },
+        "density": {
+          "label": "Interface Density",
+          "comfortable": "Comfortable",
+          "compact": "Compact",
+          "spacious": "Spacious"
+        }
+      }
+    },
+    "system": {
+      "title": "System Path Configuration",
+      "description": "Configure system paths and environment settings",
+      "workingDirectory": {
+        "label": "Working Directory",
+        "placeholder": "./data_storage/",
+        "help": "Working directory path for data storage"
+      },
+      "condaPath": {
+        "label": "Conda Path",
+        "placeholder": "/home/user/anaconda3",
+        "help": "Anaconda installation path"
+      },
+      "condaEnv": {
+        "label": "Conda Environment",
+        "placeholder": "data_assistant",
+        "help": "Conda environment name to use"
+      },
+      "chromedriverPath": {
+        "label": "ChromeDriver Path",
+        "placeholder": "./chromedriver-linux64/chromedriver",
+        "help": "ChromeDriver executable file path"
+      }
+    },
+    "agent": {
+      "title": "Agent Settings",
+      "description": "Configure multi-agent system parameters",
+      "workflow": {
+        "title": "Workflow",
+        "autoStart": "Auto Start",
+        "parallelExecution": "Parallel Execution",
+        "maxConcurrentAgents": "Max Concurrent Agents",
+        "retryFailedTasks": "Retry Failed Tasks",
+        "saveIntermediateResults": "Save Intermediate Results"
+      },
+      "priorities": {
+        "title": "Agent Priorities",
+        "searchAgent": "Search Agent",
+        "analysisAgent": "Analysis Agent",
+        "visualizationAgent": "Visualization Agent",
+        "reportAgent": "Report Agent",
+        "qualityReviewAgent": "Quality Review Agent"
+      },
+      "timeout": {
+        "title": "Timeout Settings",
+        "agentResponse": "Agent Response Timeout",
+        "fileUpload": "File Upload Timeout",
+        "apiRequest": "API Request Timeout",
+        "websocketConnection": "WebSocket Connection Timeout",
+        "unit": "ms"
+      },
+      "debugging": {
+        "title": "Debug Settings",
+        "enabled": "Enable Debug Mode",
+        "logLevel": {
+          "label": "Log Level",
+          "debug": "Debug",
+          "info": "Info",
+          "warn": "Warning",
+          "error": "Error"
+        },
+        "saveLogsToFile": "Save Logs to File",
+        "showAgentSteps": "Show Agent Steps",
+        "verboseOutput": "Verbose Output"
+      }
+    },
+    "data": {
+      "title": "Data Settings",
+      "description": "Data management and storage configuration",
+      "upload": {
+        "title": "Upload Settings",
+        "maxFileSize": {
+          "label": "Max File Size",
+          "unit": "MB"
+        },
+        "allowedTypes": "Allowed File Types",
+        "maxFilesPerUpload": "Max Files Per Upload",
+        "autoScan": "Auto Scan Files",
+        "compressImages": "Compress Images"
+      },
+      "retention": {
+        "title": "Data Retention",
+        "chatHistory": "Chat History Retention",
+        "uploadedFiles": "Uploaded Files Retention",
+        "analysisResults": "Analysis Results Retention",
+        "logs": "Logs Retention",
+        "unit": "days",
+        "autoDelete": "Auto Delete Expired Data"
+      },
+      "cache": {
+        "title": "Cache Settings",
+        "enabled": "Enable Cache",
+        "maxSize": {
+          "label": "Max Cache Size",
+          "unit": "MB"
+        },
+        "ttl": {
+          "label": "Cache TTL",
+          "unit": "seconds"
+        },
+        "preloadData": "Preload Data",
+        "compressData": "Compress Data"
+      },
+      "cleanup": {
+        "title": "Cleanup Settings",
+        "autoCleanup": "Auto Cleanup",
+        "cleanupInterval": {
+          "label": "Cleanup Interval",
+          "unit": "hours"
+        },
+        "keepRecent": {
+          "label": "Keep Recent Data",
+          "unit": "days"
+        },
+        "cleanupLogs": "Cleanup Logs",
+        "cleanupCache": "Cleanup Cache"
+      }
+    },
+    "actions": {
+      "save": "Save Settings",
+      "cancel": "Cancel Changes",
+      "reset": "Reset to Defaults",
+      "export": "Export Settings",
+      "import": "Import Settings",
+      "backup": "Create Backup",
+      "restore": "Restore Backup"
+    },
+    "validation": {
+      "required": "This field is required",
+      "invalidFormat": "Invalid format",
+      "tooShort": "Too short",
+      "tooLong": "Too long",
+      "outOfRange": "Value out of range",
+      "invalidUrl": "Invalid URL format",
+      "invalidEmail": "Invalid email format"
+    },
+    "messages": {
+      "saveSuccess": "Settings saved successfully",
+      "saveFailed": "Failed to save settings: {error}",
+      "resetSuccess": "Settings reset to defaults",
+      "exportSuccess": "Settings exported",
+      "importSuccess": "Settings imported successfully",
+      "importFailed": "Failed to import settings: {error}",
+      "backupCreated": "Backup created",
+      "backupRestored": "Settings restored from backup",
+      "connectionSuccess": "Connection test successful",
+      "connectionFailed": "Connection test failed",
+      "tokenValid": "Token validation successful",
+      "tokenInvalid": "Token validation failed",
+      "syncSuccess": "Settings synced to server",
+      "syncFailed": "Failed to sync to server: {error}",
+      "unsavedChanges": "You have unsaved changes. Do you want to leave?"
+    }
+  }
+}

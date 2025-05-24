@@ -1,0 +1,320 @@
+{
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "刪除",
+    "edit": "編輯",
+    "add": "新增",
+    "remove": "移除",
+    "reset": "重置",
+    "confirm": "確認",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "loading": "載入中...",
+    "success": "成功",
+    "error": "錯誤",
+    "warning": "警告",
+    "info": "信息",
+    "yes": "是",
+    "no": "否",
+    "ok": "確定",
+    "search": "搜尋",
+    "filter": "篩選",
+    "export": "匯出",
+    "import": "匯入",
+    "refresh": "重新整理"
+  },
+  "navigation": {
+    "dashboard": "儀表板",
+    "chat": "聊天界面",
+    "files": "文件管理",
+    "agents": "代理監控",
+    "visualization": "數據視覺化",
+    "settings": "系統設定"
+  },
+  "settings": {
+    "title": "系統設定",
+    "description": "配置系統參數和個人偏好",
+    "sections": {
+      "api": "API配置",
+      "user": "用戶偏好",
+      "agent": "代理設定",
+      "data": "數據設定",
+      "system": "系統路徑"
+    },
+    "api": {
+      "title": "API配置",
+      "description": "配置後端服務連接設定",
+      "token": {
+        "label": "API Token",
+        "placeholder": "請輸入您的API Token",
+        "help": "用於身份驗證的API Token",
+        "validate": "驗證Token",
+        "valid": "Token有效",
+        "invalid": "Token無效",
+        "required": "Token為必填項",
+        "tooShort": "Token長度不足",
+        "invalidFormat": "Token格式無效"
+      },
+      "baseUrl": {
+        "label": "基礎URL",
+        "placeholder": "http://localhost:5001",
+        "help": "後端API服務的基礎地址",
+        "invalid": "URL格式無效"
+      },
+      "timeout": {
+        "label": "請求超時",
+        "help": "API請求超時時間（毫秒）",
+        "unit": "毫秒"
+      },
+      "retryAttempts": {
+        "label": "重試次數",
+        "help": "請求失敗時的重試次數"
+      },
+      "enableLogging": {
+        "label": "啟用日誌",
+        "help": "記錄API請求和響應日誌"
+      },
+      "openaiApiKey": {
+        "label": "OpenAI API Key",
+        "placeholder": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "help": "OpenAI API密鑰，用於AI模型調用（必填）"
+      },
+      "firecrawlApiKey": {
+        "label": "Firecrawl API Key",
+        "placeholder": "fc-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "help": "Firecrawl API密鑰，用於網頁爬取功能（可選）"
+      },
+      "langchainApiKey": {
+        "label": "LangChain API Key",
+        "placeholder": "lc-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "help": "LangChain API密鑰，用於處理監控（可選）"
+      },
+      "testConnection": "測試連接",
+      "connectionTest": {
+        "testing": "測試連接中...",
+        "success": "連接成功",
+        "failed": "連接失敗",
+        "status": "狀態：{status}",
+        "message": "訊息：{message}"
+      }
+    },
+    "user": {
+      "title": "用戶偏好",
+      "description": "個人化設定和偏好配置",
+      "language": {
+        "label": "語言",
+        "help": "選擇界面語言"
+      },
+      "theme": {
+        "label": "主題模式",
+        "help": "選擇界面主題",
+        "light": "淺色",
+        "dark": "深色",
+        "auto": "跟隨系統"
+      },
+      "timezone": {
+        "label": "時區",
+        "help": "選擇您的時區"
+      },
+      "dateFormat": {
+        "label": "日期格式",
+        "help": "選擇日期顯示格式"
+      },
+      "notifications": {
+        "title": "通知設定",
+        "enabled": "啟用通知",
+        "types": {
+          "title": "通知類型",
+          "email": "郵件通知",
+          "browser": "瀏覽器通知",
+          "system": "系統通知",
+          "chat": "聊天通知",
+          "agent": "代理通知"
+        },
+        "sound": "音效提示",
+        "vibration": "震動提醒",
+        "desktop": "桌面通知",
+        "quietHours": {
+          "title": "靜音時段",
+          "enabled": "啟用靜音時段",
+          "startTime": "開始時間",
+          "endTime": "結束時間"
+        }
+      },
+      "interface": {
+        "title": "界面設定",
+        "sidebarCollapsed": "收起側邊欄",
+        "compactMode": "緊湊模式",
+        "showToolbar": "顯示工具欄",
+        "animationsEnabled": "啟用動畫",
+        "fontSize": {
+          "label": "字體大小",
+          "small": "小",
+          "medium": "中",
+          "large": "大"
+        },
+        "density": {
+          "label": "界面密度",
+          "comfortable": "舒適",
+          "compact": "緊湊",
+          "spacious": "寬鬆"
+        }
+      }
+    },
+    "system": {
+      "title": "系統路徑配置",
+      "description": "配置系統運行所需的路徑和環境",
+      "workingDirectory": {
+        "label": "工作目錄",
+        "placeholder": "./data_storage/",
+        "help": "數據存儲的工作目錄路徑"
+      },
+      "condaPath": {
+        "label": "Conda路徑",
+        "placeholder": "/home/user/anaconda3",
+        "help": "Anaconda安裝路徑"
+      },
+      "condaEnv": {
+        "label": "Conda環境",
+        "placeholder": "data_assistant",
+        "help": "使用的Conda環境名稱"
+      },
+      "chromedriverPath": {
+        "label": "ChromeDriver路徑",
+        "placeholder": "./chromedriver-linux64/chromedriver",
+        "help": "ChromeDriver可執行文件路徑"
+      }
+    },
+    "agent": {
+      "title": "代理設定",
+      "description": "配置多代理系統參數",
+      "workflow": {
+        "title": "工作流程",
+        "autoStart": "自動啟動",
+        "parallelExecution": "並行執行",
+        "maxConcurrentAgents": "最大並發代理數",
+        "retryFailedTasks": "重試失敗任務",
+        "saveIntermediateResults": "保存中間結果"
+      },
+      "priorities": {
+        "title": "代理優先級",
+        "searchAgent": "搜尋代理",
+        "analysisAgent": "分析代理",
+        "visualizationAgent": "視覺化代理",
+        "reportAgent": "報告代理",
+        "qualityReviewAgent": "品質審查代理"
+      },
+      "timeout": {
+        "title": "超時設定",
+        "agentResponse": "代理響應超時",
+        "fileUpload": "文件上傳超時",
+        "apiRequest": "API請求超時",
+        "websocketConnection": "WebSocket連接超時",
+        "unit": "毫秒"
+      },
+      "debugging": {
+        "title": "調試設定",
+        "enabled": "啟用調試模式",
+        "logLevel": {
+          "label": "日誌級別",
+          "debug": "調試",
+          "info": "信息",
+          "warn": "警告",
+          "error": "錯誤"
+        },
+        "saveLogsToFile": "保存日誌到文件",
+        "showAgentSteps": "顯示代理步驟",
+        "verboseOutput": "詳細輸出"
+      }
+    },
+    "data": {
+      "title": "數據設定",
+      "description": "數據管理和存儲配置",
+      "upload": {
+        "title": "上傳設定",
+        "maxFileSize": {
+          "label": "最大文件大小",
+          "unit": "MB"
+        },
+        "allowedTypes": "允許的文件類型",
+        "maxFilesPerUpload": "單次上傳最大文件數",
+        "autoScan": "自動掃描文件",
+        "compressImages": "壓縮圖片"
+      },
+      "retention": {
+        "title": "數據保留",
+        "chatHistory": "聊天記錄保留期",
+        "uploadedFiles": "上傳文件保留期",
+        "analysisResults": "分析結果保留期",
+        "logs": "日誌保留期",
+        "unit": "天",
+        "autoDelete": "自動刪除過期數據"
+      },
+      "cache": {
+        "title": "快取設定",
+        "enabled": "啟用快取",
+        "maxSize": {
+          "label": "最大快取大小",
+          "unit": "MB"
+        },
+        "ttl": {
+          "label": "快取有效期",
+          "unit": "秒"
+        },
+        "preloadData": "預載入數據",
+        "compressData": "壓縮數據"
+      },
+      "cleanup": {
+        "title": "清理設定",
+        "autoCleanup": "自動清理",
+        "cleanupInterval": {
+          "label": "清理間隔",
+          "unit": "小時"
+        },
+        "keepRecent": {
+          "label": "保留近期數據",
+          "unit": "天"
+        },
+        "cleanupLogs": "清理日誌",
+        "cleanupCache": "清理快取"
+      }
+    },
+    "actions": {
+      "save": "保存設定",
+      "cancel": "取消修改",
+      "reset": "重置為預設值",
+      "export": "匯出設定",
+      "import": "匯入設定",
+      "backup": "創建備份",
+      "restore": "恢復備份"
+    },
+    "validation": {
+      "required": "此欄位為必填項",
+      "invalidFormat": "格式無效",
+      "tooShort": "長度不足",
+      "tooLong": "長度過長",
+      "outOfRange": "數值超出範圍",
+      "invalidUrl": "URL格式無效",
+      "invalidEmail": "郵件地址格式無效"
+    },
+    "messages": {
+      "saveSuccess": "設定已成功保存",
+      "saveFailed": "保存設定失敗：{error}",
+      "resetSuccess": "設定已重置為預設值",
+      "exportSuccess": "設定已匯出",
+      "importSuccess": "設定匯入成功",
+      "importFailed": "匯入設定失敗：{error}",
+      "backupCreated": "備份已創建",
+      "backupRestored": "已從備份恢復設定",
+      "connectionSuccess": "連接測試成功",
+      "connectionFailed": "連接測試失敗",
+      "tokenValid": "Token驗證成功",
+      "tokenInvalid": "Token驗證失敗",
+      "syncSuccess": "設定已同步到伺服器",
+      "syncFailed": "同步到伺服器失敗：{error}",
+      "unsavedChanges": "您有未保存的修改，是否要離開？"
+    }
+  }
+}
