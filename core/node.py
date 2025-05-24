@@ -32,6 +32,10 @@ def agent_node(state: State, agent: AgentExecutor, name: str) -> State:
         elif name == "process_agent":
             state["process_decision"] = ai_message
             logger.info("Process decision updated")
+            print(f"=== process_agent輸出調試 ===")
+            print(f"process_agent輸出內容: {ai_message.content}")
+            print(f"設置process_decision為: {ai_message}")
+            print(f"當前sender: {state.get('sender', 'None')}")
         elif name == "visualization_agent":
             state["visualization_state"] = ai_message
             logger.info("Visualization state updated")
@@ -58,6 +62,7 @@ def human_choice_node(state: State) -> State:
     Handle human input to choose the next step in the process.
     Supports both CMD and UI input methods.
     """
+    print("=== 進入 human_choice_node ===")
     logger.info("Processing human choice")
     
     # Check if we already have a process_decision from UI (e.g., user clicked a button)
@@ -68,26 +73,21 @@ def human_choice_node(state: State) -> State:
         # Clear the decision immediately after reading it
         state["process_decision"] = ""
         logger.info(f"Received UI decision: {choice}")
+        print(f"=== human_choice_node 處理UI決策 ===")
+        print(f"UI決策值: {ui_decision}")
+        print(f"決策選擇: {choice}")
     else:
         # Add prompt message for both UI and CMD if no UI decision was passed
         prompt_message = "Please choose the next step:\n1. Regenerate hypothesis\n2. Continue the research process"
         state["messages"].append(AIMessage(content=prompt_message))
         
-        # For CMD interface
-        if os.isatty(0):  # Check if running in terminal
-            while True:
-                choice = input("Please enter your choice (1 or 2): ")
-                if choice in ["1", "2"]:
-                    break
-                logger.warning(f"Invalid input received: {choice}")
-                print("Invalid input, please try again.")
-            
-            if choice == "1":
-                modification_areas = input("Please specify which parts of the hypothesis you want to modify: ")
-        else:
-            # For UI - return current state and wait for input
-            state["sender"] = "human_choice"
-            return state
+        # 強制使用UI模式，因為我們在Web應用環境中
+        # For UI - return current state and wait for input
+        print("=== UI模式檢測到，設置sender為human_choice並返回狀態 ===")
+        print(f"當前狀態中的消息數: {len(state.get('messages', []))}")
+        state["sender"] = "human_choice"
+        print(f"已設置sender為: {state['sender']}")
+        return state
     
     # Process the choice
     if choice == "1":
@@ -100,6 +100,9 @@ def human_choice_node(state: State) -> State:
         content = "Continue the research process"
         state["process"] = "Continue the research process"
         logger.info("Continuing research process")
+        logger.info(f"當前hypothesis狀態: {state.get('hypothesis', 'None')}")
+        # 確保hypothesis_router會正確路由到Process
+        print(f"=== 決策處理完成，choice={choice}, hypothesis='{state.get('hypothesis', '')}' ===")
     
     human_message = HumanMessage(content=content)
     state["messages"].append(human_message)

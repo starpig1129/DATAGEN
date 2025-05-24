@@ -114,6 +114,11 @@ export const useChatStore = defineStore('chat', () => {
           }
           
           const backendState: BackendState = JSON.parse(event.data)
+          console.log('=== SSE state_update 調試 ===')
+          console.log('原始事件數據:', event.data)
+          console.log('解析後的數據:', backendState)
+          console.log('sender:', backendState.sender)
+          console.log('needs_decision:', backendState.needs_decision)
           console.log('解析SSE數據成功，代理狀態:', backendState.sender)
           updateFromBackendState(backendState)
         } catch (error) {

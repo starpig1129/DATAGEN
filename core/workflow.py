@@ -161,9 +161,9 @@ class WorkflowManager:
             }
         )
 
-        # Compile workflow
+        # Compile workflow with checkpointer for state persistence
         self.memory = MemorySaver()
-        self.graph = self.workflow.compile()
+        self.graph = self.workflow.compile(checkpointer=self.memory, interrupt_after=["Hypothesis"])
 
     def get_graph(self):
         """Return the compiled workflow graph"""

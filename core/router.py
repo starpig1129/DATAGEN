@@ -24,6 +24,13 @@ def hypothesis_router(state: State) -> NodeType:
     logger.info("Entering hypothesis_router")
     hypothesis: Union[AIMessage, str, None] = state.get("hypothesis")
     
+    # 添加詳細的調試信息
+    print(f"=== hypothesis_router 調試 ===")
+    print(f"原始hypothesis值: {repr(hypothesis)}")
+    print(f"hypothesis類型: {type(hypothesis)}")
+    print(f"state中的process: {state.get('process', 'None')}")
+    print(f"state中的sender: {state.get('sender', 'None')}")
+    
     try:
         if isinstance(hypothesis, AIMessage):
             hypothesis_content = hypothesis.content
@@ -42,8 +49,13 @@ def hypothesis_router(state: State) -> NodeType:
         logger.error(f"Error processing hypothesis: {e}")
         hypothesis_content = ""
     
+    print(f"處理後的hypothesis_content: '{hypothesis_content}'")
+    print(f"hypothesis_content.strip(): '{hypothesis_content.strip()}'")
+    print(f"not hypothesis_content.strip(): {not hypothesis_content.strip()}")
+    
     result = "Hypothesis" if not hypothesis_content.strip() else "Process"
     logger.info(f"hypothesis_router decision: {result}")
+    print(f"=== hypothesis_router 決策: {result} ===")
     return result
 
 def QualityReview_router(state: State) -> NodeType:
@@ -90,6 +102,12 @@ def process_router(state: State) -> ProcessNodeType:
     logger.info("Entering process_router")
     process_decision: Union[AIMessage, Dict, str, None] = state.get("process_decision", "")
     
+    # 添加詳細的調試信息
+    print(f"=== process_router 調試 ===")
+    print(f"原始process_decision值: {repr(process_decision)}")
+    print(f"process_decision類型: {type(process_decision)}")
+    print(f"state中的sender: {state.get('sender', 'None')}")
+    
     decision_str: str = ""
     
     try:
@@ -123,10 +141,12 @@ def process_router(state: State) -> ProcessNodeType:
     # If decision_str is empty or not a valid decision, return "Process"
     if not decision_str or decision_str not in valid_decisions:
         logger.warning(f"Invalid or empty process decision: {decision_str}. Defaulting to 'Process'.")
+        print(f"=== process_router 決策: Process (invalid/empty) ===")
         return "Process"
     
     # Default to "Process"
     logger.info("Defaulting to 'Process'")
+    print(f"=== process_router 決策: Process (default) ===")
     return "Process"
 
 logger.info("Router module initialized")

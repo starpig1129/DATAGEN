@@ -90,12 +90,51 @@ def process_message_background(input_state):
         print(f"啟動代理工作流 [線程ID: {thread_id}]")
         print(f"輸入狀態: sender={input_state.get('sender', 'None')}, process_decision={input_state.get('process_decision', 'None')}")
         
-        events = system.workflow_manager.get_graph().stream(
-            input_state,
-            {"configurable": {"thread_id": "1"}, "recursion_limit": 3000},
-            stream_mode="values",
-            debug=False
-        )
+        # Use persistent thread ID for checkpoint continuity
+        thread_config = {"configurable": {"thread_id": "persistent_chat_session"}, "recursion_limit": 3000}
+        
+        # If this is a decision, we're continuing from an interrupt
+        if input_state.get("process_decision"):
+            print(f"恢復工作流從決策點，process_decision={input_state.get('process_decision')}")
+            # First update the checkpoint state with the decision
+            graph = system.workflow_manager.get_graph()
+            current_checkpoint = graph.get_state(thread_config)
+            if current_checkpoint:
+                # Update the state with the decision using update_state
+                update_data = {
+                    "process_decision": input_state["process_decision"]
+                }
+                # Add the decision message to the state
+                if "messages" in input_state:
+                    update_data["messages"] = input_state["messages"]
+                
+                print(f"更新checkpoint狀態，process_decision={update_data.get('process_decision')}")
+                graph.update_state(thread_config, update_data)
+                
+                # Continue from the interrupt point (resume)
+                print("從中斷點恢復工作流執行")
+                events = graph.stream(
+                    None,  # No input needed when resuming from interrupt
+                    thread_config,
+                    stream_mode="values",
+                    debug=False
+                )
+            else:
+                print("警告：沒有找到checkpoint，啟動新工作流")
+                events = graph.stream(
+                    input_state,
+                    thread_config,
+                    stream_mode="values",
+                    debug=False
+                )
+        else:
+            print(f"啟動新的工作流實例")
+            events = system.workflow_manager.get_graph().stream(
+                input_state,
+                thread_config,
+                stream_mode="values",
+                debug=False
+            )
         print(f"工作流流已創建 [線程ID: {thread_id}]")
 
         # Update state with results
@@ -125,7 +164,10 @@ def process_message_background(input_state):
             if needs_decision:
                 temp_state['needs_decision'] = True
                 temp_state['process_decision'] = "" # Clear process decision
-                print(f"需要用戶決策，已清除process_decision")
+                print(f"需要用戶決策，設置needs_decision=True，已清除process_decision")
+            else:
+                temp_state['needs_decision'] = False
+                print(f"不需要決策，設置needs_decision=False")
 
             # Serialize and push the current temp_state after processing each event
             # This ensures intermediate updates are sent to the frontend
@@ -146,16 +188,44 @@ def process_message_background(input_state):
             # --- End of modified SSE push logic ---
 
         # --- Code after the loop (only runs if no decision was needed during the loop) ---
-        # If the loop completes without returning, it means no decision was needed throughout the stream.
+        # If the loop completes without returning, check if it's due to an interrupt
         print(f"工作流完成，處理了 {event_count} 個事件 [線程ID: {thread_id}]")
-
-        # Safely update the global state with the final accumulated state
-        temp_state['needs_decision'] = False # Explicitly set to false as loop completed without needing decision
-        current_state = temp_state # Update global state
+        
+        # Check if the workflow was interrupted (paused for user decision)
+        graph = system.workflow_manager.get_graph()
+        thread_config = {"configurable": {"thread_id": "persistent_chat_session"}}
+        current_checkpoint = graph.get_state(thread_config)
+        
+        if current_checkpoint and current_checkpoint.next:
+            # Workflow was interrupted, check if next step is HumanChoice
+            next_steps = current_checkpoint.next
+            print(f"工作流被中斷，下一步: {next_steps}")
+            if "HumanChoice" in next_steps:
+                print("檢測到需要決策 - 工作流在Hypothesis後暫停")
+                temp_state['needs_decision'] = True
+                temp_state['sender'] = "human_choice"
+                current_state = temp_state
+                print(f"已設置needs_decision=True，等待用戶決策 [線程ID: {thread_id}]")
+                
+                # Push interrupt state to SSE
+                serialized_state = serialize_state(current_state)
+                print(f"=== 中斷狀態序列化調試 ===")
+                print(f"原始狀態 sender: {current_state.get('sender', 'None')}")
+                print(f"原始狀態 needs_decision: {current_state.get('needs_decision', 'None')}")
+                print(f"序列化後狀態 sender: {serialized_state.get('sender', 'None')}")
+                print(f"序列化後狀態 needs_decision: {serialized_state.get('needs_decision', 'None')}")
+                state_json = json.dumps(serialized_state)
+                print(f"最終JSON字符串: {state_json}")
+                sse_queue.put(state_json)
+                print(f"中斷狀態已推送到SSE隊列 [線程ID: {thread_id}, 隊列大小: {sse_queue.qsize()}]")
+                return
+        
+        # Normal completion - no decision needed
+        temp_state['needs_decision'] = False
+        current_state = temp_state
         print(f"已更新全局狀態，不需要決策 [線程ID: {thread_id}]")
 
         # Serialize and push the final state update via SSE
-        # This ensures the final state with needs_decision=False is sent.
         serialized_state = serialize_state(current_state)
         state_json = json.dumps(serialized_state)
         sse_queue.put(state_json)

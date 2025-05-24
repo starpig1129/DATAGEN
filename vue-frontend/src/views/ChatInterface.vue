@@ -161,19 +161,7 @@ const agentTypes = [
 ]
 
 // 計算屬性
-const canSendMessage = computed(() => {
-  const storeCanSend = chatStore.canSendMessage
-  const hasInput = inputMessage.value.trim().length > 0
-  console.log('組件canSendMessage計算:', {
-    storeCanSend,
-    hasInput,
-    result: storeCanSend && hasInput,
-    isConnected: chatStore.isConnected,
-    isProcessing: chatStore.isProcessing,
-    needsDecision: chatStore.needsDecision
-  })
-  return storeCanSend
-})
+const canSendMessage = computed(() => chatStore.canSendMessage)
 
 const inputPlaceholder = computed(() => {
   if (chatStore.needsDecision) return '請先做出決策...'
@@ -267,6 +255,16 @@ const handleScroll = () => {
 watch(() => chatStore.messages.length, () => {
   if (isScrolledToBottom.value) {
     scrollToBottom()
+  }
+}, { immediate: true })
+
+// 監聽決策狀態變化
+watch(() => chatStore.needsDecision, (newValue, oldValue) => {
+  console.log(`決策狀態變化: ${oldValue} -> ${newValue}`)
+  if (newValue) {
+    console.log('需要決策，應該顯示決策按鈕')
+  } else {
+    console.log('不需要決策，隱藏決策按鈕')
   }
 }, { immediate: true })
 
