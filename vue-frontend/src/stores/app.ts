@@ -216,9 +216,38 @@ export const useAppStore = defineStore('app', {
     },
     
     // 處理網路重新連接
-    handleNetworkReconnect() {
-      // 這裡可以添加重新同步數據的邏輯
+    async handleNetworkReconnect() {
+      // 重新同步數據的邏輯
       console.log('網路連接已恢復，開始重新同步數據...')
+      
+      try {
+        this.isLoading = true
+        
+        // 檢查後端 API 連接
+        await this.testApiConnection()
+        
+        // 觸發其他 stores 的數據重新同步
+        const event = new CustomEvent('network-reconnected', {
+          detail: { timestamp: Date.now() }
+        })
+        document.dispatchEvent(event)
+        
+        this.addNotification({
+          type: 'success',
+          title: '網路已恢復',
+          message: '數據同步已完成'
+        })
+        
+      } catch (error) {
+        console.error('網路重連後數據同步失敗:', error)
+        this.addNotification({
+          type: 'warning',
+          title: '同步警告',
+          message: '網路已恢復但部分數據同步失敗'
+        })
+      } finally {
+        this.isLoading = false
+      }
     },
     
     // 登出
@@ -265,6 +294,153 @@ export const useAppStore = defineStore('app', {
     
     clearNotificationsByType(type: Notification['type']) {
       this.notifications = this.notifications.filter(n => n.type !== type)
+    },
+
+    // API 連接測試
+    async testApiConnection(): Promise<boolean> {
+      try {
+        const response = await fetch(`${this.config.apiBaseUrl}/api/system/status`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          signal: AbortSignal.timeout(5000) // 5秒超時
+        })
+        
+        if (!response.ok) {
+          throw new Error(`API 連接失敗: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        console.log('API 連接測試成功:', data)
+        return true
+        
+      } catch (error) {
+        console.error('API 連接測試失敗:', error)
+        this.setError(error instanceof Error ? error.message : 'API 連接失敗')
+        return false
+      }
+    },
+
+    // API 請求重試機制
+    async apiRequest<T = any>(
+      endpoint: string,
+      options: RequestInit = {},
+      retryCount: number = 3
+    ): Promise<T> {
+      const url = `${this.config.apiBaseUrl}${endpoint}`
+      
+      for (let attempt = 0; attempt <= retryCount; attempt++) {
+        try {
+          const response = await fetch(url, {
+            ...options,
+            headers: {
+              'Content-Type': 'application/json',
+              ...options.headers
+            }
+          })
+          
+          if (!response.ok) {
+            if (response.status >= 500 && attempt < retryCount) {
+              // 伺服器錯誤，重試
+              await this.delay(Math.pow(2, attempt) * 1000) // 指數退避
+              continue
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+          
+          return await response.json()
+          
+        } catch (error) {
+          if (attempt === retryCount) {
+            // 最後一次嘗試失敗
+            const errorMessage = error instanceof Error ? error.message : '請求失敗'
+            this.addNotification({
+              type: 'error',
+              title: 'API 請求失敗',
+              message: `${endpoint}: ${errorMessage}`
+            })
+            throw error
+          }
+          
+          // 網路錯誤，重試
+          if (error instanceof TypeError || error instanceof DOMException) {
+            await this.delay(Math.pow(2, attempt) * 1000)
+            continue
+          }
+          
+          throw error
+        }
+      }
+      
+      throw new Error('重試次數已達上限')
+    },
+
+    // 延遲工具函數
+    delay(ms: number): Promise<void> {
+      return new Promise(resolve => setTimeout(resolve, ms))
+    },
+
+    // 批量 API 請求
+    async batchApiRequest<T = any>(
+      requests: Array<{ endpoint: string; options?: RequestInit }>,
+      concurrency: number = 3
+    ): Promise<Array<T | Error>> {
+      const results: Array<T | Error> = []
+      
+      for (let i = 0; i < requests.length; i += concurrency) {
+        const batch = requests.slice(i, i + concurrency)
+        
+        const batchPromises = batch.map(async (request) => {
+          try {
+            return await this.apiRequest<T>(request.endpoint, request.options)
+          } catch (error) {
+            return error instanceof Error ? error : new Error('未知錯誤')
+          }
+        })
+        
+        const batchResults = await Promise.all(batchPromises)
+        results.push(...batchResults)
+      }
+      
+      return results
+    },
+
+    // 定期健康檢查
+    startHealthCheck(interval: number = 30000): void {
+      // 清除現有的健康檢查
+      this.stopHealthCheck()
+      
+      const healthCheckInterval = setInterval(async () => {
+        if (!this.isOnline) {
+          return // 如果離線，跳過健康檢查
+        }
+        
+        try {
+          const isHealthy = await this.testApiConnection()
+          if (!isHealthy && this.isOnline) {
+            // API 不健康但網路顯示在線，可能是後端問題
+            this.addNotification({
+              type: 'warning',
+              title: '後端服務異常',
+              message: '無法連接到後端服務，請檢查服務狀態'
+            })
+          }
+        } catch (error) {
+          console.error('健康檢查失敗:', error)
+        }
+      }, interval)
+      
+      // 儲存間隔 ID 以便後續清除
+      ;(this as any).healthCheckInterval = healthCheckInterval
+    },
+
+    stopHealthCheck(): void {
+      const intervalId = (this as any).healthCheckInterval
+      if (intervalId) {
+        clearInterval(intervalId)
+        ;(this as any).healthCheckInterval = null
+      }
     }
   }
 })

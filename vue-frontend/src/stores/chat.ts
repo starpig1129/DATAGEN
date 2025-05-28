@@ -454,6 +454,147 @@ export const useChatStore = defineStore('chat', () => {
     currentTypingAgent.value = undefined
   }
 
+  // 實時數據同步
+  const syncWithRealtime = (realtimeData: any): void => {
+    try {
+      if (realtimeData.type === 'chat_state' && realtimeData.data) {
+        console.log('從實時數據同步聊天狀態:', realtimeData.data)
+        updateFromBackendState(realtimeData.data)
+      }
+    } catch (error) {
+      console.error('同步實時數據失敗:', error)
+    }
+  }
+
+  // 增強的錯誤處理和重試
+  const sendMessageWithRetry = async (content: string, maxRetries: number = 3): Promise<boolean> => {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        await sendMessage(content)
+        return true
+      } catch (error) {
+        console.error(`發送消息失敗 (嘗試 ${attempt + 1}/${maxRetries}):`, error)
+        
+        if (attempt < maxRetries - 1) {
+          // 等待後重試
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
+          
+          // 檢查連接狀態
+          if (!isConnected.value) {
+            console.log('嘗試重新建立 SSE 連接...')
+            connectSSE()
+            await new Promise(resolve => setTimeout(resolve, 2000)) // 等待連接建立
+          }
+        }
+      }
+    }
+    return false
+  }
+
+  // 批量消息處理
+  const processBatchMessages = async (messages: string[]): Promise<boolean[]> => {
+    const results: boolean[] = []
+    
+    for (const message of messages) {
+      const success = await sendMessageWithRetry(message)
+      results.push(success)
+      
+      // 如果不是最後一條消息，等待一段時間避免過載
+      if (message !== messages[messages.length - 1]) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
+    
+    return results
+  }
+
+  // 連接狀態監控
+  const startConnectionMonitoring = (): void => {
+    // 監聽網路狀態變化
+    const handleOnline = () => {
+      console.log('網路已恢復，重新建立 SSE 連接')
+      if (!isConnected.value) {
+        connectSSE()
+      }
+    }
+
+    const handleOffline = () => {
+      console.log('網路已斷開')
+      isConnected.value = false
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    // 監聽自定義重連事件
+    const handleNetworkReconnect = () => {
+      console.log('收到網路重連事件，檢查 SSE 連接狀態')
+      if (!isConnected.value) {
+        connectSSE()
+      }
+    }
+
+    document.addEventListener('network-reconnected', handleNetworkReconnect)
+
+    // 儲存事件監聽器引用以便清理
+    ;(window as any).chatEventListeners = {
+      handleOnline,
+      handleOffline,
+      handleNetworkReconnect
+    }
+  }
+
+  const stopConnectionMonitoring = (): void => {
+    const listeners = (window as any).chatEventListeners
+    if (listeners) {
+      window.removeEventListener('online', listeners.handleOnline)
+      window.removeEventListener('offline', listeners.handleOffline)
+      document.removeEventListener('network-reconnected', listeners.handleNetworkReconnect)
+      ;(window as any).chatEventListeners = null
+    }
+  }
+
+  // 性能優化：消息去重
+  const deduplicateMessages = (): void => {
+    const seen = new Set<string>()
+    const uniqueMessages: Message[] = []
+    
+    for (const message of messages.value) {
+      const key = `${message.content}-${message.sender}-${message.type}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        uniqueMessages.push(message)
+      }
+    }
+    
+    if (uniqueMessages.length !== messages.value.length) {
+      console.log(`去除了 ${messages.value.length - uniqueMessages.length} 條重複消息`)
+      messages.value = uniqueMessages
+    }
+  }
+
+  // 增強初始化
+  const initializeChatEnhanced = async (): Promise<void> => {
+    console.log('增強聊天界面初始化...')
+    
+    // 啟動連接監控
+    startConnectionMonitoring()
+    
+    // 執行原有初始化
+    await initializeChat()
+    
+    // 定期去重消息
+    setInterval(deduplicateMessages, 30000) // 每30秒去重一次
+  }
+
+  // 增強銷毀
+  const destroyChatEnhanced = (): void => {
+    console.log('增強聊天界面銷毀...')
+    
+    stopConnectionMonitoring()
+    destroyChat()
+  }
+
   return {
     // 狀態
     messages: readonly(messages),
@@ -468,13 +609,23 @@ export const useChatStore = defineStore('chat', () => {
     chatState,
     canSendMessage,
     
-    // 方法
+    // 基礎方法
     sendMessage,
     sendDecision,
     clearMessages,
     initializeChat,
     destroyChat,
     connectSSE,
-    disconnectSSE
+    disconnectSSE,
+    
+    // 增強方法
+    syncWithRealtime,
+    sendMessageWithRetry,
+    processBatchMessages,
+    startConnectionMonitoring,
+    stopConnectionMonitoring,
+    deduplicateMessages,
+    initializeChatEnhanced,
+    destroyChatEnhanced
   }
 })

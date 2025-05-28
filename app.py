@@ -12,6 +12,8 @@ from main import MultiAgentSystem
 from core.state import State
 from langchain_core.messages import HumanMessage, AIMessage
 import threading # Add threading import
+import asyncio
+from typing import Dict, Any
 
 app = Flask(__name__, static_folder='ui', static_url_path='') # Serve static files from root URL path
 CORS(app)  # Enable CORS for all routes
@@ -25,6 +27,23 @@ system = MultiAgentSystem()
 
 # Create a thread-safe queue for SSE messages
 sse_queue = Queue()
+
+# WebSocket 支援 - 導入 WebSocket 管理器
+try:
+    from websocket_server import ws_manager, broadcast_agent_update, broadcast_data_update, broadcast_file_update
+    WEBSOCKET_ENABLED = True
+    print("WebSocket 支援已啟用")
+except ImportError:
+    WEBSOCKET_ENABLED = False
+    print("WebSocket 支援未啟用 - websocket_server.py 不可用")
+    
+    # 創建空的廣播函數作為備用
+    def broadcast_agent_update(*args, **kwargs):
+        pass
+    def broadcast_data_update(*args, **kwargs):
+        pass
+    def broadcast_file_update(*args, **kwargs):
+        pass
 
 # Initialize state
 current_state = {
@@ -89,6 +108,10 @@ def process_message_background(input_state):
     global current_state, sse_queue, system
     thread_id = threading.get_ident()
     print(f"後台處理開始 [線程ID: {thread_id}]")
+    
+    # 廣播代理開始處理
+    broadcast_agent_update("workflow_manager", "processing", 0, "開始處理用戶請求")
+    
     try:
         # Run the system with input (This is the blocking part)
         print(f"啟動代理工作流 [線程ID: {thread_id}]")
@@ -149,6 +172,13 @@ def process_message_background(input_state):
             print(f"處理事件 #{event_count} [線程ID: {thread_id}]")
             print(f"事件發送者: {event.get('sender', 'None')}")
             
+            # 廣播代理狀態更新
+            sender = event.get('sender', 'unknown')
+            if sender and sender != 'None':
+                progress = min(int((event_count / 10) * 100), 100)  # 估算進度
+                current_task = f"執行 {sender} 代理任務"
+                broadcast_agent_update(sender, "processing", progress, current_task)
+            
             for key in temp_state:
                 if key != "messages" and key in event:
                     temp_state[key] = event[key]
@@ -159,6 +189,13 @@ def process_message_background(input_state):
                     if isinstance(msg, (HumanMessage, AIMessage, dict, str))
                 ]
                 print(f"更新消息列表，當前消息數: {len(temp_state['messages'])}")
+                
+                # 廣播數據更新
+                broadcast_data_update("chat_state", {
+                    "messages": len(temp_state["messages"]),
+                    "sender": sender,
+                    "timestamp": datetime.now().isoformat()
+                })
 
             # --- Start of modified SSE push logic ---
             # Check if decision is needed based on the sender in the current event state
@@ -438,6 +475,16 @@ def upload_files():
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             file.save(filepath)
             uploaded_files.append(filename)
+            
+            # 廣播文件上傳狀態
+            file_info = get_file_info(filepath)
+            if file_info:
+                file_info['id'] = f"file_{len(uploaded_files)}"
+                broadcast_file_update({
+                    "type": "file_uploaded",
+                    "file": file_info,
+                    "timestamp": datetime.now().isoformat()
+                })
         
         return jsonify({
             "status": "success",

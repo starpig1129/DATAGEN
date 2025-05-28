@@ -98,19 +98,22 @@ export const useFileStore = defineStore('file', () => {
   })
 
   // Actions
-  const fetchFiles = async (): Promise<void> => {
+  const fetchFiles = async (useCache: boolean = false): Promise<void> => {
+    // 如果使用緩存且文件列表不為空，則跳過
+    if (useCache && files.value.length > 0) {
+      return
+    }
+    
     isLoading.value = true
     try {
-      const response = await fetch('/api/files')
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
+      const appStore = useAppStore()
+      const response = await appStore.apiRequest<{ files: FileInfo[] }>('/api/files')
       
       // 直接使用後端返回的文件列表
       // 後端已經提供了完整的文件信息
-      files.value = data.files
+      files.value = response.files
+      
+      console.log(`成功獲取 ${response.files.length} 個文件`)
       
     } catch (error) {
       console.error('獲取文件列表失敗:', error)
@@ -396,6 +399,229 @@ export const useFileStore = defineStore('file', () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
+  // 實時文件狀態更新
+  const syncFileStatus = (fileData: any): void => {
+    try {
+      if (fileData.type === 'file_update') {
+        console.log('文件狀態更新:', fileData)
+        
+        // 刷新文件列表
+        fetchFiles(false) // 強制刷新，不使用緩存
+      } else if (fileData.type === 'file_upload_progress') {
+        // 更新上傳進度
+        const { fileId, progress, status } = fileData.data
+        const currentProgress = uploadProgress.value.get(fileId)
+        if (currentProgress) {
+          uploadProgress.value.set(fileId, {
+            ...currentProgress,
+            progress,
+            status
+          })
+        }
+      }
+    } catch (error) {
+      console.error('同步文件狀態失敗:', error)
+    }
+  }
+
+  // 批量文件操作
+  const batchFileOperation = async (
+    fileIds: string[],
+    operation: 'delete' | 'download',
+    options?: any
+  ): Promise<void> => {
+    const appStore = useAppStore()
+    
+    try {
+      isLoading.value = true
+      
+      const results = await Promise.allSettled(
+        fileIds.map(async (fileId) => {
+          switch (operation) {
+            case 'delete':
+              return await deleteFiles([fileId])
+            case 'download':
+              return await downloadFile(fileId)
+            default:
+              throw new Error(`不支援的操作: ${operation}`)
+          }
+        })
+      )
+      
+      const successful = results.filter(r => r.status === 'fulfilled').length
+      const failed = results.filter(r => r.status === 'rejected').length
+      
+      if (successful > 0) {
+        appStore.addNotification({
+          type: 'success',
+          title: '批量操作完成',
+          message: `成功處理 ${successful} 個文件${failed > 0 ? `，失敗 ${failed} 個` : ''}`
+        })
+      }
+      
+      if (failed > 0) {
+        appStore.addNotification({
+          type: 'warning',
+          title: '部分操作失敗',
+          message: `${failed} 個文件操作失敗`
+        })
+      }
+      
+    } catch (error) {
+      const appStore = useAppStore()
+      appStore.addNotification({
+        type: 'error',
+        title: '批量操作失敗',
+        message: error instanceof Error ? error.message : '未知錯誤'
+      })
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // 智能文件預加載
+  const preloadFiles = async (fileIds: string[]): Promise<void> => {
+    try {
+      // 預加載文件內容到緩存
+      const preloadPromises = fileIds.map(async (fileId) => {
+        const file = files.value.find(f => f.id === fileId)
+        if (file && file.type === 'text' && file.size < 1024 * 1024) { // 只預加載小於1MB的文本文件
+          try {
+            const response = await fetch(`/api/files/content/${encodeURIComponent(file.name)}`)
+            if (response.ok) {
+              const content = await response.text()
+              // 緩存到 sessionStorage
+              sessionStorage.setItem(`file_content_${fileId}`, content)
+              console.log(`預加載文件成功: ${file.name}`)
+            }
+          } catch (error) {
+            console.warn(`預加載文件失敗: ${file.name}`, error)
+          }
+        }
+      })
+      
+      await Promise.allSettled(preloadPromises)
+    } catch (error) {
+      console.error('文件預加載失敗:', error)
+    }
+  }
+
+  // 文件搜索增強
+  const advancedSearch = async (searchCriteria: {
+    query?: string
+    fileType?: string
+    dateRange?: { start: string; end: string }
+    sizeRange?: { min: number; max: number }
+    tags?: string[]
+  }): Promise<FileInfo[]> => {
+    try {
+      // 構建搜索參數
+      const params = new URLSearchParams()
+      
+      if (searchCriteria.query) params.append('q', searchCriteria.query)
+      if (searchCriteria.fileType) params.append('type', searchCriteria.fileType)
+      if (searchCriteria.dateRange) {
+        params.append('dateStart', searchCriteria.dateRange.start)
+        params.append('dateEnd', searchCriteria.dateRange.end)
+      }
+      if (searchCriteria.sizeRange) {
+        params.append('sizeMin', searchCriteria.sizeRange.min.toString())
+        params.append('sizeMax', searchCriteria.sizeRange.max.toString())
+      }
+      if (searchCriteria.tags) {
+        params.append('tags', searchCriteria.tags.join(','))
+      }
+      
+      const appStore = useAppStore()
+      const response = await appStore.apiRequest<{ files: FileInfo[] }>(
+        `/api/files/search?${params.toString()}`
+      )
+      
+      return response.files || []
+      
+    } catch (error) {
+      console.error('高級搜索失敗:', error)
+      const appStore = useAppStore()
+      appStore.addNotification({
+        type: 'error',
+        title: '搜索失敗',
+        message: error instanceof Error ? error.message : '搜索請求失敗'
+      })
+      return []
+    }
+  }
+
+  // 文件自動同步
+  const enableAutoSync = (interval: number = 30000): void => {
+    // 定期自動刷新文件列表
+    const autoSyncInterval = setInterval(async () => {
+      try {
+        const currentCount = files.value.length
+        await fetchFiles(false)
+        const newCount = files.value.length
+        
+        if (newCount !== currentCount) {
+          const appStore = useAppStore()
+          appStore.addNotification({
+            type: 'info',
+            title: '文件已同步',
+            message: `檢測到文件變更，列表已更新`,
+            duration: 3000
+          })
+        }
+      } catch (error) {
+        console.error('自動同步失敗:', error)
+      }
+    }, interval)
+    
+    // 儲存間隔 ID 以便清理
+    ;(window as any).fileAutoSyncInterval = autoSyncInterval
+  }
+
+  const disableAutoSync = (): void => {
+    const intervalId = (window as any).fileAutoSyncInterval
+    if (intervalId) {
+      clearInterval(intervalId)
+      ;(window as any).fileAutoSyncInterval = null
+    }
+  }
+
+  // 增強的文件統計
+  const getFileStatistics = () => {
+    const stats = {
+      totalFiles: files.value.length,
+      totalSize: totalSize.value,
+      typeDistribution: {} as Record<string, number>,
+      sizeDistribution: {
+        small: 0,  // < 1MB
+        medium: 0, // 1MB - 10MB
+        large: 0   // > 10MB
+      },
+      recentFiles: files.value
+        .filter(f => {
+          const fileDate = new Date(f.updatedAt)
+          const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+          return fileDate > dayAgo
+        }).length
+    }
+    
+    files.value.forEach(file => {
+      // 類型分佈
+      stats.typeDistribution[file.type] = (stats.typeDistribution[file.type] || 0) + 1
+      
+      // 大小分佈
+      if (file.size < 1024 * 1024) {
+        stats.sizeDistribution.small++
+      } else if (file.size < 10 * 1024 * 1024) {
+        stats.sizeDistribution.medium++
+      } else {
+        stats.sizeDistribution.large++
+      }
+    })
+    
+    return stats
+  }
+
   return {
     // 狀態
     files,
@@ -413,7 +639,7 @@ export const useFileStore = defineStore('file', () => {
     totalSize,
     fileTypes,
     
-    // Actions
+    // 基礎 Actions
     fetchFiles,
     uploadFiles,
     downloadFile,
@@ -428,6 +654,15 @@ export const useFileStore = defineStore('file', () => {
     clearSearch,
     setSortBy,
     setViewMode,
+    
+    // 增強功能
+    syncFileStatus,
+    batchFileOperation,
+    preloadFiles,
+    advancedSearch,
+    enableAutoSync,
+    disableAutoSync,
+    getFileStatistics,
     
     // 工具函數
     formatFileSize

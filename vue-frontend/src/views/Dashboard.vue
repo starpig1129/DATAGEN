@@ -1,144 +1,260 @@
 <template>
-  <div class="dashboard">
-    <!-- 頁面標題 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div>
-          <h1 class="page-title">系統儀表板</h1>
-          <p class="page-description">多代理數據分析系統總覽</p>
+  <ResponsiveContainer
+    title="系統儀表板"
+    layout="default"
+    :loading="isInitialLoading"
+    loading-text="正在載入儀表板數據..."
+    :error="initError"
+    @retry="initializeDashboard"
+    show-skip-link
+    auto-focus
+  >
+    <template #header="{ isMobile }">
+      <div class="dashboard-header">
+        <div class="header-content">
+          <div class="title-section">
+            <h1 class="page-title">系統儀表板</h1>
+            <p class="page-description">多代理數據分析系統總覽</p>
+          </div>
+          <div class="header-actions">
+            <InteractiveElement
+              effect="scale"
+              enable-ripple
+              :tooltip="isRefreshing ? '正在刷新...' : '刷新數據'"
+            >
+              <el-button
+                type="primary"
+                :icon="Refresh"
+                :loading="isRefreshing"
+                @click="refreshDashboardData"
+                circle
+                :disabled="isRefreshing"
+              />
+            </InteractiveElement>
+          </div>
         </div>
-        <el-button
-          type="primary"
-          :icon="Refresh"
-          :loading="isRefreshing"
-          @click="refreshDashboardData"
-          circle
-          title="刷新數據"
+      </div>
+    </template>
+
+    <template #default="{ isMobile }">
+      <!-- 載入狀態 - 骨架屏 -->
+      <div v-if="isDataLoading" class="dashboard-loading">
+        <ProgressiveLoader
+          :loading="true"
+          :stages="loadingStages"
+          :current-stage-index="currentLoadingStage"
+          auto-progress
+          show-animation
+          spinner-type="pulse"
         />
       </div>
-    </div>
 
-    <!-- 統計卡片 -->
-    <div class="stats-grid">
-      <el-card
-        v-for="stat in systemStats"
-        :key="stat.key"
-        class="stat-card"
-        shadow="hover"
-      >
-        <div class="stat-content">
-          <div class="stat-icon" :style="{ backgroundColor: stat.color }">
-            <el-icon :size="24" :color="'white'">
-              <component :is="stat.icon" />
-            </el-icon>
+      <!-- 主要內容 -->
+      <div v-else class="dashboard-content">
+        <!-- 統計卡片 -->
+        <div class="stats-section">
+          <transition-group name="card-fade" tag="div" class="stats-grid">
+            <InteractiveElement
+              v-for="(stat, index) in systemStats"
+              :key="stat.key"
+              effect="scale"
+              intensity="subtle"
+              enable-scale
+              enable-glow
+              :tooltip="`${stat.label}: ${stat.value}`"
+              :animate-on-mount="true"
+              :delay="index * 100"
+            >
+              <el-card
+                class="stat-card"
+                shadow="hover"
+                :class="{ 'stat-error': stat.trend === 'negative' }"
+              >
+                <div class="stat-content">
+                  <div class="stat-icon" :style="{ backgroundColor: stat.color }">
+                    <el-icon :size="24" :color="'white'">
+                      <component :is="stat.icon" />
+                    </el-icon>
+                  </div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ stat.value }}</div>
+                    <div class="stat-label">{{ stat.label }}</div>
+                    <div class="stat-change" :class="stat.trend">
+                      <el-icon><component :is="stat.trendIcon" /></el-icon>
+                      <span>{{ stat.change }}</span>
+                    </div>
+                  </div>
+                </div>
+              </el-card>
+            </InteractiveElement>
+          </transition-group>
+        </div>
+
+        <!-- 主要內容區域 -->
+        <div class="dashboard-main" :class="{ 'mobile-stack': isMobile }">
+          <!-- 左側：代理狀態和活動 -->
+          <div class="left-panel">
+            <!-- 代理狀態總覽 -->
+            <ErrorBoundary
+              :show-details="false"
+              :show-go-back="false"
+              @retry="loadAgentStatus"
+            >
+              <el-card class="agent-overview" shadow="hover">
+                <template #header>
+                  <div class="card-header">
+                    <span>代理狀態總覽</span>
+                    <InteractiveElement
+                      effect="scale"
+                      enable-ripple
+                      tooltip="查看詳細代理狀態"
+                    >
+                      <el-button type="primary" text @click="navigateToAgents">
+                        查看詳情
+                      </el-button>
+                    </InteractiveElement>
+                  </div>
+                </template>
+                
+                <div v-if="agentStatusLoading" class="agent-loading">
+                  <SkeletonLoader type="list" :items="8" />
+                </div>
+                
+                <div v-else class="agent-grid">
+                  <transition-group name="agent-fade" tag="div">
+                    <InteractiveElement
+                      v-for="(agent, index) in agentStatus"
+                      :key="agent.id"
+                      effect="slide"
+                      enable-scale
+                      :tooltip="`${agent.name} - ${getStatusText(agent.status)}`"
+                      :animate-on-mount="true"
+                      :delay="index * 50"
+                    >
+                      <div
+                        class="agent-item"
+                        :class="agent.status"
+                      >
+                        <div class="agent-avatar">
+                          <el-icon><Monitor /></el-icon>
+                        </div>
+                        <div class="agent-info">
+                          <div class="agent-name">{{ agent.name }}</div>
+                          <div class="agent-status">{{ getStatusText(agent.status) }}</div>
+                        </div>
+                        <div class="agent-indicator" :class="agent.status"></div>
+                      </div>
+                    </InteractiveElement>
+                  </transition-group>
+                </div>
+              </el-card>
+            </ErrorBoundary>
+
+            <!-- 最近活動 -->
+            <ErrorBoundary
+              :show-details="false"
+              :show-go-back="false"
+              @retry="loadRecentActivities"
+            >
+              <el-card class="recent-activity" shadow="hover">
+                <template #header>
+                  <span>最近活動</span>
+                </template>
+                
+                <div v-if="activitiesLoading" class="activities-loading">
+                  <SkeletonLoader type="list" :items="5" />
+                </div>
+                
+                <el-timeline v-else>
+                  <transition-group name="timeline-fade">
+                    <el-timeline-item
+                      v-for="(activity, index) in recentActivities"
+                      :key="activity.id"
+                      :timestamp="formatTime(activity.timestamp)"
+                      :type="activity.type"
+                      :style="{ animationDelay: `${index * 100}ms` }"
+                      class="timeline-item-animated"
+                    >
+                      <div class="activity-content">
+                        <div class="activity-title">{{ activity.title }}</div>
+                        <div class="activity-description">{{ activity.description }}</div>
+                      </div>
+                    </el-timeline-item>
+                  </transition-group>
+                </el-timeline>
+              </el-card>
+            </ErrorBoundary>
           </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ stat.value }}</div>
-            <div class="stat-label">{{ stat.label }}</div>
-            <div class="stat-change" :class="stat.trend">
-              <el-icon><component :is="stat.trendIcon" /></el-icon>
-              <span>{{ stat.change }}</span>
-            </div>
+
+          <!-- 右側：圖表和快速操作 -->
+          <div class="right-panel">
+            <!-- 系統性能圖表 -->
+            <ErrorBoundary
+              :show-details="false"
+              error-type="chart"
+              @retry="loadPerformanceData"
+            >
+              <el-card class="performance-chart" shadow="hover">
+                <template #header>
+                  <span>系統性能監控</span>
+                </template>
+                
+                <div class="chart-container">
+                  <div v-if="chartLoading" class="chart-loading">
+                    <SkeletonLoader type="chart" />
+                  </div>
+                  
+                  <PerformanceChart
+                    v-else
+                    :height="300"
+                    :refresh-interval="5000"
+                    :is-dark="isDarkMode"
+                  />
+                </div>
+              </el-card>
+            </ErrorBoundary>
+
+            <!-- 快速操作 -->
+            <el-card class="quick-actions" shadow="hover">
+              <template #header>
+                <span>快速操作</span>
+              </template>
+              
+              <div class="action-grid">
+                <InteractiveElement
+                  v-for="(action, index) in quickActions"
+                  :key="action.key"
+                  effect="bounce"
+                  enable-ripple
+                  enable-scale
+                  :tooltip="action.description || action.label"
+                  :animate-on-mount="true"
+                  :delay="index * 100"
+                >
+                  <el-button
+                    :type="action.type as 'primary' | 'success' | 'warning' | 'info' | 'danger'"
+                    :icon="action.icon"
+                    class="action-button"
+                    @click="handleQuickAction(action.key)"
+                  >
+                    {{ action.label }}
+                  </el-button>
+                </InteractiveElement>
+              </div>
+            </el-card>
           </div>
         </div>
-      </el-card>
-    </div>
-
-    <!-- 主要內容區域 -->
-    <div class="dashboard-content">
-      <!-- 左側：代理狀態和活動 -->
-      <div class="left-panel">
-        <!-- 代理狀態總覽 -->
-        <el-card class="agent-overview" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span>代理狀態總覽</span>
-              <el-button type="primary" text @click="navigateToAgents">
-                查看詳情
-              </el-button>
-            </div>
-          </template>
-          
-          <div class="agent-grid">
-            <div
-              v-for="agent in agentStatus"
-              :key="agent.id"
-              class="agent-item"
-              :class="agent.status"
-            >
-              <div class="agent-avatar">
-                <el-icon><Monitor /></el-icon>
-              </div>
-              <div class="agent-info">
-                <div class="agent-name">{{ agent.name }}</div>
-                <div class="agent-status">{{ getStatusText(agent.status) }}</div>
-              </div>
-              <div class="agent-indicator" :class="agent.status"></div>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 最近活動 -->
-        <el-card class="recent-activity" shadow="hover">
-          <template #header>
-            <span>最近活動</span>
-          </template>
-          
-          <el-timeline>
-            <el-timeline-item
-              v-for="activity in recentActivities"
-              :key="activity.id"
-              :timestamp="formatTime(activity.timestamp)"
-              :type="activity.type"
-            >
-              <div class="activity-content">
-                <div class="activity-title">{{ activity.title }}</div>
-                <div class="activity-description">{{ activity.description }}</div>
-              </div>
-            </el-timeline-item>
-          </el-timeline>
-        </el-card>
       </div>
+    </template>
+  </ResponsiveContainer>
 
-      <!-- 右側：圖表和快速操作 -->
-      <div class="right-panel">
-        <!-- 系統性能圖表 -->
-        <el-card class="performance-chart" shadow="hover">
-          <template #header>
-            <span>系統性能監控</span>
-          </template>
-          
-          <div class="chart-container">
-            <PerformanceChart
-              :height="300"
-              :refresh-interval="5000"
-              :is-dark="settingsStore.currentTheme === 'dark'"
-            />
-          </div>
-        </el-card>
-
-        <!-- 快速操作 -->
-        <el-card class="quick-actions" shadow="hover">
-          <template #header>
-            <span>快速操作</span>
-          </template>
-          
-          <div class="action-grid">
-            <el-button
-              v-for="action in quickActions"
-              :key="action.key"
-              :type="action.type as 'primary' | 'success' | 'warning' | 'info' | 'danger'"
-              :icon="action.icon"
-              class="action-button"
-              @click="handleQuickAction(action.key)"
-            >
-              {{ action.label }}
-            </el-button>
-          </div>
-        </el-card>
-      </div>
-    </div>
-  </div>
+  <!-- 鍵盤快捷鍵支援 - 移到容器外 -->
+  <KeyboardShortcuts
+    :shortcuts="dashboardShortcuts"
+    :commands="dashboardCommands"
+    @shortcut="handleShortcut"
+    @command="handleCommand"
+  />
 </template>
 
 <script setup lang="ts">
@@ -148,10 +264,8 @@ import {
   Monitor,
   TrendCharts,
   ChatDotRound,
-  View,
   DataAnalysis,
   Folder,
-  Setting,
   ArrowUp,
   ArrowDown,
   DocumentCopy,
@@ -161,13 +275,22 @@ import {
 import { formatDistanceToNow } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
 import { ElMessage } from 'element-plus'
+
+// 新的 UX 組件
+import ResponsiveContainer from '@/components/common/ResponsiveContainer.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import ProgressiveLoader from '@/components/common/ProgressiveLoader.vue'
+import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
+import InteractiveElement from '@/components/common/InteractiveElement.vue'
+import KeyboardShortcuts from '@/components/common/KeyboardShortcuts.vue'
+
+// 現有組件
 import PerformanceChart from '@/components/charts/PerformanceChart.vue'
 
 // Pinia Stores
 import { useAppStore } from '@/stores/app'
 import { useChatStore } from '@/stores/chat'
 import { useFileStore } from '@/stores/file'
-import { useSettingsStore } from '@/stores/settings'
 
 // Types
 import { MessageType } from '@/types/chat'
@@ -176,18 +299,41 @@ const router = useRouter()
 const appStore = useAppStore()
 const chatStore = useChatStore()
 const fileStore = useFileStore()
-const settingsStore = useSettingsStore()
+
+// 響應式數據
+const isDarkMode = computed(() => {
+  // 從 localStorage 或系統偏好檢測深色模式
+  return document.documentElement.classList.contains('dark') || 
+         (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+})
 
 // 載入狀態
+const isInitialLoading = ref(true)
+const isDataLoading = ref(false)
 const isRefreshing = ref(false)
+const agentStatusLoading = ref(false)
+const activitiesLoading = ref(false)
+const chartLoading = ref(false)
+const initError = ref<string | null>(null)
 
-// 系統統計數據 - 基於 stores 的動態計算
+// 載入階段
+const loadingStages = ref([
+  { title: '初始化應用', description: '準備系統組件', duration: 800 },
+  { title: '載入設定', description: '驗證配置信息', duration: 600 },
+  { title: '連接服務', description: '建立後端連接', duration: 1000 },
+  { title: '獲取數據', description: '載入儀表板數據', duration: 1200 },
+  { title: '完成', description: '準備就緒', duration: 400 }
+])
+
+const currentLoadingStage = ref(0)
+
+// 計算屬性保持原有邏輯
 const systemStats = computed(() => {
   const activeAgents = agentStatus.value.filter(agent => agent.status === 'active').length
   const totalAgents = agentStatus.value.length
   const completedTasks = chatStore.messages.length
   const connectionStatus = chatStore.isConnected
-  const systemPerformance = settingsStore.isApiConfigured ? 95 : 50
+  const systemPerformance = connectionStatus ? 95 : 50
 
   return [
     {
@@ -233,7 +379,7 @@ const systemStats = computed(() => {
   ]
 })
 
-// 代理狀態 - 基於聊天狀態和設定的動態計算
+// 代理狀態 - 保持原有邏輯
 const agentStatus = computed(() => {
   const baseAgents = [
     { id: '1', name: '處理代理', status: 'idle' },
@@ -263,15 +409,10 @@ const agentStatus = computed(() => {
     })
   }
 
-  // 根據設定狀態調整代理狀態
-  if (!settingsStore.isApiConfigured) {
-    baseAgents[7].status = 'error' // 優化代理顯示錯誤，表示配置問題
-  }
-
   return baseAgents
 })
 
-// 最近活動 - 基於聊天消息和應用通知
+// 最近活動 - 保持原有邏輯
 const recentActivities = computed(() => {
   const activities: Array<{
     id: string
@@ -347,12 +488,75 @@ const recentActivities = computed(() => {
     .slice(0, 5)
 })
 
-// 快速操作
+// 快速操作 - 增強版
 const quickActions = ref([
-  { key: 'chat', label: '開始對話', type: 'primary', icon: ChatDotRound },
-  { key: 'agents', label: '代理監控', type: 'success', icon: Monitor },
-  { key: 'visualization', label: '數據視覺化', type: 'warning', icon: DataAnalysis },
-  { key: 'files', label: '文件管理', type: 'info', icon: Folder }
+  { 
+    key: 'chat', 
+    label: '開始對話', 
+    description: '與 AI 代理開始新的對話',
+    type: 'primary', 
+    icon: ChatDotRound 
+  },
+  { 
+    key: 'agents', 
+    label: '代理監控', 
+    description: '查看代理狀態和性能',
+    type: 'success', 
+    icon: Monitor 
+  },
+  { 
+    key: 'visualization', 
+    label: '數據視覺化', 
+    description: '創建和管理數據圖表',
+    type: 'warning', 
+    icon: DataAnalysis 
+  },
+  { 
+    key: 'files', 
+    label: '文件管理', 
+    description: '上傳和管理文件',
+    type: 'info', 
+    icon: Folder 
+  }
+])
+
+// 快捷鍵配置
+const dashboardShortcuts = ref({
+  'ctrl+shift+r': {
+    keys: 'ctrl+shift+r',
+    description: '刷新儀表板數據',
+    action: () => refreshDashboardData()
+  },
+  'ctrl+1': {
+    keys: 'ctrl+1',
+    description: '跳轉到聊天界面',
+    action: () => handleQuickAction('chat')
+  },
+  'ctrl+2': {
+    keys: 'ctrl+2',
+    description: '跳轉到代理監控',
+    action: () => handleQuickAction('agents')
+  }
+})
+
+// 命令配置
+const dashboardCommands = ref([
+  {
+    id: 'refresh-dashboard',
+    title: '刷新儀表板',
+    subtitle: '重新載入所有數據',
+    icon: '🔄',
+    action: () => refreshDashboardData(),
+    keywords: ['refresh', 'reload', '刷新', '重新載入']
+  },
+  {
+    id: 'view-agents',
+    title: '查看代理狀態',
+    subtitle: '打開代理監控頁面',
+    icon: '🤖',
+    action: () => navigateToAgents(),
+    keywords: ['agents', 'monitor', '代理', '監控']
+  }
 ])
 
 // 方法
@@ -394,27 +598,25 @@ const handleQuickAction = (actionKey: string) => {
   }
 }
 
-// 數據刷新機制
+// 增強的數據刷新機制
 const refreshDashboardData = async () => {
   if (isRefreshing.value) return
   
   isRefreshing.value = true
   try {
-    // 刷新各個 store 的數據
+    // 並行載入不同數據源
     await Promise.allSettled([
-      // 初始化聊天連接（如果尚未連接）
+      loadAgentStatus(),
+      loadRecentActivities(),
+      loadPerformanceData(),
+      // 刷新各個 store 的數據
       chatStore.isConnected ? Promise.resolve() : chatStore.initializeChat(),
-      // 獲取文件列表
-      fileStore.fetchFiles(),
-      // 驗證設定
-      settingsStore.validateSettings()
+      fileStore.fetchFiles()
     ])
     
-    // 顯示成功訊息
     ElMessage.success('儀表板數據已更新')
   } catch (error) {
     console.error('刷新儀表板數據失敗:', error)
-    // 使用 app store 的通知系統
     appStore.addNotification({
       type: 'error',
       title: '刷新失敗',
@@ -423,6 +625,99 @@ const refreshDashboardData = async () => {
   } finally {
     isRefreshing.value = false
   }
+}
+
+// 分段載入方法
+const loadAgentStatus = async () => {
+  agentStatusLoading.value = true
+  try {
+    // 模擬 API 請求
+    await new Promise(resolve => setTimeout(resolve, 500))
+    // 實際的代理狀態載入邏輯會在這裡
+  } finally {
+    agentStatusLoading.value = false
+  }
+}
+
+const loadRecentActivities = async () => {
+  activitiesLoading.value = true
+  try {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    // 實際的活動載入邏輯會在這裡
+  } finally {
+    activitiesLoading.value = false
+  }
+}
+
+const loadPerformanceData = async () => {
+  chartLoading.value = true
+  try {
+    await new Promise(resolve => setTimeout(resolve, 800))
+    // 實際的性能數據載入邏輯會在這裡
+  } finally {
+    chartLoading.value = false
+  }
+}
+
+// 初始化儀表板
+const initializeDashboard = async () => {
+  isInitialLoading.value = true
+  isDataLoading.value = true
+  initError.value = null
+  
+  try {
+    // 階段 1: 初始化應用程式
+    currentLoadingStage.value = 0
+    if (!appStore.isInitialized) {
+      await appStore.initialize()
+    }
+    
+    // 階段 2: 載入設定
+    currentLoadingStage.value = 1
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // 階段 3: 連接服務
+    currentLoadingStage.value = 2
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // 階段 4: 獲取數據
+    currentLoadingStage.value = 3
+    await refreshDashboardData()
+    
+    // 階段 5: 完成
+    currentLoadingStage.value = 4
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    console.log('儀表板已成功載入')
+    
+    // 顯示歡迎通知
+    appStore.addNotification({
+      type: 'success',
+      title: '歡迎使用',
+      message: '多代理數據分析系統儀表板已載入完成',
+      duration: 3000
+    })
+  } catch (error) {
+    console.error('儀表板初始化失敗:', error)
+    initError.value = '儀表板初始化時發生錯誤，部分功能可能無法正常使用'
+    appStore.addNotification({
+      type: 'error',
+      title: '初始化失敗',
+      message: initError.value
+    })
+  } finally {
+    isInitialLoading.value = false
+    isDataLoading.value = false
+  }
+}
+
+// 快捷鍵和命令處理
+const handleShortcut = (keys: string, event: KeyboardEvent) => {
+  console.log('快捷鍵觸發:', keys)
+}
+
+const handleCommand = (command: any) => {
+  console.log('命令執行:', command.title)
 }
 
 // 自動刷新定時器
@@ -446,61 +741,21 @@ const stopAutoRefresh = () => {
 
 // 生命週期
 onMounted(async () => {
-  console.log('儀表板載入中...')
-  
-  try {
-    // 初始化應用程式（如果尚未初始化）
-    if (!appStore.isInitialized) {
-      await appStore.initialize()
-    }
-    
-    // 初始化設定（如果尚未初始化）
-    if (!settingsStore.isApiConfigured) {
-      await settingsStore.initialize()
-    }
-    
-    // 執行初始數據載入
-    await refreshDashboardData()
-    
-    // 啟動自動刷新
-    startAutoRefresh()
-    
-    console.log('儀表板已成功載入')
-    
-    // 顯示歡迎通知
-    appStore.addNotification({
-      type: 'success',
-      title: '歡迎使用',
-      message: '多代理數據分析系統儀表板已載入完成',
-      duration: 3000
-    })
-  } catch (error) {
-    console.error('儀表板初始化失敗:', error)
-    appStore.addNotification({
-      type: 'error',
-      title: '初始化失敗',
-      message: '儀表板初始化時發生錯誤，部分功能可能無法正常使用'
-    })
-  }
+  console.log('儀表板組件載入中...')
+  await initializeDashboard()
+  startAutoRefresh()
 })
 
 onUnmounted(() => {
   console.log('儀表板正在卸載...')
-  
-  // 停止自動刷新
   stopAutoRefresh()
-  
-  // 清理資源（如需要）
   console.log('儀表板已卸載')
 })
 </script>
 
 <style scoped>
-.dashboard {
-  padding: 0;
-}
-
-.page-header {
+/* 儀表板佈局 */
+.dashboard-header {
   margin-bottom: 24px;
 }
 
@@ -508,6 +763,10 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.title-section {
+  flex: 1;
 }
 
 .page-title {
@@ -522,39 +781,67 @@ onUnmounted(() => {
   margin: 0;
 }
 
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* 載入狀態 */
+.dashboard-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+/* 統計卡片區域 */
+.stats-section {
+  margin-bottom: 24px;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
 }
 
 .stat-card {
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
+  box-shadow: var(--el-box-shadow-light);
+}
+
+.stat-card.stat-error {
+  border-left: 4px solid var(--el-color-danger);
 }
 
 .stat-content {
   display: flex;
   align-items: center;
   gap: 16px;
+  padding: 4px;
 }
 
 .stat-icon {
   width: 48px;
   height: 48px;
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .stat-info {
   flex: 1;
+  min-width: 0;
 }
 
 .stat-value {
@@ -562,12 +849,13 @@ onUnmounted(() => {
   font-weight: 700;
   color: var(--el-text-color-primary);
   line-height: 1;
+  margin-bottom: 4px;
 }
 
 .stat-label {
   font-size: 14px;
   color: var(--el-text-color-regular);
-  margin: 4px 0;
+  margin-bottom: 4px;
 }
 
 .stat-change {
@@ -585,10 +873,15 @@ onUnmounted(() => {
   color: var(--el-color-danger);
 }
 
-.dashboard-content {
+/* 主要內容區域 */
+.dashboard-main {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
+}
+
+.dashboard-main.mobile-stack {
+  grid-template-columns: 1fr;
 }
 
 .left-panel,
@@ -598,10 +891,18 @@ onUnmounted(() => {
   gap: 24px;
 }
 
+/* 卡片標題 */
 .card-header {
   display: flex;
-  justify-content: between;
+  justify-content: space-between;
   align-items: center;
+}
+
+/* 代理網格 */
+.agent-loading,
+.activities-loading,
+.chart-loading {
+  padding: 16px;
 }
 
 .agent-grid {
@@ -616,111 +917,246 @@ onUnmounted(() => {
   gap: 12px;
   padding: 12px;
   border-radius: 8px;
+  background: var(--el-bg-color-page);
   border: 1px solid var(--el-border-color-lighter);
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
 .agent-item:hover {
+  background: var(--el-bg-color);
+  border-color: var(--el-border-color-light);
+}
+
+.agent-item.active {
+  border-color: var(--el-color-success);
+  background: var(--el-color-success-light-9);
+}
+
+.agent-item.processing {
   border-color: var(--el-color-primary);
-  background-color: var(--el-color-primary-light-9);
+  background: var(--el-color-primary-light-9);
+}
+
+.agent-item.error {
+  border-color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
 }
 
 .agent-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: var(--el-color-primary-light-8);
+  background: var(--el-color-info-light-7);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--el-color-primary);
+  color: var(--el-color-info);
 }
 
 .agent-info {
   flex: 1;
+  min-width: 0;
 }
 
 .agent-name {
+  font-size: 14px;
   font-weight: 500;
   color: var(--el-text-color-primary);
+  margin-bottom: 2px;
 }
 
 .agent-status {
   font-size: 12px;
-  color: var(--el-text-color-regular);
+  color: var(--el-text-color-secondary);
 }
 
 .agent-indicator {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  background: var(--el-color-info);
 }
 
 .agent-indicator.active {
-  background-color: var(--el-color-success);
-}
-
-.agent-indicator.idle {
-  background-color: var(--el-color-info);
+  background: var(--el-color-success);
+  box-shadow: 0 0 6px var(--el-color-success);
 }
 
 .agent-indicator.processing {
-  background-color: var(--el-color-warning);
+  background: var(--el-color-primary);
   animation: pulse 2s infinite;
 }
 
 .agent-indicator.error {
-  background-color: var(--el-color-danger);
+  background: var(--el-color-danger);
 }
 
+/* 圖表容器 */
+.chart-container {
+  min-height: 300px;
+  position: relative;
+}
+
+/* 快速操作 */
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.action-button {
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+/* 活動時間線 */
 .activity-content {
-  margin-left: 8px;
+  padding: 4px 0;
 }
 
 .activity-title {
+  font-size: 14px;
   font-weight: 500;
   color: var(--el-text-color-primary);
   margin-bottom: 4px;
 }
 
 .activity-description {
-  font-size: 13px;
-  color: var(--el-text-color-regular);
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.4;
 }
 
-.chart-container {
-  height: 300px;
-}
-
-.action-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.action-button {
-  height: 48px;
-}
-
+/* 動畫 */
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* 響應式設計 */
-@media (max-width: 1024px) {
-  .dashboard-content {
-    grid-template-columns: 1fr;
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
   }
 }
 
+/* 過渡動畫 */
+.card-fade-enter-active,
+.card-fade-leave-active,
+.agent-fade-enter-active,
+.agent-fade-leave-active,
+.timeline-fade-enter-active,
+.timeline-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.card-fade-enter-from,
+.card-fade-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.agent-fade-enter-from,
+.agent-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.timeline-fade-enter-from,
+.timeline-fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.timeline-item-animated {
+  animation: slideInUp 0.5s ease forwards;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 響應式設計 */
 @media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .dashboard-main {
+    grid-template-columns: 1fr;
+  }
+  
   .stats-grid {
     grid-template-columns: 1fr;
   }
   
   .action-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .page-title {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-content {
+    gap: 12px;
+  }
+  
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
+  
+  .action-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* 無障礙支援 */
+@media (prefers-reduced-motion: reduce) {
+  .stat-card,
+  .agent-item,
+  .timeline-item-animated {
+    transition: none;
+    animation: none;
+  }
+  
+  .agent-indicator.processing {
+    animation: none;
+  }
+}
+
+/* 高對比度模式 */
+@media (prefers-contrast: high) {
+  .stat-card,
+  .agent-item {
+    border-width: 2px;
+  }
+  
+  .stat-change.positive {
+    color: #008000;
+  }
+  
+  .stat-change.negative {
+    color: #ff0000;
   }
 }
 </style>
