@@ -23,15 +23,53 @@
     "filter": "筛选",
     "export": "导出",
     "import": "导入",
-    "refresh": "刷新"
+    "refresh": "刷新",
+    "notifications": "通知",
+    "profile": "个人资料",
+    "logout": "登出"
+  },
+  "app": {
+    "title": "多代理数据分析系统"
   },
   "navigation": {
     "dashboard": "仪表板",
     "chat": "聊天界面",
     "files": "文件管理",
-    "agents": "代理监控",
-    "visualization": "数据可视化",
-    "settings": "系统设置"
+    "agents": {
+      "title": "代理管理",
+      "monitor": "代理监控",
+      "workflow": "工作流",
+      "performance": "性能分析"
+    },
+    "visualization": {
+      "title": "数据可视化",
+      "charts": "图表分析",
+      "dashboard": "仪表板",
+      "reports": "报告生成"
+    },
+    "settings": "系统设置",
+    "agentStatus": "代理状态",
+    "collapse": "折叠",
+    "expand": "展开"
+  },
+  "agents": {
+    "status": {
+      "title": "代理状态",
+      "active": "运行中",
+      "idle": "空闲",
+      "processing": "处理中",
+      "error": "错误"
+    },
+    "names": {
+      "processing": "处理代理",
+      "hypothesis": "假设代理",
+      "search": "搜索代理",
+      "code": "代码代理",
+      "visualization": "可视化代理",
+      "report": "报告代理",
+      "qualityReview": "质量审查代理",
+      "optimization": "优化代理"
+    }
   },
   "settings": {
     "title": "系统设置",
@@ -93,11 +131,21 @@
       },
       "testConnection": "测试连接",
       "connectionTest": {
+        "description": "测试与后端服务的连接状态",
         "testing": "测试连接中...",
         "success": "连接成功",
         "failed": "连接失败",
         "status": "状态：{status}",
-        "message": "消息：{message}"
+        "message": "消息：{message}",
+        "responseData": "响应数据",
+        "showDetails": "显示详情",
+        "hideDetails": "隐藏详情",
+        "copyResults": "复制结果",
+        "testHistory": "测试历史",
+        "clearHistory": "清除历史",
+        "copySuccess": "测试结果已复制到剪贴板",
+        "copyFailed": "复制失败",
+        "historyCleared": "测试历史已清除"
       }
     },
     "user": {
@@ -200,6 +248,7 @@
       },
       "priorities": {
         "title": "代理优先级",
+        "level": "优先级",
         "searchAgent": "搜索代理",
         "analysisAgent": "分析代理",
         "visualizationAgent": "可视化代理",
@@ -239,6 +288,7 @@
           "unit": "MB"
         },
         "allowedTypes": "允许的文件类型",
+        "allowedTypesHelp": "支持的文件类型，可以添加自定义类型",
         "maxFilesPerUpload": "单次上传最大文件数",
         "autoScan": "自动扫描文件",
         "compressImages": "压缩图片"
@@ -264,7 +314,16 @@
           "unit": "秒"
         },
         "preloadData": "预加载数据",
-        "compressData": "压缩数据"
+        "compressData": "压缩数据",
+        "stats": {
+          "title": "缓存统计",
+          "clear": "清除缓存",
+          "currentSize": "当前大小",
+          "hitRate": "命中率",
+          "itemCount": "项目数量"
+        },
+        "confirmClear": "确定要清除所有缓存吗？这可能会影响系统性能。",
+        "clearSuccess": "缓存已清除"
       },
       "cleanup": {
         "title": "清理设置",
@@ -278,7 +337,15 @@
           "unit": "天"
         },
         "cleanupLogs": "清理日志",
-        "cleanupCache": "清理缓存"
+        "cleanupCache": "清理缓存",
+        "manual": {
+          "title": "手动清理",
+          "description": "立即执行清理操作",
+          "cleanupLogs": "清理日志",
+          "cleanupCache": "清理缓存",
+          "cleanupTempFiles": "清理临时文件",
+          "cleanupAll": "全部清理"
+        }
       }
     },
     "actions": {
@@ -288,7 +355,8 @@
       "export": "导出设置",
       "import": "导入设置",
       "backup": "创建备份",
-      "restore": "恢复备份"
+      "restore": "恢复备份",
+      "more": "更多操作"
     },
     "validation": {
       "required": "此字段为必填项",
@@ -297,11 +365,14 @@
       "tooLong": "长度过长",
       "outOfRange": "数值超出范围",
       "invalidUrl": "URL格式无效",
-      "invalidEmail": "邮件地址格式无效"
+      "invalidEmail": "邮件地址格式无效",
+      "formHasErrors": "请修复表单错误后再保存"
     },
     "messages": {
       "saveSuccess": "设置已成功保存",
       "saveFailed": "保存设置失败：{error}",
+      "saveTimeout": "保存操作超时 - 请检查您的网络连接",
+      "saveNetworkError": "网络错误 - 请检查您的连接并重试",
       "resetSuccess": "设置已重置为默认值",
       "exportSuccess": "设置已导出",
       "importSuccess": "设置导入成功",
@@ -314,7 +385,28 @@
       "tokenInvalid": "Token验证失败",
       "syncSuccess": "设置已同步到服务器",
       "syncFailed": "同步到服务器失败：{error}",
-      "unsavedChanges": "您有未保存的修改，是否要离开？"
+      "unsavedChanges": "您有未保存的修改",
+      "noBackupFound": "未找到备份文件",
+      "languageChanged": "语言已切换为{language}",
+      "languageChangeFailed": "语言切换失败",
+      "themeChanged": "主题已切换为{theme}",
+      "initializationFailed": "设置初始化失败"
+    },
+    "confirm": {
+      "resetTitle": "重置设置",
+      "resetMessage": "确定要重置所有设置为默认值吗？此操作无法撤销。",
+      "resetConfirm": "确定重置",
+      "restoreTitle": "恢复备份",
+      "restoreMessage": "确定要从备份恢复设置吗？当前设置将被覆盖。",
+      "restoreConfirm": "确定恢复"
+    },
+    "errors": {
+      "fileFormat": "文件格式错误",
+      "networkError": "网络连接错误",
+      "serverError": "服务器错误",
+      "validationError": "验证错误",
+      "permissionDenied": "权限不足",
+      "timeout": "操作超时"
     }
   }
 }

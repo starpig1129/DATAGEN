@@ -345,7 +345,7 @@ export const SETTINGS_VALIDATION_RULES: SettingsValidationRules = {
       pattern: /^[A-Za-z0-9_\-]+$/
     },
     baseUrl: {
-      required: true,
+      required: false, // 改為非必填，使用預設值
       pattern: /^https?:\/\/.+/
     },
     timeout: {
@@ -354,8 +354,8 @@ export const SETTINGS_VALIDATION_RULES: SettingsValidationRules = {
     },
     openaiApiKey: {
       required: true,
-      minLength: 32,
-      pattern: /^sk-[A-Za-z0-9]+$/
+      minLength: 20, // 降低最小長度要求
+      pattern: /^sk-[A-Za-z0-9_-]+$/ // 允許底線和連字符
     }
   },
   data: {

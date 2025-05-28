@@ -7,7 +7,7 @@ const ChatInterface = () => import('@/views/ChatInterface.vue')
 const AgentMonitor = () => import('@/views/AgentMonitor.vue')
 const DataVisualization = () => import('@/views/DataVisualization.vue')
 const FileManager = () => import('@/views/FileManager.vue')
-const Settings = () => import('@/views/Settings.vue')
+const Settings = () => import('@/views/SettingsSimple.vue')
 
 // 路由配置
 const routes: RouteRecordRaw[] = [

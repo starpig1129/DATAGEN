@@ -581,7 +581,7 @@ def event_stream():
     return response
 
 # 設定管理API端點
-SETTINGS_FILE = 'data_storage/settings.json'
+SETTINGS_FILE = './settings.json'
 
 def load_settings():
     """載入系統設定"""
@@ -597,14 +597,60 @@ def load_settings():
 def save_settings(settings):
     """保存系統設定"""
     try:
-        # 確保目錄存在
-        os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
+        print(f"🔍 開始保存設定到檔案...")
+        print(f"- 目標檔案路徑: {SETTINGS_FILE}")
+        print(f"- 目標目錄: {os.path.dirname(SETTINGS_FILE)}")
+        print(f"- 設定數據大小: {len(str(settings))} 字符")
         
+        # 確保目錄存在
+        target_dir = os.path.dirname(SETTINGS_FILE)
+        if not os.path.exists(target_dir):
+            print(f"📁 創建目錄: {target_dir}")
+            os.makedirs(target_dir, exist_ok=True)
+        else:
+            print(f"✅ 目錄已存在: {target_dir}")
+        
+        # 檢查目錄權限
+        if not os.access(target_dir, os.W_OK):
+            raise PermissionError(f"沒有寫入權限: {target_dir}")
+        print(f"✅ 目錄寫入權限檢查通過")
+        
+        # 創建備份（如果檔案已存在）
+        if os.path.exists(SETTINGS_FILE):
+            backup_file = f"{SETTINGS_FILE}.backup"
+            import shutil
+            shutil.copy2(SETTINGS_FILE, backup_file)
+            print(f"💾 已創建備份檔案: {backup_file}")
+        
+        print(f"💾 開始寫入設定檔案...")
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
             json.dump(settings, f, ensure_ascii=False, indent=2)
+        
+        # 驗證檔案是否成功創建
+        if os.path.exists(SETTINGS_FILE):
+            file_size = os.path.getsize(SETTINGS_FILE)
+            print(f"✅ 設定檔案創建成功!")
+            print(f"- 檔案路徑: {os.path.abspath(SETTINGS_FILE)}")
+            print(f"- 檔案大小: {file_size} bytes")
+            
+            # 驗證檔案內容是否可讀
+            try:
+                with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                    test_data = json.load(f)
+                print(f"✅ 檔案內容驗證成功，包含 {len(test_data)} 個頂級鍵")
+            except Exception as verify_error:
+                print(f"⚠️ 檔案內容驗證失敗: {verify_error}")
+        else:
+            raise FileNotFoundError("檔案創建後仍不存在")
+            
         return True
     except Exception as e:
-        print(f"保存設定失敗: {e}")
+        print(f"❌ 保存設定失敗: {e}")
+        print(f"- 錯誤類型: {type(e).__name__}")
+        print(f"- 工作目錄: {os.getcwd()}")
+        print(f"- 檔案路徑: {os.path.abspath(SETTINGS_FILE)}")
+        import traceback
+        print(f"- 錯誤堆疊: {traceback.format_exc()}")
         return False
 
 @app.route('/api/settings', methods=['GET'])
@@ -735,22 +781,50 @@ def get_settings():
 def update_settings():
     """更新系統設定"""
     try:
+        print(f"📥 收到設定更新請求")
+        print(f"- 請求方法: {request.method}")
+        print(f"- 內容類型: {request.content_type}")
+        print(f"- 請求數據大小: {len(request.get_data())} bytes")
+        
         # 驗證請求數據
         if not request.json:
-            return jsonify({"status": "error", "message": "無效的請求數據"}), 400
+            error_msg = "無效的請求數據"
+            print(f"❌ {error_msg}")
+            return jsonify({"status": "error", "message": error_msg}), 400
         
         settings = request.json
+        print(f"📋 收到設定數據，包含鍵: {list(settings.keys())}")
         
         # 添加最後修改時間
         settings['lastModified'] = datetime.now().isoformat()
+        print(f"⏰ 已添加最後修改時間: {settings['lastModified']}")
         
         # 保存設定
+        print(f"💾 開始保存設定...")
         if save_settings(settings):
-            return jsonify({"status": "success", "message": "設定已保存"})
+            success_msg = "設定已保存"
+            print(f"✅ {success_msg}")
+            
+            # 再次檢查檔案是否存在
+            if os.path.exists(SETTINGS_FILE):
+                file_info = os.stat(SETTINGS_FILE)
+                print(f"📁 檔案確認存在: {os.path.abspath(SETTINGS_FILE)}")
+                print(f"- 檔案大小: {file_info.st_size} bytes")
+                print(f"- 修改時間: {datetime.fromtimestamp(file_info.st_mtime)}")
+            else:
+                print(f"⚠️ 警告: 保存函數返回成功但檔案不存在")
+            
+            return jsonify({"status": "success", "message": success_msg})
         else:
-            return jsonify({"status": "error", "message": "保存設定失敗"}), 500
+            error_msg = "保存設定失敗"
+            print(f"❌ {error_msg}")
+            return jsonify({"status": "error", "message": error_msg}), 500
             
     except Exception as e:
+        error_msg = f"處理設定更新時發生錯誤: {str(e)}"
+        print(f"❌ {error_msg}")
+        import traceback
+        print(f"- 錯誤堆疊: {traceback.format_exc()}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/auth/verify-token', methods=['POST'])

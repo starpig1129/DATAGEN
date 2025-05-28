@@ -1,12 +1,18 @@
 <template>
-  <div class="app-layout">
+  <div
+    class="app-layout"
+    :class="layoutClasses"
+  >
     <!-- 頂部導航欄 -->
     <AppHeader />
     
     <!-- 主要內容區域 -->
     <div class="app-body">
       <!-- 側邊欄 -->
-      <AppSidebar v-if="!isMobileDevice" />
+      <AppSidebar
+        v-if="!isMobileDevice"
+        :collapsed="settingsStore.settings.user.interface.sidebarCollapsed"
+      />
       
       <!-- 主內容區 -->
       <main class="app-main">
@@ -31,10 +37,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useSettingsStore } from '@/stores/settings'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import AppFooter from './AppFooter.vue'
+
+// Store
+const settingsStore = useSettingsStore()
 
 // 響應式狀態
 const drawerVisible = ref(false)
@@ -43,6 +53,33 @@ const showFooter = ref(true)
 // 模擬移動設備檢測 (實際上應該從store獲取)
 const isMobileDevice = computed(() => {
   return window.innerWidth < 768
+})
+
+// 計算界面設定相關的 CSS 類別
+const layoutClasses = computed(() => {
+  const classes: string[] = []
+  const interfaceSettings = settingsStore.settings.user.interface
+  
+  if (interfaceSettings.sidebarCollapsed) {
+    classes.push('sidebar-collapsed')
+  }
+  
+  if (interfaceSettings.compactMode) {
+    classes.push('compact-mode')
+  }
+  
+  if (!interfaceSettings.showToolbar) {
+    classes.push('hide-toolbar')
+  }
+  
+  if (!interfaceSettings.animationsEnabled) {
+    classes.push('no-animations')
+  }
+  
+  classes.push(`font-size-${interfaceSettings.fontSize}`)
+  classes.push(`density-${interfaceSettings.density}`)
+  
+  return classes
 })
 
 // 暴露給父組件的方法
@@ -63,6 +100,74 @@ defineExpose({
   transition: background-color 0.3s ease;
 }
 
+/* 界面設定 - 側邊欄摺疊 */
+.app-layout.sidebar-collapsed .app-body {
+  /* 當側邊欄摺疊時，主內容區域會自動調整 */
+}
+
+/* 界面設定 - 緊湊模式 */
+.app-layout.compact-mode .app-main {
+  padding: 8px;
+  font-size: 0.9em;
+}
+
+.app-layout.compact-mode .app-body {
+  gap: 0;
+}
+
+/* 界面設定 - 隱藏工具欄 */
+.app-layout.hide-toolbar .app-header {
+  display: none;
+}
+
+.app-layout.hide-toolbar .app-body {
+  height: 100vh; /* 佔據整個視窗高度 */
+}
+
+/* 界面設定 - 禁用動畫 */
+.app-layout.no-animations,
+.app-layout.no-animations * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* 界面設定 - 字體大小 */
+.app-layout.font-size-small {
+  font-size: 0.875rem; /* 14px */
+}
+
+.app-layout.font-size-medium {
+  font-size: 1rem; /* 16px */
+}
+
+.app-layout.font-size-large {
+  font-size: 1.125rem; /* 18px */
+}
+
+/* 界面設定 - 密度控制 */
+.app-layout.density-compact .app-main {
+  padding: 8px;
+  line-height: 1.3;
+}
+
+.app-layout.density-compact .el-form-item {
+  margin-bottom: 12px;
+}
+
+.app-layout.density-comfortable .app-main {
+  padding: 16px;
+  line-height: 1.5;
+}
+
+.app-layout.density-spacious .app-main {
+  padding: 24px;
+  line-height: 1.7;
+}
+
+.app-layout.density-spacious .el-form-item {
+  margin-bottom: 28px;
+}
+
 .app-body {
   display: flex;
   flex: 1;
@@ -74,13 +179,21 @@ defineExpose({
   overflow: auto;
   padding: 16px;
   background: var(--el-bg-color-page);
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, padding 0.3s ease;
 }
 
 /* 移動端適配 */
 @media (max-width: 768px) {
   .app-main {
     padding: 12px;
+  }
+  
+  .app-layout.compact-mode .app-main {
+    padding: 6px;
+  }
+  
+  .app-layout.density-spacious .app-main {
+    padding: 16px;
   }
 }
 
@@ -129,5 +242,19 @@ defineExpose({
 .dark .mobile-sidebar {
   --el-drawer-bg-color: rgba(31, 41, 55, 0.95);
   backdrop-filter: blur(20px);
+}
+
+/* 緊湊模式下的特殊樣式 */
+.app-layout.compact-mode .mobile-sidebar {
+  --el-drawer-size: 240px;
+}
+
+/* 字體大小影響整體佈局 */
+.app-layout.font-size-small .app-main {
+  line-height: 1.4;
+}
+
+.app-layout.font-size-large .app-main {
+  line-height: 1.6;
 }
 </style>

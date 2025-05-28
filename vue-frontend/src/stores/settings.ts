@@ -56,6 +56,12 @@ export const useSettingsStore = defineStore('settings', {
 
     // 檢查API是否已配置
     isApiConfigured: (state) => {
+      const { baseUrl } = state.settings.api
+      return Boolean(baseUrl) // 只需要 baseUrl，不強制要求 openaiApiKey
+    },
+
+    // 檢查是否有完整的API配置（包括 openaiApiKey）
+    hasFullApiConfig: (state) => {
       const { openaiApiKey, baseUrl } = state.settings.api
       return Boolean(openaiApiKey && baseUrl)
     },
@@ -96,13 +102,11 @@ export const useSettingsStore = defineStore('settings', {
         if (this.settings.user.language !== currentLocale) {
           await setLocale(this.settings.user.language)
           document.documentElement.setAttribute('lang', this.settings.user.language)
-          console.log('✅ 初始化語言已設定為:', this.settings.user.language)
         }
         
         // 確保主題設定正確應用
         await this.applyTheme()
         
-        console.log('設定初始化完成，語言:', this.settings.user.language, '主題:', this.currentTheme)
       } catch (error) {
         console.error('設定初始化失敗:', error)
         // 使用預設設定
@@ -121,10 +125,6 @@ export const useSettingsStore = defineStore('settings', {
           
           // 合併預設設定以確保所有屬性存在
           this.settings = this.mergeWithDefaults(parsed)
-          
-          console.log('設定已從本地存儲載入')
-        } else {
-          console.log('未找到已保存的設定，使用預設值')
         }
 
         // 載入同步狀態
@@ -153,8 +153,6 @@ export const useSettingsStore = defineStore('settings', {
         this.lastSaved = new Date().toISOString()
         this.isDirty = false
 
-        console.log('設定已保存到本地存儲')
-
         // 嘗試同步到後端
         await this.syncToServer()
       } catch (error) {
@@ -166,34 +164,45 @@ export const useSettingsStore = defineStore('settings', {
     // 同步設定到伺服器
     async syncToServer() {
       if (!this.isApiConfigured) {
-        console.warn('API未配置，跳過伺服器同步')
-        return
+        const error = new Error('API baseUrl 未配置，無法同步到伺服器')
+        this.syncStatus.errors.push(error.message)
+        throw error // 拋出錯誤讓 UI 能夠處理
       }
 
       this.syncStatus.syncing = true
       this.syncStatus.errors = []
 
       try {
-        const response = await fetch(`${this.settings.api.baseUrl}/api/settings`, {
+        console.log('📤 發送設定到伺服器...')
+        const response = await this.makeApiRequest('/api/settings', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.settings.api.token}`
-          },
           body: JSON.stringify(this.settings)
         })
 
+        console.log('📨 伺服器響應狀態:', response.status, response.statusText)
+
         if (!response.ok) {
-          throw new Error(`同步失敗: ${response.statusText}`)
+          const errorData = await response.text()
+          
+          let errorMessage = `同步失敗: ${response.statusText}`
+          try {
+            const parsedError = JSON.parse(errorData)
+            errorMessage = parsedError.message || errorMessage
+          } catch {
+            // Use default error message
+          }
+          throw new Error(errorMessage)
         }
+
+        const responseData = await response.json()
 
         this.syncStatus.lastSync = new Date().toISOString()
         localStorage.setItem(STORAGE_KEYS.LAST_SYNC, this.syncStatus.lastSync)
-
-        console.log('設定已同步到伺服器')
       } catch (error) {
-        this.syncStatus.errors.push(error instanceof Error ? error.message : '同步失敗')
+        const errorMessage = error instanceof Error ? error.message : '同步失敗'
+        this.syncStatus.errors.push(errorMessage)
         console.error('同步設定到伺服器失敗:', error)
+        throw error // Re-throw to allow UI to handle
       } finally {
         this.syncStatus.syncing = false
       }
@@ -202,28 +211,34 @@ export const useSettingsStore = defineStore('settings', {
     // 從伺服器載入設定
     async loadFromServer() {
       if (!this.isApiConfigured) {
-        throw new Error('API未配置')
+        throw new Error('API not configured')
       }
 
       this.isLoading = true
       try {
-        const response = await fetch(`${this.settings.api.baseUrl}/api/settings`, {
-          headers: {
-            'Authorization': `Bearer ${this.settings.api.token}`
-          }
+        const response = await this.makeApiRequest('/api/settings', {
+          method: 'GET'
         })
 
         if (!response.ok) {
-          throw new Error(`載入失敗: ${response.statusText}`)
+          const errorData = await response.text()
+          let errorMessage = `Load failed: ${response.statusText}`
+          try {
+            const parsedError = JSON.parse(errorData)
+            errorMessage = parsedError.message || errorMessage
+          } catch {
+            // Use default error message
+          }
+          throw new Error(errorMessage)
         }
 
         const serverSettings = await response.json() as Settings
         this.settings = this.mergeWithDefaults(serverSettings)
         
         await this.saveSettings()
-        console.log('設定已從伺服器載入')
+        console.log('Settings loaded from server successfully')
       } catch (error) {
-        console.error('從伺服器載入設定失敗:', error)
+        console.error('Failed to load settings from server:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -234,7 +249,7 @@ export const useSettingsStore = defineStore('settings', {
     async verifyToken(token?: string) {
       const tokenToVerify = token || this.settings.api.openaiApiKey
       if (!tokenToVerify) {
-        throw new Error('Token為空')
+        throw new Error('Token is empty')
       }
 
       try {
@@ -248,7 +263,7 @@ export const useSettingsStore = defineStore('settings', {
 
         return response.ok
       } catch (error) {
-        console.error('Token驗證失敗:', error)
+        console.error('Token verification failed:', error)
         return false
       }
     },
@@ -256,27 +271,104 @@ export const useSettingsStore = defineStore('settings', {
     // 測試連接
     async testConnection() {
       try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), this.settings.api.timeout)
+        
         const response = await fetch(`${this.settings.api.baseUrl}/api/system/status`, {
           method: 'GET',
           headers: this.settings.api.openaiApiKey ? {
-            'Authorization': `Bearer ${this.settings.api.openaiApiKey}`
-          } : {},
-          signal: AbortSignal.timeout(this.settings.api.timeout)
+            'Authorization': `Bearer ${this.settings.api.openaiApiKey}`,
+            'Content-Type': 'application/json'
+          } : {
+            'Content-Type': 'application/json'
+          },
+          signal: controller.signal
         })
 
-        return {
+        clearTimeout(timeoutId)
+
+        const result = {
           success: response.ok,
           status: response.status,
           statusText: response.statusText,
-          data: response.ok ? await response.json() : null
+          data: null as any
         }
+
+        try {
+          if (response.ok) {
+            result.data = await response.json()
+          } else {
+            // Try to get error details from response
+            const errorText = await response.text()
+            try {
+              result.data = JSON.parse(errorText)
+            } catch {
+              result.data = { error: errorText }
+            }
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse response:', parseError)
+        }
+
+        return result
       } catch (error) {
+        let errorMessage = 'Connection failed'
+        let errorCode = 'NETWORK_ERROR'
+
+        if (error instanceof Error) {
+          if (error.name === 'AbortError') {
+            errorMessage = 'Connection timeout'
+            errorCode = 'TIMEOUT'
+          } else if (error.message.includes('fetch')) {
+            errorMessage = 'Network error - check your connection and server URL'
+            errorCode = 'NETWORK_ERROR'
+          } else {
+            errorMessage = error.message
+          }
+        }
+
         return {
           success: false,
           status: 0,
-          statusText: error instanceof Error ? error.message : '連接失敗',
-          data: null
+          statusText: errorMessage,
+          data: { error: errorMessage, code: errorCode }
         }
+      }
+    },
+
+    // 增強的API請求方法，支持重試
+    async makeApiRequest(endpoint: string, options: RequestInit = {}, retries = 0): Promise<Response> {
+      const maxRetries = this.settings.api.retryAttempts || 3
+      const baseUrl = this.settings.api.baseUrl
+      
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), this.settings.api.timeout)
+        
+        const response = await fetch(`${baseUrl}${endpoint}`, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(this.settings.api.openaiApiKey && {
+              'Authorization': `Bearer ${this.settings.api.openaiApiKey}`
+            }),
+            ...options.headers
+          },
+          signal: controller.signal
+        })
+
+        clearTimeout(timeoutId)
+        return response
+      } catch (error) {
+        if (retries < maxRetries && error instanceof Error) {
+          // Retry on network errors, but not on timeout errors
+          if (!error.name.includes('Abort') && !error.message.includes('timeout')) {
+            console.warn(`API request failed, retrying... (${retries + 1}/${maxRetries})`)
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000)) // Exponential backoff
+            return this.makeApiRequest(endpoint, options, retries + 1)
+          }
+        }
+        throw error
       }
     },
 
@@ -304,10 +396,22 @@ export const useSettingsStore = defineStore('settings', {
           window.dispatchEvent(new CustomEvent('language-changed', {
             detail: { language: preferences.language }
           }))
-          console.log('✅ 用戶偏好語言已應用:', preferences.language)
         } catch (error) {
           console.error('❌ 用戶偏好語言設定失敗:', error)
         }
+      }
+    },
+
+    // 更新界面設定
+    async updateInterfaceSettings(interfaceSettings: Partial<typeof defaultSettings.user.interface>) {
+      this.settings.user.interface = { ...this.settings.user.interface, ...interfaceSettings }
+      this.markDirty()
+      
+      // 自動保存界面設定變更
+      try {
+        await this.saveSettings()
+      } catch (error) {
+        console.error('❌ 界面設定自動保存失敗:', error)
       }
     },
 
@@ -331,7 +435,6 @@ export const useSettingsStore = defineStore('settings', {
       // 立即應用語言變更到 i18n
       try {
         await setLocale(language)
-        console.log('✅ 語言已設定並應用:', language)
         
         // 強制觸發全域語言更新
         document.documentElement.setAttribute('lang', language)
@@ -371,16 +474,13 @@ export const useSettingsStore = defineStore('settings', {
       try {
         if (theme === 'dark') {
           injectDarkModeStyles()
-          console.log('✅ 深色模式樣式已強制注入')
         } else {
           removeDarkModeStyles()
-          console.log('✅ 深色模式樣式已移除')
         }
       } catch (error) {
         console.error('❌ 樣式注入失敗:', error)
       }
       
-      console.log('🎨 主題已應用:', theme, 'HTML classes:', html.className)
     },
 
     // 設置系統主題監聽器
@@ -398,10 +498,8 @@ export const useSettingsStore = defineStore('settings', {
       const errors: SettingsError[] = []
       const warnings: SettingsError[] = []
 
-      // 舊的token驗證已移除，改用openaiApiKey驗證
-
       // 驗證OpenAI API Key (必填)
-      if (!this.settings.api.openaiApiKey) {
+      if (!this.settings.api.openaiApiKey || this.settings.api.openaiApiKey.trim() === '') {
         errors.push({
           field: 'api.openaiApiKey',
           code: 'OPENAI_API_KEY_REQUIRED',
@@ -409,16 +507,18 @@ export const useSettingsStore = defineStore('settings', {
           value: this.settings.api.openaiApiKey
         })
       } else {
-        if (this.settings.api.openaiApiKey.length < validationRules.api.openaiApiKey.minLength) {
+        // 使用更寬鬆的長度檢查
+        if (this.settings.api.openaiApiKey.length < 20) {
           errors.push({
             field: 'api.openaiApiKey',
             code: 'OPENAI_API_KEY_TOO_SHORT',
-            message: `OpenAI API Key長度至少需要${validationRules.api.openaiApiKey.minLength}字符`,
+            message: 'OpenAI API Key長度至少需要20字符',
             value: this.settings.api.openaiApiKey.length
           })
         }
 
-        if (validationRules.api.openaiApiKey.pattern && !validationRules.api.openaiApiKey.pattern.test(this.settings.api.openaiApiKey)) {
+        // 使用更寬鬆的格式檢查
+        if (!/^sk-[a-zA-Z0-9_-]+$/.test(this.settings.api.openaiApiKey)) {
           errors.push({
             field: 'api.openaiApiKey',
             code: 'OPENAI_API_KEY_INVALID_FORMAT',
@@ -428,14 +528,21 @@ export const useSettingsStore = defineStore('settings', {
         }
       }
 
-      // 驗證API URL
-      if (!validationRules.api.baseUrl.pattern.test(this.settings.api.baseUrl)) {
-        errors.push({
-          field: 'api.baseUrl',
-          code: 'INVALID_URL',
-          message: 'API基礎URL格式無效',
-          value: this.settings.api.baseUrl
-        })
+      // 驗證API URL (更寬鬆的檢查)
+      if (this.settings.api.baseUrl && this.settings.api.baseUrl.trim() !== '') {
+        try {
+          new URL(this.settings.api.baseUrl)
+        } catch {
+          // 如果不是完整 URL，檢查是否為有效的 http/https URL 格式
+          if (!/^https?:\/\/.+/.test(this.settings.api.baseUrl)) {
+            errors.push({
+              field: 'api.baseUrl',
+              code: 'INVALID_URL',
+              message: 'API基礎URL格式無效',
+              value: this.settings.api.baseUrl
+            })
+          }
+        }
       }
 
       // 驗證數值範圍
@@ -446,6 +553,29 @@ export const useSettingsStore = defineStore('settings', {
           message: `超時時間不能小於${validationRules.api.timeout.min}毫秒`,
           value: this.settings.api.timeout
         })
+      }
+
+      // 驗證可選的 API Keys（只在非空時檢查格式）
+      if (this.settings.api.firecrawlApiKey && this.settings.api.firecrawlApiKey.trim() !== '') {
+        if (!/^fc-[a-zA-Z0-9_-]+$/.test(this.settings.api.firecrawlApiKey)) {
+          warnings.push({
+            field: 'api.firecrawlApiKey',
+            code: 'INVALID_FORMAT',
+            message: 'Firecrawl API Key格式可能無效',
+            value: this.settings.api.firecrawlApiKey
+          })
+        }
+      }
+
+      if (this.settings.api.langchainApiKey && this.settings.api.langchainApiKey.trim() !== '') {
+        if (!/^lsv2_pt_[a-zA-Z0-9_]+$/.test(this.settings.api.langchainApiKey)) {
+          warnings.push({
+            field: 'api.langchainApiKey',
+            code: 'INVALID_FORMAT',
+            message: 'LangChain API Key格式可能無效 (期望格式: lsv2_pt_開頭)',
+            value: this.settings.api.langchainApiKey
+          })
+        }
       }
 
       this.validationErrors = errors
@@ -590,6 +720,9 @@ export const useSettingsStore = defineStore('settings', {
     // 清除驗證錯誤
     clearValidationErrors() {
       this.validationErrors = []
-    }
+    },
+
+
+
   }
 })

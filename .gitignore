@@ -4,3 +4,5 @@
 data_storage/*
 *__pycache__/
 chromedriver/*
+settings.json
+settings.json.backup

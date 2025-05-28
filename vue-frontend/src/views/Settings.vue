@@ -21,7 +21,7 @@
         <el-dropdown @command="handleCommand">
           <el-button>
             <el-icon class="mr-1"><More /></el-icon>
-            更多操作
+            {{ $t('settings.actions.more') }}
             <el-icon class="ml-1"><ArrowDown /></el-icon>
           </el-button>
           <template #dropdown>
@@ -61,6 +61,7 @@
         label-position="top"
         class="settings-form"
         @submit.prevent="saveSettings"
+        @validate="handleValidation"
       >
         <!-- API配置區域 -->
         <SettingsSection
@@ -405,27 +406,29 @@
                   </el-form-item>
                   
                   <div v-if="formData.user.notifications.quietHours.enabled" class="grid grid-cols-2 gap-4 mt-4">
-                    <el-form-item 
+                    <el-form-item
                       :label="$t('settings.user.notifications.quietHours.startTime')"
                       prop="user.notifications.quietHours.startTime"
                     >
-                      <el-time-picker
+                      <el-time-select
                         v-model="formData.user.notifications.quietHours.startTime"
-                        format="HH:mm"
-                        value-format="HH:mm"
+                        start="00:00"
+                        step="00:30"
+                        end="23:30"
                         :placeholder="$t('settings.user.notifications.quietHours.startTime')"
                         class="w-full"
                       />
                     </el-form-item>
                     
-                    <el-form-item 
+                    <el-form-item
                       :label="$t('settings.user.notifications.quietHours.endTime')"
                       prop="user.notifications.quietHours.endTime"
                     >
-                      <el-time-picker
+                      <el-time-select
                         v-model="formData.user.notifications.quietHours.endTime"
-                        format="HH:mm"
-                        value-format="HH:mm"
+                        start="00:00"
+                        step="00:30"
+                        end="23:30"
                         :placeholder="$t('settings.user.notifications.quietHours.endTime')"
                         class="w-full"
                       />
@@ -440,80 +443,108 @@
           <div class="mt-8">
             <h4 class="section-subtitle">{{ $t('settings.user.interface.title') }}</h4>
             
-            <div class="interface-settings grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <el-form-item prop="user.interface.sidebarCollapsed">
-                <el-checkbox
-                  v-model="formData.user.interface.sidebarCollapsed"
+            <div class="interface-settings">
+              <!-- 開關選項 -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <el-form-item
                   :label="$t('settings.user.interface.sidebarCollapsed')"
-                />
-              </el-form-item>
-              
-              <el-form-item prop="user.interface.compactMode">
-                <el-checkbox
-                  v-model="formData.user.interface.compactMode"
+                  prop="user.interface.sidebarCollapsed"
+                >
+                  <el-switch
+                    v-model="formData.user.interface.sidebarCollapsed"
+                    :active-text="$t('common.yes')"
+                    :inactive-text="$t('common.no')"
+                    inline-prompt
+                  />
+                </el-form-item>
+                
+                <el-form-item
                   :label="$t('settings.user.interface.compactMode')"
-                />
-              </el-form-item>
-              
-              <el-form-item prop="user.interface.showToolbar">
-                <el-checkbox
-                  v-model="formData.user.interface.showToolbar"
+                  prop="user.interface.compactMode"
+                >
+                  <el-switch
+                    v-model="formData.user.interface.compactMode"
+                    :active-text="$t('common.yes')"
+                    :inactive-text="$t('common.no')"
+                    inline-prompt
+                  />
+                </el-form-item>
+                
+                <el-form-item
                   :label="$t('settings.user.interface.showToolbar')"
-                />
-              </el-form-item>
-              
-              <el-form-item prop="user.interface.animationsEnabled">
-                <el-checkbox
-                  v-model="formData.user.interface.animationsEnabled"
+                  prop="user.interface.showToolbar"
+                >
+                  <el-switch
+                    v-model="formData.user.interface.showToolbar"
+                    :active-text="$t('common.yes')"
+                    :inactive-text="$t('common.no')"
+                    inline-prompt
+                  />
+                </el-form-item>
+                
+                <el-form-item
                   :label="$t('settings.user.interface.animationsEnabled')"
-                />
-              </el-form-item>
-              
-              <el-form-item 
-                :label="$t('settings.user.interface.fontSize.label')"
-                prop="user.interface.fontSize"
-              >
-                <el-select
-                  v-model="formData.user.interface.fontSize"
-                  class="w-full"
+                  prop="user.interface.animationsEnabled"
                 >
-                  <el-option
-                    value="small"
-                    :label="$t('settings.user.interface.fontSize.small')"
+                  <el-switch
+                    v-model="formData.user.interface.animationsEnabled"
+                    :active-text="$t('common.yes')"
+                    :inactive-text="$t('common.no')"
+                    inline-prompt
                   />
-                  <el-option
-                    value="medium"
-                    :label="$t('settings.user.interface.fontSize.medium')"
-                  />
-                  <el-option
-                    value="large"
-                    :label="$t('settings.user.interface.fontSize.large')"
-                  />
-                </el-select>
-              </el-form-item>
+                </el-form-item>
+              </div>
               
-              <el-form-item 
-                :label="$t('settings.user.interface.density.label')"
-                prop="user.interface.density"
-              >
-                <el-select
-                  v-model="formData.user.interface.density"
-                  class="w-full"
+              <!-- 下拉選項 -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <el-form-item
+                  :label="$t('settings.user.interface.fontSize.label')"
+                  prop="user.interface.fontSize"
                 >
-                  <el-option
-                    value="comfortable"
-                    :label="$t('settings.user.interface.density.comfortable')"
-                  />
-                  <el-option
-                    value="compact"
-                    :label="$t('settings.user.interface.density.compact')"
-                  />
-                  <el-option
-                    value="spacious"
-                    :label="$t('settings.user.interface.density.spacious')"
-                  />
-                </el-select>
-              </el-form-item>
+                  <el-select
+                    v-model="formData.user.interface.fontSize"
+                    :placeholder="$t('settings.user.interface.fontSize.label')"
+                    class="w-full"
+                  >
+                    <el-option
+                      value="small"
+                      :label="$t('settings.user.interface.fontSize.small')"
+                    />
+                    <el-option
+                      value="medium"
+                      :label="$t('settings.user.interface.fontSize.medium')"
+                    />
+                    <el-option
+                      value="large"
+                      :label="$t('settings.user.interface.fontSize.large')"
+                    />
+                  </el-select>
+                </el-form-item>
+                
+                <el-form-item
+                  :label="$t('settings.user.interface.density.label')"
+                  prop="user.interface.density"
+                >
+                  <el-select
+                    v-model="formData.user.interface.density"
+                    :placeholder="$t('settings.user.interface.density.label')"
+                    class="w-full"
+                  >
+                    <el-option
+                      value="comfortable"
+                      :label="$t('settings.user.interface.density.comfortable')"
+                    />
+                    <el-option
+                      value="compact"
+                      :label="$t('settings.user.interface.density.compact')"
+                    />
+                    <el-option
+                      value="spacious"
+                      :label="$t('settings.user.interface.density.spacious')"
+                    />
+                  </el-select>
+                </el-form-item>
+              </div>
             </div>
           </div>
         </SettingsSection>
@@ -551,7 +582,7 @@
       <div class="actions-content">
         <div class="actions-info">
           <el-icon><InfoFilled /></el-icon>
-          <span>您有未保存的修改</span>
+          <span>{{ $t('settings.messages.unsavedChanges') }}</span>
         </div>
         <div class="actions-buttons">
           <el-button @click="cancelChanges">
@@ -582,7 +613,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type FormItemProp } from 'element-plus'
 import {
   Check,
   More,
@@ -595,9 +626,10 @@ import {
   Connection,
   User,
   InfoFilled,
-  Setting
+  Setting,
+  Tools as Robot,
+  DataBoard as Database
 } from '@element-plus/icons-vue'
-import { Setting as Robot, DataBoard as Database } from '@element-plus/icons-vue'
 import { useSettingsStore } from '@/stores/settings'
 import { setLocale, getCurrentLocale } from '@/i18n'
 import type { Settings, LanguageCode, NotificationType } from '@/types/settings'
@@ -620,6 +652,7 @@ const fileInputRef = ref<HTMLInputElement>()
 // 狀態
 const saving = ref(false)
 const loading = ref(false)
+const validationErrors = ref<Record<string, string[]>>({})
 
 // 表單數據
 const formData = reactive<Settings>({ ...settingsStore.settings })
@@ -629,6 +662,22 @@ watch(() => settingsStore.settings, (newSettings) => {
   Object.assign(formData, newSettings)
 }, { deep: true })
 
+// 確保表單數據有適當的預設值
+const ensureDefaultValues = () => {
+  if (!formData.api.baseUrl) {
+    formData.api.baseUrl = 'http://localhost:5001'
+  }
+  if (!formData.api.timeout) {
+    formData.api.timeout = 30000
+  }
+  if (!formData.api.retryAttempts) {
+    formData.api.retryAttempts = 3
+  }
+}
+
+// 初始化時確保預設值
+ensureDefaultValues()
+
 // 監聽表單變化標記為髒數據（防抖處理）
 let markDirtyTimeout: number | null = null
 watch(formData, () => {
@@ -636,7 +685,9 @@ watch(formData, () => {
     clearTimeout(markDirtyTimeout)
   }
   markDirtyTimeout = setTimeout(() => {
-    settingsStore.markDirty()
+    if (!settingsStore.isDirty) {
+      settingsStore.markDirty()
+    }
   }, 300) // 300ms防抖
 }, { deep: true })
 
@@ -647,6 +698,12 @@ watch(() => formData.user.theme, (newTheme) => {
   settingsStore.setTheme(newTheme)
   console.log('主題已切換為:', newTheme)
 })
+
+// 監聽界面設定變更，即時應用
+watch(() => formData.user.interface, (newInterface) => {
+  settingsStore.updateInterfaceSettings(newInterface)
+  console.log('界面設定已更新:', newInterface)
+}, { deep: true })
 
 // 可用時區
 const availableTimezones = computed(() => {
@@ -688,26 +745,188 @@ const notificationTypeLabels = computed(() => ({
 }))
 
 // 表單驗證規則
-const formRules = {
+const formRules = computed<FormRules>(() => ({
   'api.openaiApiKey': [
-    { required: true, message: t('settings.validation.required'), trigger: 'blur' },
-    { min: 32, message: t('settings.api.token.tooShort'), trigger: 'blur' },
-    { pattern: /^sk-[A-Za-z0-9]+$/, message: t('settings.api.token.invalidFormat'), trigger: 'blur' }
+    {
+      validator: (rule: any, value: string, callback: any) => {
+        // 如果值為空且是初始狀態，不觸發驗證錯誤
+        if (!value || value.trim() === '') {
+          if (!settingsStore.isDirty) {
+            callback() // 初始狀態不顯示錯誤
+          } else {
+            callback(new Error(t('settings.validation.required')))
+          }
+        } else if (value.length < 20) {
+          callback(new Error(t('settings.validation.tooShort')))
+        } else if (!/^sk-[a-zA-Z0-9_-]+$/.test(value)) {
+          callback(new Error(t('settings.validation.invalidFormat')))
+        } else {
+          callback()
+        }
+      },
+      trigger: ['blur', 'change']
+    }
+  ],
+  'api.firecrawlApiKey': [
+    {
+      validator: (rule: any, value: string, callback: any) => {
+        if (!value || value.trim() === '') {
+          callback() // 空值時不驗證
+        } else if (!/^fc-[a-zA-Z0-9_-]+$/.test(value)) {
+          callback(new Error(t('settings.validation.invalidFormat')))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
+  'api.langchainApiKey': [
+    {
+      validator: (rule: any, value: string, callback: any) => {
+        if (!value || value.trim() === '') {
+          callback() // 空值時不驗證
+        } else if (!/^lsv2_pt_[a-zA-Z0-9_]+$/.test(value)) {
+          callback(new Error(t('settings.validation.invalidFormat')))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ],
   'api.baseUrl': [
-    { required: true, message: t('settings.validation.required'), trigger: 'blur' },
-    { pattern: /^https?:\/\/.+/, message: t('settings.validation.invalidUrl'), trigger: 'blur' }
+    {
+      validator: (rule: any, value: string, callback: any) => {
+        if (!value || value.trim() === '') {
+          callback() // 空值時不驗證，使用預設值
+        } else {
+          // 檢查是否為有效的 URL 格式
+          try {
+            new URL(value)
+            callback()
+          } catch {
+            // 如果不是完整 URL，檢查是否為有效的 http/https URL 格式
+            if (!/^https?:\/\/.+/.test(value)) {
+              callback(new Error(t('settings.validation.invalidUrl')))
+            } else {
+              callback()
+            }
+          }
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
+  'api.timeout': [
+    {
+      type: 'number',
+      min: 1000,
+      max: 300000,
+      message: t('settings.validation.outOfRange'),
+      trigger: 'blur'
+    }
+  ],
+  'api.retryAttempts': [
+    {
+      type: 'number',
+      min: 0,
+      max: 10,
+      message: t('settings.validation.outOfRange'),
+      trigger: 'blur'
+    }
+  ],
+  'user.notifications.quietHours.startTime': [
+    {
+      required: false,
+      trigger: 'blur'
+    }
+  ],
+  'user.notifications.quietHours.endTime': [
+    {
+      required: false,
+      trigger: 'blur'
+    }
   ]
+}))
+
+// 處理驗證事件
+const handleValidation = (prop: FormItemProp, isValid: boolean, message: string) => {
+  const propKey = Array.isArray(prop) ? prop.join('.') : String(prop)
+  if (!isValid) {
+    if (!validationErrors.value[propKey]) {
+      validationErrors.value[propKey] = []
+    }
+    if (!validationErrors.value[propKey].includes(message)) {
+      validationErrors.value[propKey].push(message)
+    }
+  } else {
+    delete validationErrors.value[propKey]
+  }
+}
+
+// 驗證整個表單
+const validateForm = async (): Promise<boolean> => {
+  if (!formRef.value) return false
+  
+  try {
+    await formRef.value.validate()
+    return true
+  } catch (error) {
+    ElMessage.error(t('settings.validation.formHasErrors'))
+    return false
+  }
+}
+
+// 驗證特定字段
+const validateField = async (prop: string): Promise<boolean> => {
+  if (!formRef.value) return false
+  
+  try {
+    await formRef.value.validateField(prop)
+    return true
+  } catch (error) {
+    return false
+  }
+}
+
+// 清除驗證錯誤
+const clearValidation = () => {
+  validationErrors.value = {}
+  if (formRef.value) {
+    formRef.value.clearValidate()
+  }
+}
+
+// 保存時的嚴格驗證
+const validateFormForSave = async (): Promise<boolean> => {
+  if (!formRef.value) return false
+  
+  // 檢查必填欄位
+  if (!formData.api.openaiApiKey || formData.api.openaiApiKey.trim() === '') {
+    ElMessage.error(t('settings.validation.required') + ': OpenAI API Key')
+    return false
+  }
+  
+  try {
+    await formRef.value.validate()
+    return true
+  } catch (error) {
+    ElMessage.error(t('settings.validation.formHasErrors'))
+    return false
+  }
 }
 
 // 保存設定
 const saveSettings = async () => {
-  if (!formRef.value) return
+  // 在保存時進行嚴格驗證
+  const strictValidation = await validateFormForSave()
+  if (!strictValidation) {
+    return
+  }
 
+  saving.value = true
   try {
-    // 跳過表單驗證，直接保存
-    saving.value = true
-    
     console.log('保存設定數據:', formData)
     
     // 更新設定store
@@ -730,12 +949,39 @@ const saveSettings = async () => {
       markDirtyTimeout = null
     }
     
+    // 清除驗證錯誤
+    clearValidation()
+    
     ElMessage.success(t('settings.messages.saveSuccess'))
   } catch (error) {
-    console.error('保存設定失敗:', error)
-    ElMessage.error(t('settings.messages.saveFailed', {
-      error: error instanceof Error ? error.message : '未知錯誤'
-    }))
+    console.error('Save settings error:', error)
+    
+    // 處理不同類型的錯誤
+    let errorMessage = t('settings.messages.saveFailed', {
+      error: t('settings.errors.serverError')
+    })
+    
+    if (error instanceof Error) {
+      if (error.message.includes('timeout') || error.message.includes('TIMEOUT')) {
+        errorMessage = t('settings.messages.saveTimeout')
+      } else if (error.message.includes('network') || error.message.includes('NETWORK_ERROR')) {
+        errorMessage = t('settings.messages.saveNetworkError')
+      } else if (error.message.includes('permission') || error.message.includes('PERMISSION')) {
+        errorMessage = t('settings.messages.saveFailed', {
+          error: t('settings.errors.permissionDenied')
+        })
+      } else if (error.message.includes('validation') || error.message.includes('VALIDATION')) {
+        errorMessage = t('settings.messages.saveFailed', {
+          error: t('settings.errors.validationError')
+        })
+      } else {
+        errorMessage = t('settings.messages.saveFailed', {
+          error: error.message
+        })
+      }
+    }
+    
+    ElMessage.error(errorMessage)
   } finally {
     saving.value = false
   }
@@ -777,12 +1023,12 @@ const handleCommand = async (command: string) => {
 const handleReset = async () => {
   try {
     await ElMessageBox.confirm(
-      '確定要重置所有設定為預設值嗎？此操作無法撤銷。',
-      '重置設定',
+      t('settings.confirm.resetMessage'),
+      t('settings.confirm.resetTitle'),
       {
         type: 'warning',
-        confirmButtonText: '確定重置',
-        cancelButtonText: '取消'
+        confirmButtonText: t('settings.confirm.resetConfirm'),
+        cancelButtonText: t('settings.actions.cancel')
       }
     )
     
@@ -830,9 +1076,27 @@ const handleFileImport = async (event: Event) => {
     
     ElMessage.success(t('settings.messages.importSuccess'))
   } catch (error) {
-    ElMessage.error(t('settings.messages.importFailed', { 
-      error: error instanceof Error ? error.message : '文件格式錯誤' 
-    }))
+    let errorMessage = t('settings.messages.importFailed', {
+      error: t('settings.errors.fileFormat')
+    })
+    
+    if (error instanceof Error) {
+      if (error.message.includes('JSON') || error.message.includes('parse')) {
+        errorMessage = t('settings.messages.importFailed', {
+          error: t('settings.errors.fileFormat')
+        })
+      } else if (error.message.includes('validation')) {
+        errorMessage = t('settings.messages.importFailed', {
+          error: t('settings.errors.validationError')
+        })
+      } else {
+        errorMessage = t('settings.messages.importFailed', {
+          error: error.message
+        })
+      }
+    }
+    
+    ElMessage.error(errorMessage)
   } finally {
     // 清除文件輸入
     target.value = ''
@@ -849,12 +1113,12 @@ const handleBackup = () => {
 const handleRestore = async () => {
   try {
     await ElMessageBox.confirm(
-      '確定要從備份恢復設定嗎？當前設定將被覆蓋。',
-      '恢復備份',
+      t('settings.confirm.restoreMessage'),
+      t('settings.confirm.restoreTitle'),
       {
         type: 'warning',
-        confirmButtonText: '確定恢復',
-        cancelButtonText: '取消'
+        confirmButtonText: t('settings.confirm.restoreConfirm'),
+        cancelButtonText: t('settings.actions.cancel')
       }
     )
     
@@ -863,7 +1127,7 @@ const handleRestore = async () => {
       Object.assign(formData, settingsStore.settings)
       ElMessage.success(t('settings.messages.backupRestored'))
     } else {
-      ElMessage.warning('未找到備份文件')
+      ElMessage.warning(t('settings.messages.noBackupFound'))
     }
   } catch {
     // 用戶取消
@@ -881,27 +1145,31 @@ const handleLanguageChange = async (language: LanguageCode) => {
   try {
     await setLocale(language)
     settingsStore.setLanguage(language)
-    console.log('語言已切換為:', language)
-    ElMessage.success(`語言已切換為${language}`)
+    console.log('Language switched to:', language)
+    ElMessage.success(t('settings.messages.languageChanged', { language }))
   } catch (error) {
-    console.error('語言切換失敗:', error)
-    ElMessage.error('語言切換失敗')
+    console.error('Language switch failed:', error)
+    ElMessage.error(t('settings.messages.languageChangeFailed'))
   }
 }
 
 // 處理主題切換
 const handleThemeChange = (theme: string) => {
   settingsStore.applyTheme()
-  ElMessage.success(`主題已切換為${theme}`)
+  ElMessage.success(t('settings.messages.themeChanged', { theme }))
 }
 
 // 處理代理設定變更
 const handleAgentSettingsChange = (agentSettings: typeof formData.agent) => {
+  formData.agent = { ...agentSettings }
+  settingsStore.markDirty()
   console.log('Agent settings changed:', agentSettings)
 }
 
 // 處理數據設定變更
 const handleDataSettingsChange = (dataSettings: typeof formData.data) => {
+  formData.data = { ...dataSettings }
+  settingsStore.markDirty()
   console.log('Data settings changed:', dataSettings)
 }
 
@@ -920,6 +1188,9 @@ onMounted(async () => {
     await settingsStore.initialize()
     Object.assign(formData, settingsStore.settings)
     
+    // 確保預設值正確設定
+    ensureDefaultValues()
+    
     // 確保語言設定正確應用
     if (formData.user.language) {
       await setLocale(formData.user.language)
@@ -927,8 +1198,12 @@ onMounted(async () => {
     
     // 確保主題設定正確應用
     settingsStore.applyTheme()
+    
+    // 等待一個 tick 後清除初始驗證錯誤
+    await nextTick()
+    clearValidation()
   } catch (error) {
-    ElMessage.error('設定初始化失敗')
+    ElMessage.error(t('settings.messages.initializationFailed'))
   } finally {
     loading.value = false
   }

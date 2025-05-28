@@ -21,7 +21,6 @@ export function setupLanguageForcer() {
       const event = new CustomEvent('vue-force-update')
       document.dispatchEvent(event)
       
-      console.log('✅ 語言強制更新完成')
     }, 100)
   })
   

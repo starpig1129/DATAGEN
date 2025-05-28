@@ -2,8 +2,8 @@
   <div class="connection-test">
     <div class="test-header">
       <div class="test-info">
-        <h4 class="test-title">連接測試</h4>
-        <p class="test-description">測試與後端服務的連接狀態</p>
+        <h4 class="test-title">{{ $t('settings.api.testConnection') }}</h4>
+        <p class="test-description">{{ $t('settings.api.connectionTest.description') }}</p>
       </div>
       <el-button
         type="primary"
@@ -49,7 +49,7 @@
             <span class="detail-label">{{ $t('settings.api.connectionTest.message', { message: lastResult.statusText }) }}</span>
           </div>
           <div class="detail-item" v-if="lastResult.data">
-            <div class="detail-label">響應數據：</div>
+            <div class="detail-label">{{ $t('settings.api.connectionTest.responseData') }}：</div>
             <pre class="detail-value">{{ JSON.stringify(lastResult.data, null, 2) }}</pre>
           </div>
         </div>
@@ -62,7 +62,7 @@
             @click="showDetails = !showDetails"
             class="toggle-details"
           >
-            {{ showDetails ? '隱藏詳情' : '顯示詳情' }}
+            {{ showDetails ? $t('settings.api.connectionTest.hideDetails') : $t('settings.api.connectionTest.showDetails') }}
             <el-icon class="ml-1">
               <ArrowDown v-if="!showDetails" />
               <ArrowUp v-else />
@@ -79,7 +79,7 @@
             <el-icon class="mr-1">
               <CopyDocument />
             </el-icon>
-            複製結果
+            {{ $t('settings.api.connectionTest.copyResults') }}
           </el-button>
         </div>
       </div>
@@ -87,14 +87,14 @@
     
     <div class="test-history" v-if="testHistory.length > 0 && showHistory">
       <div class="history-header">
-        <h5>測試歷史</h5>
+        <h5>{{ $t('settings.api.connectionTest.testHistory') }}</h5>
         <el-button
           type="primary"
           link
           size="small"
           @click="clearHistory"
         >
-          清除歷史
+          {{ $t('settings.api.connectionTest.clearHistory') }}
         </el-button>
       </div>
       
@@ -111,7 +111,7 @@
             <Check v-if="result.success" />
             <Close v-else />
           </el-icon>
-          <span class="history-status">{{ result.success ? '成功' : '失敗' }}</span>
+          <span class="history-status">{{ result.success ? $t('common.success') : $t('common.error') }}</span>
           <span class="history-time">{{ formatTime(result.timestamp) }}</span>
         </div>
       </div>
@@ -177,7 +177,7 @@ const canTest = computed(() => {
 })
 
 // 監聽設定變化，自動測試
-watch(() => [settingsStore.settings.api.baseUrl, settingsStore.settings.api.token], () => {
+watch(() => [settingsStore.settings.api.baseUrl, settingsStore.settings.api.openaiApiKey], () => {
   if (props.autoTest && canTest.value) {
     runTest()
   }
@@ -221,7 +221,7 @@ const runTest = async () => {
     const errorResult: TestResult = {
       success: false,
       status: 0,
-      statusText: error instanceof Error ? error.message : '連接失敗',
+      statusText: error instanceof Error ? error.message : t('settings.api.connectionTest.failed'),
       data: null,
       timestamp: Date.now()
     }
@@ -251,16 +251,16 @@ const copyResults = async () => {
   
   try {
     await navigator.clipboard.writeText(resultText)
-    ElMessage.success('測試結果已複製到剪貼板')
+    ElMessage.success(t('settings.api.connectionTest.copySuccess'))
   } catch (error) {
-    ElMessage.error('複製失敗')
+    ElMessage.error(t('settings.api.connectionTest.copyFailed'))
   }
 }
 
 // 清除歷史記錄
 const clearHistory = () => {
   testHistory.value = []
-  ElMessage.success('測試歷史已清除')
+  ElMessage.success(t('settings.api.connectionTest.historyCleared'))
 }
 
 // 暴露方法

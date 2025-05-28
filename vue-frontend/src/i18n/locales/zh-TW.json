@@ -24,7 +24,6 @@
     "export": "匯出",
     "import": "匯入",
     "refresh": "重新整理",
-    "search": "搜索...",
     "notifications": "通知",
     "profile": "個人資料",
     "logout": "登出"
@@ -132,11 +131,21 @@
       },
       "testConnection": "測試連接",
       "connectionTest": {
+        "description": "測試與後端服務的連接狀態",
         "testing": "測試連接中...",
         "success": "連接成功",
         "failed": "連接失敗",
         "status": "狀態：{status}",
-        "message": "訊息：{message}"
+        "message": "訊息：{message}",
+        "responseData": "響應數據",
+        "showDetails": "顯示詳情",
+        "hideDetails": "隱藏詳情",
+        "copyResults": "複製結果",
+        "testHistory": "測試歷史",
+        "clearHistory": "清除歷史",
+        "copySuccess": "測試結果已複製到剪貼板",
+        "copyFailed": "複製失敗",
+        "historyCleared": "測試歷史已清除"
       }
     },
     "user": {
@@ -239,6 +248,7 @@
       },
       "priorities": {
         "title": "代理優先級",
+        "level": "優先級",
         "searchAgent": "搜尋代理",
         "analysisAgent": "分析代理",
         "visualizationAgent": "視覺化代理",
@@ -278,6 +288,7 @@
           "unit": "MB"
         },
         "allowedTypes": "允許的文件類型",
+        "allowedTypesHelp": "支援的文件類型，可以添加自定義類型",
         "maxFilesPerUpload": "單次上傳最大文件數",
         "autoScan": "自動掃描文件",
         "compressImages": "壓縮圖片"
@@ -303,7 +314,16 @@
           "unit": "秒"
         },
         "preloadData": "預載入數據",
-        "compressData": "壓縮數據"
+        "compressData": "壓縮數據",
+        "stats": {
+          "title": "快取統計",
+          "clear": "清除快取",
+          "currentSize": "當前大小",
+          "hitRate": "命中率",
+          "itemCount": "項目數量"
+        },
+        "confirmClear": "確定要清除所有快取嗎？這可能會影響系統性能。",
+        "clearSuccess": "快取已清除"
       },
       "cleanup": {
         "title": "清理設定",
@@ -317,7 +337,15 @@
           "unit": "天"
         },
         "cleanupLogs": "清理日誌",
-        "cleanupCache": "清理快取"
+        "cleanupCache": "清理快取",
+        "manual": {
+          "title": "手動清理",
+          "description": "立即執行清理操作",
+          "cleanupLogs": "清理日誌",
+          "cleanupCache": "清理快取",
+          "cleanupTempFiles": "清理臨時文件",
+          "cleanupAll": "全部清理"
+        }
       }
     },
     "actions": {
@@ -327,7 +355,8 @@
       "export": "匯出設定",
       "import": "匯入設定",
       "backup": "創建備份",
-      "restore": "恢復備份"
+      "restore": "恢復備份",
+      "more": "更多操作"
     },
     "validation": {
       "required": "此欄位為必填項",
@@ -336,11 +365,14 @@
       "tooLong": "長度過長",
       "outOfRange": "數值超出範圍",
       "invalidUrl": "URL格式無效",
-      "invalidEmail": "郵件地址格式無效"
+      "invalidEmail": "郵件地址格式無效",
+      "formHasErrors": "請修復表單錯誤後再保存"
     },
     "messages": {
       "saveSuccess": "設定已成功保存",
       "saveFailed": "保存設定失敗：{error}",
+      "saveTimeout": "保存操作超時 - 請檢查您的網路連接",
+      "saveNetworkError": "網路錯誤 - 請檢查您的連接並重試",
       "resetSuccess": "設定已重置為預設值",
       "exportSuccess": "設定已匯出",
       "importSuccess": "設定匯入成功",
@@ -353,7 +385,28 @@
       "tokenInvalid": "Token驗證失敗",
       "syncSuccess": "設定已同步到伺服器",
       "syncFailed": "同步到伺服器失敗：{error}",
-      "unsavedChanges": "您有未保存的修改，是否要離開？"
+      "unsavedChanges": "您有未保存的修改",
+      "noBackupFound": "未找到備份檔案",
+      "languageChanged": "語言已切換為{language}",
+      "languageChangeFailed": "語言切換失敗",
+      "themeChanged": "主題已切換為{theme}",
+      "initializationFailed": "設定初始化失敗"
+    },
+    "confirm": {
+      "resetTitle": "重置設定",
+      "resetMessage": "確定要重置所有設定為預設值嗎？此操作無法撤銷。",
+      "resetConfirm": "確定重置",
+      "restoreTitle": "恢復備份",
+      "restoreMessage": "確定要從備份恢復設定嗎？當前設定將被覆蓋。",
+      "restoreConfirm": "確定恢復"
+    },
+    "errors": {
+      "fileFormat": "檔案格式錯誤",
+      "networkError": "網路連接錯誤",
+      "serverError": "伺服器錯誤",
+      "validationError": "驗證錯誤",
+      "permissionDenied": "權限不足",
+      "timeout": "操作超時"
     }
   }
 }

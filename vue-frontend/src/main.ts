@@ -74,12 +74,6 @@ async function initializeApp() {
     // 初始化設定store（會自動應用保存的設定）
     await settingsStore.initialize()
     
-    console.log('✅ 應用初始化完成:', {
-      language: settingsStore.currentLanguage,
-      theme: settingsStore.currentTheme,
-      htmlClass: document.documentElement.className,
-      htmlDataTheme: document.documentElement.getAttribute('data-theme')
-    })
   } catch (error) {
     console.error('❌ 設定store初始化失敗:', error)
   }

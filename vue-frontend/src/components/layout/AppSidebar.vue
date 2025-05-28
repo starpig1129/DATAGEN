@@ -116,8 +116,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useSettingsStore } from '@/stores/settings'
 import {
   DataBoard,
   ChatDotRound,
@@ -135,8 +136,19 @@ import {
   Fold
 } from '@element-plus/icons-vue'
 
+// Props
+interface Props {
+  collapsed?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  collapsed: false
+})
+
+// Store
+const settingsStore = useSettingsStore()
+
 // 響應式數據
-const isCollapsed = ref(false)
 const unreadCount = ref(2)
 
 // 當前路由
@@ -144,6 +156,11 @@ const route = useRoute()
 
 // 計算屬性
 const activeMenuKey = computed(() => route.path)
+
+// 側邊欄摺疊狀態 - 優先使用 props，其次使用設定 store
+const isCollapsed = computed(() => {
+  return props.collapsed ?? settingsStore.settings.user.interface.sidebarCollapsed
+})
 
 // 模擬代理狀態數據
 const agentStatus = ref([
@@ -159,7 +176,10 @@ const agentStatus = ref([
 
 // 方法
 const toggleCollapse = () => {
-  isCollapsed.value = !isCollapsed.value
+  // 切換設定 store 中的側邊欄摺疊狀態
+  settingsStore.updateInterfaceSettings({
+    sidebarCollapsed: !isCollapsed.value
+  })
 }
 </script>
 
@@ -174,6 +194,12 @@ const toggleCollapse = () => {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+}
+
+/* 摺疊狀態的側邊欄 */
+.app-sidebar:has(.sidebar-menu.el-menu--collapse),
+.sidebar-collapsed .app-sidebar {
+  width: 64px;
 }
 
 .app-sidebar::before {

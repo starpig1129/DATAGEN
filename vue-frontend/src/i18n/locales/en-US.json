@@ -24,7 +24,6 @@
     "export": "Export",
     "import": "Import",
     "refresh": "Refresh",
-    "search": "Search...",
     "notifications": "Notifications",
     "profile": "Profile",
     "logout": "Logout"
@@ -132,11 +131,21 @@
       },
       "testConnection": "Test Connection",
       "connectionTest": {
+        "description": "Test connection status with backend service",
         "testing": "Testing connection...",
         "success": "Connection successful",
         "failed": "Connection failed",
         "status": "Status: {status}",
-        "message": "Message: {message}"
+        "message": "Message: {message}",
+        "responseData": "Response Data",
+        "showDetails": "Show Details",
+        "hideDetails": "Hide Details",
+        "copyResults": "Copy Results",
+        "testHistory": "Test History",
+        "clearHistory": "Clear History",
+        "copySuccess": "Test results copied to clipboard",
+        "copyFailed": "Copy failed",
+        "historyCleared": "Test history cleared"
       }
     },
     "user": {
@@ -239,6 +248,7 @@
       },
       "priorities": {
         "title": "Agent Priorities",
+        "level": "Priority",
         "searchAgent": "Search Agent",
         "analysisAgent": "Analysis Agent",
         "visualizationAgent": "Visualization Agent",
@@ -278,6 +288,7 @@
           "unit": "MB"
         },
         "allowedTypes": "Allowed File Types",
+        "allowedTypesHelp": "Supported file types, you can add custom types",
         "maxFilesPerUpload": "Max Files Per Upload",
         "autoScan": "Auto Scan Files",
         "compressImages": "Compress Images"
@@ -303,7 +314,16 @@
           "unit": "seconds"
         },
         "preloadData": "Preload Data",
-        "compressData": "Compress Data"
+        "compressData": "Compress Data",
+        "stats": {
+          "title": "Cache Statistics",
+          "clear": "Clear Cache",
+          "currentSize": "Current Size",
+          "hitRate": "Hit Rate",
+          "itemCount": "Item Count"
+        },
+        "confirmClear": "Are you sure you want to clear all cache? This may affect system performance.",
+        "clearSuccess": "Cache cleared successfully"
       },
       "cleanup": {
         "title": "Cleanup Settings",
@@ -317,7 +337,15 @@
           "unit": "days"
         },
         "cleanupLogs": "Cleanup Logs",
-        "cleanupCache": "Cleanup Cache"
+        "cleanupCache": "Cleanup Cache",
+        "manual": {
+          "title": "Manual Cleanup",
+          "description": "Execute cleanup operations immediately",
+          "cleanupLogs": "Cleanup Logs",
+          "cleanupCache": "Cleanup Cache",
+          "cleanupTempFiles": "Cleanup Temp Files",
+          "cleanupAll": "Cleanup All"
+        }
       }
     },
     "actions": {
@@ -327,7 +355,8 @@
       "export": "Export Settings",
       "import": "Import Settings",
       "backup": "Create Backup",
-      "restore": "Restore Backup"
+      "restore": "Restore Backup",
+      "more": "More Actions"
     },
     "validation": {
       "required": "This field is required",
@@ -336,11 +365,14 @@
       "tooLong": "Too long",
       "outOfRange": "Value out of range",
       "invalidUrl": "Invalid URL format",
-      "invalidEmail": "Invalid email format"
+      "invalidEmail": "Invalid email format",
+      "formHasErrors": "Please fix the form errors before saving"
     },
     "messages": {
       "saveSuccess": "Settings saved successfully",
       "saveFailed": "Failed to save settings: {error}",
+      "saveTimeout": "Save operation timed out - please check your connection",
+      "saveNetworkError": "Network error - please check your connection and try again",
       "resetSuccess": "Settings reset to defaults",
       "exportSuccess": "Settings exported",
       "importSuccess": "Settings imported successfully",
@@ -353,7 +385,28 @@
       "tokenInvalid": "Token validation failed",
       "syncSuccess": "Settings synced to server",
       "syncFailed": "Failed to sync to server: {error}",
-      "unsavedChanges": "You have unsaved changes. Do you want to leave?"
+      "unsavedChanges": "You have unsaved changes",
+      "noBackupFound": "No backup file found",
+      "languageChanged": "Language switched to {language}",
+      "languageChangeFailed": "Failed to switch language",
+      "themeChanged": "Theme switched to {theme}",
+      "initializationFailed": "Settings initialization failed"
+    },
+    "confirm": {
+      "resetTitle": "Reset Settings",
+      "resetMessage": "Are you sure you want to reset all settings to defaults? This action cannot be undone.",
+      "resetConfirm": "Reset",
+      "restoreTitle": "Restore Backup",
+      "restoreMessage": "Are you sure you want to restore settings from backup? Current settings will be overwritten.",
+      "restoreConfirm": "Restore"
+    },
+    "errors": {
+      "fileFormat": "Invalid file format",
+      "networkError": "Network connection error",
+      "serverError": "Server error",
+      "validationError": "Validation error",
+      "permissionDenied": "Permission denied",
+      "timeout": "Operation timeout"
     }
   }
 }

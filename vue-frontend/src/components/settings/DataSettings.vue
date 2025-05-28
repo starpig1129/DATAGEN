@@ -78,7 +78,7 @@
           </el-select>
           <div class="form-help">
             <el-text size="small" type="info">
-              支援的文件類型，可以添加自定義類型
+              {{ $t('settings.data.upload.allowedTypesHelp') }}
             </el-text>
           </div>
         </el-form-item>
@@ -249,22 +249,22 @@
       <!-- 快取統計 -->
       <div v-if="localValue.cache.enabled" class="cache-stats">
         <div class="stats-header">
-          <h5>快取統計</h5>
+          <h5>{{ $t('settings.data.cache.stats.title') }}</h5>
           <el-button type="primary" link size="small" @click="clearCache">
-            清除快取
+            {{ $t('settings.data.cache.stats.clear') }}
           </el-button>
         </div>
         <div class="stats-grid">
           <div class="stat-item">
-            <span class="stat-label">當前大小</span>
+            <span class="stat-label">{{ $t('settings.data.cache.stats.currentSize') }}</span>
             <span class="stat-value">{{ formatSize(cacheStats.currentSize) }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">命中率</span>
+            <span class="stat-label">{{ $t('settings.data.cache.stats.hitRate') }}</span>
             <span class="stat-value">{{ cacheStats.hitRate }}%</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">項目數量</span>
+            <span class="stat-label">{{ $t('settings.data.cache.stats.itemCount') }}</span>
             <span class="stat-value">{{ cacheStats.itemCount }}</span>
           </div>
         </div>
@@ -342,23 +342,23 @@
       <!-- 手動清理操作 -->
       <div class="manual-cleanup">
         <div class="cleanup-header">
-          <h5>手動清理</h5>
+          <h5>{{ $t('settings.data.cleanup.manual.title') }}</h5>
           <el-text size="small" type="info">
-            立即執行清理操作
+            {{ $t('settings.data.cleanup.manual.description') }}
           </el-text>
         </div>
         <div class="cleanup-actions">
           <el-button @click="cleanupLogs" :loading="cleaning.logs">
-            清理日誌
+            {{ $t('settings.data.cleanup.manual.cleanupLogs') }}
           </el-button>
           <el-button @click="cleanupCache" :loading="cleaning.cache">
-            清理快取
+            {{ $t('settings.data.cleanup.manual.cleanupCache') }}
           </el-button>
           <el-button @click="cleanupTempFiles" :loading="cleaning.temp">
-            清理臨時文件
+            {{ $t('settings.data.cleanup.manual.cleanupTempFiles') }}
           </el-button>
           <el-button type="danger" @click="cleanupAll" :loading="cleaning.all">
-            全部清理
+            {{ $t('settings.data.cleanup.manual.cleanupAll') }}
           </el-button>
         </div>
       </div>
@@ -442,12 +442,12 @@ const formatSize = (bytes: number) => {
 const clearCache = async () => {
   try {
     await ElMessageBox.confirm(
-      '確定要清除所有快取嗎？這可能會影響系統性能。',
-      '清除快取',
+      t('settings.data.cache.confirmClear'),
+      t('settings.data.cache.stats.clear'),
       {
         type: 'warning',
-        confirmButtonText: '確定清除',
-        cancelButtonText: '取消'
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel')
       }
     )
     
@@ -458,7 +458,7 @@ const clearCache = async () => {
       itemCount: 0
     }
     
-    ElMessage.success('快取已清除')
+    ElMessage.success(t('settings.data.cache.clearSuccess'))
   } catch {
     // 用戶取消
   }

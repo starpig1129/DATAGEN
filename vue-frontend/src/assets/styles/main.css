@@ -523,3 +523,153 @@ html[data-theme="dark"] .el-button--primary,
   border-color: #4b5563 !important;
   color: #f9fafb !important;
 }
+
+/* 界面設定 - 全域樣式 */
+
+/* 字體大小控制 */
+.font-size-small {
+  --font-scale: 0.875;
+}
+
+.font-size-medium {
+  --font-scale: 1;
+}
+
+.font-size-large {
+  --font-scale: 1.125;
+}
+
+/* 應用字體縮放 */
+.font-size-small,
+.font-size-small * {
+  font-size: calc(var(--font-base) * 0.875) !important;
+}
+
+.font-size-large,
+.font-size-large * {
+  font-size: calc(var(--font-base) * 1.125) !important;
+}
+
+/* 密度控制 */
+.density-compact {
+  --density-padding: 0.5;
+  --density-margin: 0.75;
+  --density-line-height: 1.3;
+}
+
+.density-comfortable {
+  --density-padding: 1;
+  --density-margin: 1;
+  --density-line-height: 1.5;
+}
+
+.density-spacious {
+  --density-padding: 1.5;
+  --density-margin: 1.25;
+  --density-line-height: 1.7;
+}
+
+/* 應用密度設定 */
+.density-compact .el-form-item {
+  margin-bottom: calc(var(--spacing-base) * var(--density-margin)) !important;
+}
+
+.density-compact .el-input__wrapper,
+.density-compact .el-button {
+  padding: calc(var(--spacing-sm) * var(--density-padding)) !important;
+}
+
+.density-spacious .el-form-item {
+  margin-bottom: calc(var(--spacing-base) * var(--density-margin)) !important;
+}
+
+.density-spacious .el-input__wrapper,
+.density-spacious .el-button {
+  padding: calc(var(--spacing-base) * var(--density-padding)) !important;
+}
+
+/* 緊湊模式 */
+.compact-mode {
+  --compact-scale: 0.9;
+}
+
+.compact-mode .el-card {
+  margin-bottom: calc(var(--spacing-base) * 0.75) !important;
+}
+
+.compact-mode .el-form-item {
+  margin-bottom: calc(var(--spacing-sm) * 1.5) !important;
+}
+
+.compact-mode .settings-section {
+  padding: calc(var(--spacing-base) * 0.75) !important;
+}
+
+/* 禁用動畫 */
+.no-animations,
+.no-animations *,
+.no-animations *::before,
+.no-animations *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+}
+
+/* 側邊欄摺疊狀態的全域影響 */
+.sidebar-collapsed .app-body {
+  /* 當側邊欄摺疊時，主內容區會自動調整 */
+}
+
+/* 隱藏工具欄狀態 */
+.hide-toolbar .app-header {
+  display: none !important;
+}
+
+.hide-toolbar .app-body {
+  height: 100vh !important;
+}
+
+/* 確保工具欄選擇器正確 */
+.app-layout.hide-toolbar .app-header {
+  display: none !important;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+  .density-spacious {
+    --density-padding: 1.25;
+    --density-margin: 1.1;
+  }
+  
+  .compact-mode {
+    --compact-scale: 0.95;
+  }
+  
+  .font-size-large {
+    --font-scale: 1.1;
+  }
+}
+
+/* 確保設定變更的即時應用 */
+html[data-interface-settings] {
+  transition: font-size var(--transition-base),
+              line-height var(--transition-base);
+}
+
+/* 界面設定組合效果 */
+.compact-mode.density-compact {
+  --combined-scale: 0.8;
+}
+
+.compact-mode.density-compact .el-form-item {
+  margin-bottom: calc(var(--spacing-sm) * 1) !important;
+}
+
+.font-size-large.density-spacious {
+  line-height: var(--line-height-loose) !important;
+}
+
+.font-size-small.density-compact {
+  line-height: var(--line-height-tight) !important;
+}

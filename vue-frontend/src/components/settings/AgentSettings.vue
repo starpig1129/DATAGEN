@@ -65,7 +65,7 @@
         >
           <div class="priority-info">
             <span class="priority-label">{{ label }}</span>
-            <span class="priority-desc">優先級: {{ localValue.priorities[agent] }}</span>
+            <span class="priority-desc">{{ $t('settings.agent.priorities.level') }}: {{ localValue.priorities[agent] }}</span>
           </div>
           <el-slider
             v-model="localValue.priorities[agent]"
