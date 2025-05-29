@@ -47,6 +47,17 @@
       "dashboard": "儀表板",
       "reports": "報告生成"
     },
+    "reports": {
+      "title": "報告生成",
+      "new": "新建報告",
+      "save": "保存報告",
+      "export": "導出報告",
+      "delete": "刪除報告",
+      "preview": "預覽",
+      "template": "模板",
+      "blocks": "內容塊",
+      "metadata": "報告信息"
+    },
     "settings": "系統設置",
     "agentStatus": "代理狀態",
     "collapse": "摺疊",

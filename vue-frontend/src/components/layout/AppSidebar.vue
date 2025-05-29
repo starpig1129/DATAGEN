@@ -68,7 +68,7 @@
           <span>{{ $t('navigation.visualization.dashboard') }}</span>
         </el-menu-item>
         
-        <el-menu-item index="/visualization/reports">
+        <el-menu-item index="/reports" route="/reports">
           <el-icon><Document /></el-icon>
           <span>{{ $t('navigation.visualization.reports') }}</span>
         </el-menu-item>

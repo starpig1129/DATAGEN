@@ -6,6 +6,7 @@ const Dashboard = () => import('@/views/Dashboard.vue')
 const ChatInterface = () => import('@/views/ChatInterface.vue')
 const AgentMonitor = () => import('@/views/AgentMonitor.vue')
 const DataVisualization = () => import('@/views/DataVisualization.vue')
+const ReportGenerator = () => import('@/views/ReportGenerator.vue')
 const FileManager = () => import('@/views/FileManager.vue')
 const Settings = () => import('@/views/SettingsSimple.vue')
 
@@ -44,6 +45,15 @@ const routes: RouteRecordRaw[] = [
     component: DataVisualization,
     meta: {
       title: '數據視覺化',
+      requiresAuth: false
+    }
+  },
+  {
+    path: '/reports',
+    name: 'ReportGenerator',
+    component: ReportGenerator,
+    meta: {
+      title: '報告生成',
       requiresAuth: false
     }
   },
