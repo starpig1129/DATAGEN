@@ -6,3 +6,5 @@ data_storage/*
 chromedriver/*
 # Configuration files
 config.yaml
+settings.json
+settings.json.backup
