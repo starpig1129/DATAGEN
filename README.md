@@ -168,7 +168,7 @@ datapath:YourDataName.csv
 Use machine learning to perform data analysis and write complete graphical reports
 '''
 ```
-
+python run_server.py --with-frontend
 ## Main Components
 
 - `hypothesis_agent`: Generates research hypotheses

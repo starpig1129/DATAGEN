@@ -30,7 +30,7 @@
       <!-- 消息頭部信息 -->
       <div class="message-header flex items-center gap-2 mb-1">
         <span class="sender-name text-sm font-medium text-gray-900 dark:text-white">
-          {{ message.sender }}
+          {{ translatedSender }}
         </span>
         <span class="timestamp text-xs text-gray-500 dark:text-gray-400">
           {{ formattedTime }}
@@ -52,7 +52,7 @@
           <div class="dot w-2 h-2 bg-current rounded-full animate-bounce" style="animation-delay: 0ms"></div>
           <div class="dot w-2 h-2 bg-current rounded-full animate-bounce" style="animation-delay: 150ms"></div>
           <div class="dot w-2 h-2 bg-current rounded-full animate-bounce" style="animation-delay: 300ms"></div>
-          <span class="ml-2 text-sm opacity-70">{{ message.sender }}正在思考...</span>
+          <span class="ml-2 text-sm opacity-70">{{ translatedSender }}正在思考...</span>
         </div>
 
         <!-- 消息內容 -->
@@ -149,8 +149,29 @@ const props = withDefaults(defineProps<Props>(), {
 // 響應式數據
 const copySuccess = ref(false)
 
+// 代理名稱翻譯映射
+const agentNameMap: Record<string, string> = {
+  'hypothesis_agent': '假設代理',
+  'code_agent': '代碼代理',
+  'process_agent': '處理代理',
+  'visualization_agent': '視覺化代理',
+  'report_agent': '報告代理',
+  'quality_review_agent': '品質檢查代理',
+  'human_choice': '等待決策',
+  'human_review': '等待審核',
+  'System': '系統',
+  'Assistant': '助手',
+  'User': '用戶'
+}
+
 // 計算屬性
 const isUserMessage = computed(() => props.message.type === MessageType.USER)
+
+// 翻譯代理名稱
+const translatedSender = computed(() => {
+  const sender = props.message.sender
+  return agentNameMap[sender] || sender
+})
 
 const formattedTime = computed(() => {
   const date = new Date(props.message.timestamp)
@@ -165,14 +186,14 @@ const avatarText = computed(() => {
   if (props.message.type === MessageType.SYSTEM) return 'S'
   if (props.message.sender === 'Assistant') return 'AI'
   
-  // 從發送者名稱中提取首字符或縮寫
-  const sender = props.message.sender
-  if (sender.includes('代理') || sender.includes('Agent')) {
-    const agentType = sender.replace(/代理|Agent/g, '')
+  // 使用翻譯後的代理名稱來生成頭像文字
+  const translated = translatedSender.value
+  if (translated.includes('代理')) {
+    const agentType = translated.replace(/代理/g, '')
     return agentType.charAt(0) || 'A'
   }
   
-  return sender.charAt(0) || 'A'
+  return translated.charAt(0) || 'A'
 })
 
 const avatarClass = computed(() => {

@@ -26,27 +26,36 @@ def agent_node(state: State, agent: AgentExecutor, name: str) -> State:
         state["messages"].append(ai_message)
         state["sender"] = name
         
-        if name == "hypothesis_agent" and not state["hypothesis"]:
-            state["hypothesis"] = ai_message
-            logger.info("Hypothesis updated")
+        if name == "hypothesis_agent" and not state.get("hypothesis"):
+            # 將 AIMessage 的內容提取為字符串存儲到狀態中
+            state["hypothesis"] = ai_message.content
+            logger.info(f"Hypothesis updated with content: {ai_message.content[:100]}...")
+            print(f"=== hypothesis_agent 輸出調試 ===")
+            print(f"hypothesis_agent 輸出內容: {ai_message.content[:200]}...")
+            print(f"設置 hypothesis 為字符串: {state['hypothesis'][:100]}...")
+            print(f"當前 sender: {state.get('sender', 'None')}")
+        elif name == "hypothesis_agent":
+            logger.info(f"Hypothesis already exists, not updating. Current hypothesis: {state.get('hypothesis', '')[:100]}...")
+            print(f"=== hypothesis 已存在，不更新 ===")
+            print(f"現有 hypothesis 內容: {state.get('hypothesis', '')[:100]}...")
         elif name == "process_agent":
-            state["process_decision"] = ai_message
+            state["process_decision"] = ai_message.content
             logger.info("Process decision updated")
             print(f"=== process_agent輸出調試 ===")
             print(f"process_agent輸出內容: {ai_message.content}")
-            print(f"設置process_decision為: {ai_message}")
+            print(f"設置process_decision為: {ai_message.content}")
             print(f"當前sender: {state.get('sender', 'None')}")
         elif name == "visualization_agent":
-            state["visualization_state"] = ai_message
+            state["visualization_state"] = ai_message.content
             logger.info("Visualization state updated")
         elif name == "searcher_agent":
-            state["searcher_state"] = ai_message
+            state["searcher_state"] = ai_message.content
             logger.info("Searcher state updated")
         elif name == "report_agent":
-            state["report_section"] = ai_message
+            state["report_section"] = ai_message.content
             logger.info("Report section updated")
         elif name == "quality_review_agent":
-            state["quality_review"] = ai_message
+            state["quality_review"] = ai_message.content
             state["needs_revision"] = "revision needed" in output.lower()
             logger.info(f"Quality review updated. Needs revision: {state['needs_revision']}")
         
@@ -70,12 +79,13 @@ def human_choice_node(state: State) -> State:
     if ui_decision:
         choice = ui_decision # Use the decision from UI
         modification_areas = "" # No modification areas needed if continuing
-        # Clear the decision immediately after reading it
-        state["process_decision"] = ""
+        # 關鍵修復：不立即清除 process_decision，讓 app.py 的中斷檢測能夠看到用戶決策
+        # 由路由器負責清除，確保工作流正確繼續
         logger.info(f"Received UI decision: {choice}")
         print(f"=== human_choice_node 處理UI決策 ===")
         print(f"UI決策值: {ui_decision}")
         print(f"決策選擇: {choice}")
+        print("保留 process_decision 供中斷檢測使用")
     else:
         # Add prompt message for both UI and CMD if no UI decision was passed
         prompt_message = "Please choose the next step:\n1. Regenerate hypothesis\n2. Continue the research process"
@@ -86,7 +96,10 @@ def human_choice_node(state: State) -> State:
         print("=== UI模式檢測到，設置sender為human_choice並返回狀態 ===")
         print(f"當前狀態中的消息數: {len(state.get('messages', []))}")
         state["sender"] = "human_choice"
+        # 修復：明確設置需要決策的狀態，確保中斷檢測能正確識別
+        state["needs_decision"] = True
         print(f"已設置sender為: {state['sender']}")
+        print(f"已設置needs_decision為: {state['needs_decision']}")
         return state
     
     # Process the choice
@@ -94,21 +107,34 @@ def human_choice_node(state: State) -> State:
         content = f"Regenerate hypothesis. Areas to modify: {modification_areas}"
         state["hypothesis"] = ""
         state["modification_areas"] = modification_areas
+        # 清除任何可能存在的繼續研究標誌
+        state["force_process"] = False
+        state["user_choice_continue"] = False
         logger.info("Hypothesis cleared for regeneration")
         logger.info(f"Areas to modify: {modification_areas}")
+        logger.info("清除force_process和user_choice_continue標誌")
+        print(f"=== 重新生成假設，清除繼續研究標誌 ===")
     else:
         content = "Continue the research process"
         state["process"] = "Continue the research process"
+        # 設置明確的標誌來指示用戶選擇了繼續研究
+        state["user_choice_continue"] = True
+        # 確保hypothesis_router知道應該路由到Process
+        state["force_process"] = True
+        # 關鍵修復：決策處理完成後，不再需要決策狀態
+        # 但保持 workflow_in_progress 直到路由器清除
         logger.info("Continuing research process")
         logger.info(f"當前hypothesis狀態: {state.get('hypothesis', 'None')}")
-        # 確保hypothesis_router會正確路由到Process
+        logger.info("設置user_choice_continue=True和force_process=True")
         print(f"=== 決策處理完成，choice={choice}, hypothesis='{state.get('hypothesis', '')}' ===")
+        print(f"設置狀態標誌: user_choice_continue=True, force_process=True")
+        print("注意：needs_decision 將由路由器負責清除")
     
     human_message = HumanMessage(content=content)
     state["messages"].append(human_message)
     state["sender"] = "human"
-    # Ensure process_decision is cleared after processing any choice
-    state["process_decision"] = ""
+    # 關鍵修復：由 hypothesis_router 負責清除 process_decision，確保狀態一致性
+    # state["process_decision"] = "" # 註解掉，避免過早清除
 
     logger.info("Human choice processed")
     return state

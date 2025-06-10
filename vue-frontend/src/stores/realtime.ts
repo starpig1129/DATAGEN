@@ -6,7 +6,7 @@ import { useChatStore } from './chat'
 // 實時數據類型定義
 export interface RealTimeData {
   id: string
-  type: 'agent_status' | 'system_metrics' | 'data_update' | 'chart_data' | 'file_status'
+  type: 'agent_status' | 'system_metrics' | 'data_update' | 'chart_data' | 'file_status' | 'chat_state'
   data: any
   timestamp: number
   source: string
@@ -55,7 +55,8 @@ interface RealTimeState {
 
 export const useRealTimeStore = defineStore('realtime', () => {
   const appStore = useAppStore()
-  const chatStore = useChatStore()
+  // 移除重複的 chatStore 導入，避免循環依賴
+  // const chatStore = useChatStore()
   
   // 響應式狀態
   const state = ref<RealTimeState>({
@@ -77,8 +78,8 @@ export const useRealTimeStore = defineStore('realtime', () => {
     dataRetentionLimit: 100
   })
   
-  // WebSocket 連接
-  const wsConnection = ref<WebSocket | null>(null)
+  // SSE 連接
+  const sseConnection = ref<EventSource | null>(null)
   const reconnectTimer = ref<number | null>(null)
   const metricsTimer = ref<number | null>(null)
   
@@ -104,91 +105,31 @@ export const useRealTimeStore = defineStore('realtime', () => {
     state.value.reconnectAttempts < state.value.maxReconnectAttempts
   )
   
-  // WebSocket 連接管理
-  const connectWebSocket = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      try {
-        const wsUrl = appStore.config.wsUrl.replace('/graphql/ws', '/ws')
-        console.log('正在連接 WebSocket:', wsUrl)
-        
-        state.value.connectionStatus = 'connecting'
-        state.value.connectionError = null
-        
-        const ws = new WebSocket(wsUrl)
-        wsConnection.value = ws
-        
-        ws.onopen = () => {
-          console.log('WebSocket 連接已建立')
-          state.value.isConnected = true
-          state.value.connectionStatus = 'connected'
-          state.value.lastConnected = new Date().toISOString()
-          state.value.reconnectAttempts = 0
-          state.value.connectionError = null
-          
-          // 發送初始化消息
-          sendMessage({
-            type: 'init',
-            clientId: generateClientId(),
-            timestamp: Date.now()
-          })
-          
-          startMetricsPolling()
-          resolve()
-        }
-        
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data)
-            handleRealtimeMessage(data)
-          } catch (error) {
-            console.error('解析 WebSocket 消息失敗:', error)
-            state.value.lastError = '消息解析錯誤'
-          }
-        }
-        
-        ws.onclose = (event) => {
-          console.log('WebSocket 連接已關閉:', event.code, event.reason)
-          state.value.isConnected = false
-          state.value.connectionStatus = 'disconnected'
-          
-          stopMetricsPolling()
-          
-          if (event.code !== 1000 && canReconnect.value) {
-            scheduleReconnect()
-          }
-        }
-        
-        ws.onerror = (error) => {
-          console.error('WebSocket 錯誤:', error)
-          state.value.connectionStatus = 'error'
-          state.value.connectionError = 'WebSocket 連接錯誤'
-          state.value.lastError = 'WebSocket 連接失敗'
-          reject(new Error('WebSocket 連接失敗'))
-        }
-        
-        // 連接超時處理
-        setTimeout(() => {
-          if (state.value.connectionStatus === 'connecting') {
-            ws.close()
-            reject(new Error('連接超時'))
-          }
-        }, 10000)
-        
-      } catch (error) {
-        console.error('創建 WebSocket 連接失敗:', error)
-        state.value.connectionStatus = 'error'
-        state.value.connectionError = error instanceof Error ? error.message : '未知錯誤'
-        reject(error)
-      }
-    })
+  // SSE 連接管理 - 統一由 Chat Store 處理，Realtime Store 只負責非聊天相關的實時數據
+  // 不再建立獨立的 SSE 連接，避免重複連接和事件處理衝突
+  const connectSSE = (): Promise<void> => {
+    console.log('⚠️  Realtime Store 不再建立獨立 SSE 連接')
+    console.log('   所有 SSE 事件統一由 Chat Store 處理')
+    console.log('   Realtime Store 通過事件監聽接收狀態更新')
+    
+    // 設置為已連接狀態，實際連接由 Chat Store 管理
+    state.value.isConnected = true
+    state.value.connectionStatus = 'connected'
+    state.value.lastConnected = new Date().toISOString()
+    state.value.reconnectAttempts = 0
+    state.value.connectionError = null
+    
+    // 監聽來自 Chat Store 的狀態更新
+    setupChatStoreEventListeners()
+    
+    return Promise.resolve()
   }
   
-  const disconnectWebSocket = (): void => {
-    if (wsConnection.value) {
-      state.value.autoReconnect = false
-      wsConnection.value.close(1000, '用戶主動斷開')
-      wsConnection.value = null
-    }
+  const disconnectSSE = (): void => {
+    console.log('Realtime Store 斷開連接 (實際連接由 Chat Store 管理)')
+    
+    // 清理事件監聽器
+    removeChatStoreEventListeners()
     
     clearReconnectTimer()
     stopMetricsPolling()
@@ -214,7 +155,7 @@ export const useRealTimeStore = defineStore('realtime', () => {
     console.log(`將在 ${delay}ms 後嘗試重新連接 (第 ${state.value.reconnectAttempts} 次)`)
     
     reconnectTimer.value = setTimeout(() => {
-      connectWebSocket().catch(error => {
+      connectSSE().catch(error => {
         console.error('重新連接失敗:', error)
         if (canReconnect.value) {
           scheduleReconnect()
@@ -230,7 +171,56 @@ export const useRealTimeStore = defineStore('realtime', () => {
     }
   }
   
-  // 消息處理
+  // 統一事件監聽器設置 - 監聽來自 Chat Store 的狀態更新
+  const setupChatStoreEventListeners = (): void => {
+    console.log('🔗 Realtime Store 設置 Chat Store 事件監聽器')
+    
+    // 監聽來自 Chat Store 的狀態更新事件
+    document.addEventListener('realtime-state-update', handleChatStoreUpdate as EventListener)
+    document.addEventListener('realtime-agent-status', handleAgentStatusUpdate as EventListener)
+    document.addEventListener('realtime-system-metrics', handleSystemMetricsUpdate as EventListener)
+  }
+  
+  const removeChatStoreEventListeners = (): void => {
+    console.log('🔌 Realtime Store 移除事件監聽器')
+    
+    document.removeEventListener('realtime-state-update', handleChatStoreUpdate as EventListener)
+    document.removeEventListener('realtime-agent-status', handleAgentStatusUpdate as EventListener)
+    document.removeEventListener('realtime-system-metrics', handleSystemMetricsUpdate as EventListener)
+  }
+  
+  // 事件處理函數
+  const handleChatStoreUpdate = (event: Event): void => {
+    try {
+      const customEvent = event as CustomEvent
+      console.log('📨 Realtime Store 收到 Chat Store 狀態更新:', customEvent.detail)
+      handleRealtimeMessage(customEvent.detail)
+    } catch (error) {
+      console.error('處理 Chat Store 狀態更新失敗:', error)
+    }
+  }
+  
+  const handleAgentStatusUpdate = (event: Event): void => {
+    try {
+      const customEvent = event as CustomEvent
+      console.log('🤖 Realtime Store 收到代理狀態更新:', customEvent.detail)
+      updateAgentStatus(customEvent.detail)
+    } catch (error) {
+      console.error('處理代理狀態更新失敗:', error)
+    }
+  }
+  
+  const handleSystemMetricsUpdate = (event: Event): void => {
+    try {
+      const customEvent = event as CustomEvent
+      console.log('📊 Realtime Store 收到系統指標更新:', customEvent.detail)
+      updateSystemMetrics(customEvent.detail)
+    } catch (error) {
+      console.error('處理系統指標更新失敗:', error)
+    }
+  }
+
+  // 消息處理 - 現在主要處理來自 Chat Store 轉發的消息
   const handleRealtimeMessage = (message: any): void => {
     try {
       const realTimeData: RealTimeData = {
@@ -238,7 +228,7 @@ export const useRealTimeStore = defineStore('realtime', () => {
         type: message.type || 'data_update',
         data: message.data || message,
         timestamp: message.timestamp || Date.now(),
-        source: message.source || 'server'
+        source: message.source || 'chat_store'
       }
       
       // 添加到數據列表
@@ -266,6 +256,9 @@ export const useRealTimeStore = defineStore('realtime', () => {
         case 'file_status':
           notifyFileUpdate(realTimeData.data)
           break
+        case 'chat_state':
+          console.log('📞 Realtime Store 收到聊天狀態更新，已由 Chat Store 處理')
+          break
       }
       
     } catch (error) {
@@ -275,19 +268,10 @@ export const useRealTimeStore = defineStore('realtime', () => {
   }
   
   const sendMessage = (message: any): boolean => {
-    if (!wsConnection.value || state.value.connectionStatus !== 'connected') {
-      console.warn('WebSocket 未連接，無法發送消息')
-      return false
-    }
-    
-    try {
-      wsConnection.value.send(JSON.stringify(message))
-      return true
-    } catch (error) {
-      console.error('發送 WebSocket 消息失敗:', error)
-      state.value.lastError = '發送消息失敗'
-      return false
-    }
+    // SSE 是單向通信，不支持從客戶端發送消息
+    // 如果需要發送消息，應該使用 HTTP API
+    console.warn('SSE 不支持發送消息，請使用 HTTP API')
+    return false
   }
   
   // 數據更新處理
@@ -379,15 +363,16 @@ export const useRealTimeStore = defineStore('realtime', () => {
     return `data_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
   
-  // 初始化和清理
+  // 初始化和清理 - 統一 SSE 連接管理
   const initialize = async (): Promise<void> => {
     try {
-      await connectWebSocket()
+      console.log('🚀 Realtime Store 初始化 (統一連接模式)')
+      await connectSSE()
       
       appStore.addNotification({
         type: 'success',
         title: '實時連接已建立',
-        message: '系統現在可以接收實時更新'
+        message: '系統現在可以接收實時更新 (統一管理模式)'
       })
     } catch (error) {
       console.error('初始化實時連接失敗:', error)
@@ -398,13 +383,14 @@ export const useRealTimeStore = defineStore('realtime', () => {
         message: '將使用定期輪詢模式'
       })
       
-      // 如果 WebSocket 失敗，則使用定期輪詢
+      // 如果 SSE 失敗，則使用定期輪詢
       startMetricsPolling()
     }
   }
   
   const destroy = (): void => {
-    disconnectWebSocket()
+    console.log('🧹 Realtime Store 清理資源')
+    disconnectSSE()
     clearReconnectTimer()
     stopMetricsPolling()
     
@@ -459,8 +445,8 @@ export const useRealTimeStore = defineStore('realtime', () => {
     // 方法
     initialize,
     destroy,
-    connectWebSocket,
-    disconnectWebSocket,
+    connectSSE,
+    disconnectSSE,
     sendMessage,
     refreshData,
     

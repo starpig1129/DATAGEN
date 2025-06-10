@@ -36,6 +36,12 @@ class State(TypedDict):
     
     # The identifier of the agent who sent the last message
     sender: str = ""
+    
+    # Boolean flag to force routing to Process node
+    force_process: bool = False
+    
+    # Boolean flag indicating user chose to continue research
+    user_choice_continue: bool = False
 class NoteState(BaseModel):
     class Config:
         arbitrary_types_allowed = True
@@ -52,6 +58,8 @@ class NoteState(BaseModel):
     quality_review: str = Field(default="", description="Feedback from quality review")
     needs_revision: bool = Field(default=False, description="Flag indicating if revision is needed")
     sender: str = Field(default="", description="Identifier of the last message sender")
+    force_process: bool = Field(default=False, description="Boolean flag to force routing to Process node")
+    user_choice_continue: bool = Field(default=False, description="Boolean flag indicating user chose to continue research")
 
     class Config:
         arbitrary_types_allowed = True  # Allow BaseMessage type without explicit validator

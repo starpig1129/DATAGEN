@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { AppConfig, User } from '@/types'
+import { useRealTimeStore } from './realtime'
 
 // 通知類型定義
 export interface Notification {
@@ -106,6 +107,16 @@ export const useAppStore = defineStore('app', {
         
         // 檢查認證狀態
         await this.checkAuthStatus()
+        
+        // 初始化實時連接
+        try {
+          const realtimeStore = useRealTimeStore()
+          await realtimeStore.initialize()
+          console.log('實時連接初始化成功')
+        } catch (realtimeError) {
+          console.error('實時連接初始化失敗:', realtimeError)
+          // 不阻止應用程式初始化，實時連接失敗不影響基本功能
+        }
         
         this.isInitialized = true
       } catch (error) {

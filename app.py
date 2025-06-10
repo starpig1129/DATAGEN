@@ -1,5 +1,5 @@
 import json # Add json import
-from queue import Queue # Add Queue import
+from queue import Queue, Empty # Add Queue and Empty import
 from flask import Flask, request, jsonify, send_from_directory, Response # Add Response import
 from flask_cors import CORS
 # from flask_sse import sse # Remove Flask-SSE import
@@ -25,8 +25,10 @@ CORS(app)  # Enable CORS for all routes
 # Initialize the multi-agent system
 system = MultiAgentSystem()
 
-# Create a thread-safe queue for SSE messages
+# Create a thread-safe queue for SSE messages and connection tracking
 sse_queue = Queue()
+active_connections = {}  # Track active SSE connections
+connection_counter = 0
 
 # WebSocket 支援 - 導入 WebSocket 管理器
 try:
@@ -58,7 +60,10 @@ current_state = {
     "quality_review": "",
     "needs_revision": False,
     "sender": "",
-    "needs_decision": False
+    "needs_decision": False,
+    "user_choice_continue": False,
+    "force_process": False,
+    "workflow_in_progress": False
 }
 
 def serialize_message(msg):
@@ -92,14 +97,300 @@ def serialize_state(state):
             serialized[key] = [serialize_message(msg) for msg in value]
         elif isinstance(value, (str, bool, int, float, type(None))):
             serialized[key] = value
+            # Add debug logging for hypothesis field
+            if key == "hypothesis" and value:
+                print(f"序列化 hypothesis: 類型=字符串, 內容='{value[:100]}...'")
+        elif isinstance(value, (HumanMessage, AIMessage)):
+            # Handle AIMessage and HumanMessage objects properly (should be rare now)
+            serialized_msg = serialize_message(value)
+            serialized[key] = serialized_msg
+            print(f"警告: 發現未處理的 AIMessage 對象在 {key}: {type(value).__name__}")
+        elif isinstance(value, dict):
+            # Recursively serialize nested dictionaries
+            serialized[key] = serialize_state(value)
+        elif isinstance(value, list):
+            # Handle lists that might contain messages or other objects
+            serialized[key] = [
+                serialize_message(item) if isinstance(item, (HumanMessage, AIMessage))
+                else serialize_state(item) if isinstance(item, dict)
+                else item if isinstance(item, (str, bool, int, float, type(None)))
+                else str(item)
+                for item in value
+            ]
         else:
+            # Fallback to string representation for other types
             serialized[key] = str(value)
+            # Add debug logging for unexpected types
+            if key == "hypothesis":
+                print(f"警告: hypothesis 使用字符串轉換: 類型={type(value).__name__}, 值='{str(value)[:100]}...'")
     return serialized
 
 def check_needs_decision(state):
     """Check if the current state needs user decision based on sender"""
     sender = state.get("sender", "")
-    return sender == "human_choice" or sender == "human_review"
+    # 檢查是否需要用戶決策 - 移除 hypothesis_agent 的直接檢測，改為依賴工作流中斷檢測
+    needs_decision = sender == "human_choice" or sender == "human_review"
+    
+    # 關鍵修復：增強調試日誌以追蹤事件流
+    print(f"=== check_needs_decision 詳細檢查 ===")
+    print(f"當前事件發送者: '{sender}'")
+    print(f"基於發送者的決策需求: {needs_decision}")
+    
+    # 添加調試日誌
+    if sender == "hypothesis_agent":
+        hypothesis = state.get("hypothesis", "")
+        print(f"=== hypothesis_agent 特別檢測 ===")
+        print(f"hypothesis 是否存在: {bool(hypothesis)}")
+        print(f"hypothesis 類型: {type(hypothesis).__name__}")
+        print(f"hypothesis 內容預覽: {hypothesis[:100]}..." if hypothesis else "無內容")
+        print(f"注意: hypothesis_agent 的決策需求將由工作流中斷檢測處理")
+        print("==============================")
+    
+    # 關鍵修復：添加其他發送者的日誌
+    elif sender in ["human_choice", "human_review"]:
+        print(f"=== 檢測到需要用戶介入的發送者: {sender} ===")
+    elif sender:
+        print(f"=== 其他代理發送者: {sender} ===")
+    else:
+        print(f"=== 無發送者或發送者為空 ===")
+    
+    print(f"最終決策需求結果: {needs_decision}")
+    print("=" * 45)
+    
+    return needs_decision
+
+
+def check_workflow_interrupt(graph, thread_config, current_state, thread_id):
+    """
+    統一的工作流中斷檢測函數
+    整合三層重複檢測邏輯為單一、原子性的檢測
+    
+    Args:
+        graph: 工作流圖實例
+        thread_config: 線程配置
+        current_state: 當前狀態字典
+        thread_id: 線程識別符
+        
+    Returns:
+        dict: {
+            'needs_interrupt': bool,          # 是否需要中斷
+            'interrupt_type': str,           # 中斷類型
+            'updated_state': dict,           # 更新後的狀態
+            'reason': str                    # 中斷原因
+        }
+    """
+    print(f"=== 統一中斷檢測開始 [線程ID: {thread_id}] ===")
+    
+    # 獲取當前檢查點狀態
+    try:
+        checkpoint = graph.get_state(thread_config)
+    except Exception as e:
+        print(f"⚠️  無法獲取檢查點狀態: {e}")
+        return {
+            'needs_interrupt': False,
+            'interrupt_type': 'none',
+            'updated_state': current_state,
+            'reason': '無法獲取檢查點狀態'
+        }
+    
+    # 創建狀態副本用於修改
+    updated_state = current_state.copy()
+    
+    # 檢查工作流階段和決策狀態
+    is_workflow_start = not updated_state.get("workflow_in_progress", False)
+    has_recent_decision = (
+        updated_state.get("user_choice_continue", False) or
+        updated_state.get("force_process", False)
+    )
+    # 修復：與 core/router.py 中的 hypothesis_router 邏輯保持一致
+    # 檢查所有可能的決策標誌
+    process_decision = updated_state.get("process_decision", "").strip()
+    has_process_decision = process_decision in ["1", "2"]  # 任何有效決策都算作已決策
+    
+    # 用戶已決策的條件：不是工作流開始 且 (有最近決策 或 有處理決策)
+    user_already_decided = (
+        not is_workflow_start and (has_recent_decision or has_process_decision)
+    )
+    
+    print(f"中斷檢測狀態分析:")
+    print(f"  - 工作流開始階段: {is_workflow_start}")
+    print(f"  - 有最近決策: {has_recent_decision}")
+    print(f"  - process_decision 值: '{process_decision}'")
+    print(f"  - 有處理決策(=2): {has_process_decision}")
+    print(f"  - 用戶已決策: {user_already_decided}")
+    
+    # 檢查檢查點狀態
+    if not checkpoint:
+        print("📋 沒有檢查點狀態，工作流正常結束")
+        return {
+            'needs_interrupt': False,
+            'interrupt_type': 'workflow_complete',
+            'updated_state': updated_state,
+            'reason': '工作流正常完成'
+        }
+    
+    next_steps = checkpoint.next if checkpoint.next else []
+    print(f"檢查點下一步: {next_steps}")
+    
+    # 新增：檢查 sender 是否為 human_choice（直接來自節點的信號）
+    if updated_state.get("sender") == "human_choice" and not user_already_decided:
+        print("🔍 檢測到 human_choice sender，直接觸發決策狀態")
+        
+        # 使用原子性狀態更新函數
+        updated_state = update_decision_state(
+            updated_state,
+            True,
+            'human_choice 節點直接要求用戶決策',
+            thread_id
+        )
+        
+        return {
+            'needs_interrupt': True,
+            'interrupt_type': 'human_choice_sender',
+            'updated_state': updated_state,
+            'reason': 'human_choice 節點直接要求用戶決策'
+        }
+    
+    # 核心中斷檢測邏輯
+    elif "HumanChoice" in next_steps and not user_already_decided:
+        print("🔍 檢測到需要用戶決策的中斷點")
+        
+        # 使用原子性狀態更新函數
+        updated_state = update_decision_state(
+            updated_state,
+            True,
+            '工作流在 HumanChoice 節點需要用戶決策',
+            thread_id
+        )
+        
+        # 清除過期的決策標誌
+        if not has_recent_decision:
+            updated_state["process_decision"] = ""
+        
+        return {
+            'needs_interrupt': True,
+            'interrupt_type': 'human_choice_required',
+            'updated_state': updated_state,
+            'reason': '工作流在 HumanChoice 節點需要用戶決策'
+        }
+    
+    elif "HumanChoice" in next_steps and user_already_decided:
+        print(f"⏭️  用戶已做決策，跳過中斷檢測")
+        
+        # 關鍵修復：用戶已決策時，立即清除需要決策的狀態
+        updated_state["needs_decision"] = False
+        
+        # 清除一次性決策標誌，但保持 workflow_in_progress
+        if has_recent_decision:
+            updated_state["user_choice_continue"] = False
+            updated_state["force_process"] = False
+            print("已清除一次性決策標誌")
+        
+        # 如果有有效的處理決策，也要清除
+        if has_process_decision:
+            updated_state["process_decision"] = ""
+            print("已清除 process_decision")
+        
+        print("已清除 needs_decision 狀態")
+        
+        return {
+            'needs_interrupt': False,
+            'interrupt_type': 'decision_completed',
+            'updated_state': updated_state,
+            'reason': '用戶已完成決策，繼續工作流'
+        }
+    
+    # 檢查是否有其他等待中的節點
+    elif next_steps:
+        print(f"📋 檢測到其他等待節點: {next_steps}")
+        return {
+            'needs_interrupt': False,
+            'interrupt_type': 'other_nodes_pending',
+            'updated_state': updated_state,
+            'reason': f'等待其他節點處理: {next_steps}'
+        }
+    
+    # 工作流正常完成
+    else:
+        print("✅ 工作流正常完成，無需中斷")
+        
+        # 使用原子性狀態更新函數
+        updated_state = update_decision_state(
+            updated_state,
+            False,
+            '工作流正常完成',
+            thread_id
+        )
+        
+        return {
+            'needs_interrupt': False,
+            'interrupt_type': 'workflow_complete',
+            'updated_state': updated_state,
+            'reason': '工作流正常完成'
+        }
+
+
+def update_decision_state(state, needs_decision, reason="", thread_id=None):
+    """
+    原子性更新決策狀態函數
+    確保決策狀態設定的一致性和可靠性
+    
+    Args:
+        state: 當前狀態字典
+        needs_decision: 是否需要決策
+        reason: 更新原因
+        thread_id: 線程識別符（用於日誌）
+    
+    Returns:
+        dict: 更新後的狀態
+    """
+    updated_state = state.copy()
+    
+    if needs_decision:
+        # 設置需要決策的狀態
+        updated_state["needs_decision"] = True
+        updated_state["workflow_in_progress"] = True
+        updated_state["sender"] = "human_choice"
+        
+        # 清除過期的決策標誌（如果沒有最近決策）
+        if not updated_state.get("user_choice_continue", False) and not updated_state.get("force_process", False):
+            updated_state["process_decision"] = ""
+        
+        log_msg = f"✅ 設置決策狀態: needs_decision=True"
+    else:
+        # 關鍵修復：徹底清除決策需求狀態
+        updated_state["needs_decision"] = False
+        
+        # 檢查是否是決策處理完成的情況
+        process_decision = updated_state.get("process_decision", "").strip()
+        user_choice_continue = updated_state.get("user_choice_continue", False)
+        
+        # 如果用戶剛完成決策（process_decision存在且有效），清除相關標誌
+        if process_decision in ["1", "2"] or user_choice_continue:
+            updated_state["user_choice_continue"] = False
+            updated_state["force_process"] = False
+            # 只有在決策處理完成後才清除 process_decision
+            if process_decision in ["1", "2"]:
+                updated_state["process_decision"] = ""
+            log_msg = f"✅ 決策處理完成: needs_decision=False, 已清除決策標誌"
+        else:
+            # 只在工作流完全結束時清除 workflow_in_progress
+            if not user_choice_continue and not updated_state.get("force_process", False):
+                updated_state["workflow_in_progress"] = False
+            log_msg = f"✅ 清除決策狀態: needs_decision=False"
+    
+    # 記錄狀態更新
+    if thread_id:
+        print(f"{log_msg} [線程ID: {thread_id}]")
+        if reason:
+            print(f"更新原因: {reason}")
+    else:
+        print(log_msg)
+        if reason:
+            print(f"更新原因: {reason}")
+    
+    return updated_state
+
 
 import traceback # Add traceback import for background error handling
 
@@ -156,7 +447,31 @@ def process_message_background(input_state):
                 )
         else:
             print(f"啟動新的工作流實例")
-            events = system.workflow_manager.get_graph().stream(
+            
+            # --- 統一啟動前中斷檢測 ---
+            graph = system.workflow_manager.get_graph()
+            
+            print(f"=== 工作流啟動前狀態檢查 ===")
+            startup_interrupt_result = check_workflow_interrupt(graph, thread_config, input_state, thread_id)
+            
+            if startup_interrupt_result['needs_interrupt']:
+                print("🔍 檢測到現有中斷狀態，直接處理決策需求")
+                
+                # 應用中斷檢測結果並推送狀態
+                temp_state = startup_interrupt_result['updated_state']
+                serialized_state = serialize_state(temp_state)
+                state_json = json.dumps(serialized_state)
+                broadcast_to_sse_connections(state_json)
+                print(f"⚡ 直接廣播中斷狀態到SSE連接 [線程ID: {thread_id}]")
+                
+                # 更新全局狀態並退出
+                current_state = temp_state
+                print(f"✅ 直接中斷處理完成，已更新全局狀態並結束線程 [線程ID: {thread_id}]")
+                return
+            else:
+                print(f"啟動前檢測結果: {startup_interrupt_result['reason']}")
+            
+            events = graph.stream(
                 input_state,
                 thread_config,
                 stream_mode="values",
@@ -164,13 +479,45 @@ def process_message_background(input_state):
             )
         print(f"工作流流已創建 [線程ID: {thread_id}]")
 
+        # 關鍵修復：確保在事件處理前獲取正確的 graph 引用（避免重複獲取）
+        if 'graph' not in locals():
+            graph = system.workflow_manager.get_graph()
+        if 'thread_config' not in locals():
+            thread_config = {"configurable": {"thread_id": "persistent_chat_session"}}
+
         # Update state with results
         temp_state = input_state.copy() # Work on a copy within the thread initially
         event_count = 0
-        for event in events:
+        
+        # 關鍵修復：創建事件列表以檢查事件流完整性
+        events_list = []
+        events_iterator = iter(events)
+        
+        # 關鍵修復：先收集所有事件，以便分析事件流
+        try:
+            for event in events_iterator:
+                events_list.append(event)
+                print(f"📦 收集事件 #{len(events_list)}: sender={event.get('sender', 'None')}")
+        except Exception as e:
+            print(f"⚠️  事件收集過程中出現錯誤: {e}")
+        
+        print(f"🔍 總共收集到 {len(events_list)} 個事件")
+        
+        # 處理收集到的事件
+        for event in events_list:
             event_count += 1
-            print(f"處理事件 #{event_count} [線程ID: {thread_id}]")
+            print(f"=== 處理事件 #{event_count} [線程ID: {thread_id}] ===")
             print(f"事件發送者: {event.get('sender', 'None')}")
+            print(f"事件完整內容: {event}")
+            
+            # 關鍵修復：檢查事件流的完整性
+            current_graph_state = graph.get_state(thread_config)
+            if current_graph_state:
+                print(f"當前圖狀態 - 下一步: {current_graph_state.next}")
+                print(f"當前圖狀態 - 配置: {getattr(current_graph_state, 'config', {})}")
+            else:
+                print("⚠️  無法獲取當前圖狀態")
+            print("=" * 50)
             
             # 廣播代理狀態更新
             sender = event.get('sender', 'unknown')
@@ -197,88 +544,93 @@ def process_message_background(input_state):
                     "timestamp": datetime.now().isoformat()
                 })
 
-            # --- Start of modified SSE push logic ---
-            # Check if decision is needed based on the sender in the current event state
-            needs_decision = check_needs_decision(event) # Pass the event directly
-            print(f"檢查是否需要決策: {needs_decision}, 發送者: {event.get('sender', 'None')}")
+            # --- 統一中斷檢測邏輯 (第一層：事件循環內檢測) ---
+            # 使用統一的中斷檢測函數替代重複邏輯
+            interrupt_result = check_workflow_interrupt(graph, thread_config, temp_state, thread_id)
             
-            if needs_decision:
-                temp_state['needs_decision'] = True
-                temp_state['process_decision'] = "" # Clear process decision
-                print(f"需要用戶決策，設置needs_decision=True，已清除process_decision")
-            else:
-                temp_state['needs_decision'] = False
-                print(f"不需要決策，設置needs_decision=False")
+            # 應用中斷檢測結果
+            temp_state = interrupt_result['updated_state']
+            needs_decision = interrupt_result['needs_interrupt']
+            
+            print(f"統一中斷檢測結果: {interrupt_result['interrupt_type']} - {interrupt_result['reason']}")
+            print(f"需要決策: {needs_decision}, 發送者: {event.get('sender', 'None')}")
 
-            # Serialize and push the current temp_state after processing each event
-            # This ensures intermediate updates are sent to the frontend
-            current_snapshot_state = temp_state.copy() # Take a snapshot for this push
-            # Ensure needs_decision reflects the check result for this specific snapshot
-            current_snapshot_state['needs_decision'] = needs_decision
+            # 廣播當前狀態到前端
+            current_snapshot_state = temp_state.copy()
             serialized_state = serialize_state(current_snapshot_state)
             state_json = json.dumps(serialized_state)
-            print(f"將狀態推送到SSE隊列 [線程ID: {thread_id}, 事件 #{event_count}]")
-            sse_queue.put(state_json)
-            print(f"狀態已推送 (needs_decision={needs_decision}, 隊列大小: {sse_queue.qsize()})")
+            print(f"將狀態廣播到SSE連接 [線程ID: {thread_id}, 事件 #{event_count}]")
+            broadcast_to_sse_connections(state_json)
+            print(f"狀態已廣播 (needs_decision={needs_decision}, 活躍連接數: {len(active_connections)})")
 
-            # If decision is needed, update global state and exit thread *after* pushing
+            # 如果檢測到中斷需求，標記但繼續處理剩餘事件
             if needs_decision:
-                current_state = temp_state # Update global state immediately
-                print(f"需要決策，已更新全局狀態並結束線程 [線程ID: {thread_id}]")
-                return # Exit the background function immediately
-            # --- End of modified SSE push logic ---
+                print(f"檢測到決策需求，標記狀態但繼續處理剩餘事件 [線程ID: {thread_id}]")
+                temp_state['decision_pending'] = True
+            # --- 統一中斷檢測邏輯結束 ---
 
-        # --- Code after the loop (only runs if no decision was needed during the loop) ---
-        # If the loop completes without returning, check if it's due to an interrupt
-        print(f"工作流完成，處理了 {event_count} 個事件 [線程ID: {thread_id}]")
+        # --- 統一後處理邏輯 ---
+        print(f"事件循環完成，處理了 {event_count} 個事件 [線程ID: {thread_id}]")
         
-        # Check if the workflow was interrupted (paused for user decision)
-        graph = system.workflow_manager.get_graph()
-        thread_config = {"configurable": {"thread_id": "persistent_chat_session"}}
-        current_checkpoint = graph.get_state(thread_config)
+        # 檢查事件循環中是否標記了決策需求
+        decision_pending = temp_state.get('decision_pending', False)
+        if decision_pending:
+            print(f"🔥 檢測到待處理的決策需求，執行最終決策處理")
+            
+            # 清除內部標記並推送最終決策狀態
+            temp_state.pop('decision_pending', None)
+            
+            serialized_final_state = serialize_state(temp_state)
+            final_json = json.dumps(serialized_final_state)
+            broadcast_to_sse_connections(final_json)
+            print(f"💥 最終決策狀態已廣播到SSE連接 [線程ID: {thread_id}, 活躍連接數: {len(active_connections)}]")
+            
+            # 更新全局狀態並退出
+            current_state = temp_state
+            print(f"⚡ 最終決策處理完成，已更新全局狀態並結束線程 [線程ID: {thread_id}]")
+            return
         
-        if current_checkpoint and current_checkpoint.next:
-            # Workflow was interrupted, check if next step is HumanChoice
-            next_steps = current_checkpoint.next
-            print(f"工作流被中斷，下一步: {next_steps}")
-            if "HumanChoice" in next_steps:
-                print("檢測到需要決策 - 工作流在Hypothesis後暫停")
-                temp_state['needs_decision'] = True
-                temp_state['sender'] = "human_choice"
-                current_state = temp_state
-                print(f"已設置needs_decision=True，等待用戶決策 [線程ID: {thread_id}]")
-                
-                # Push interrupt state to SSE
-                serialized_state = serialize_state(current_state)
-                print(f"=== 中斷狀態序列化調試 ===")
-                print(f"原始狀態 sender: {current_state.get('sender', 'None')}")
-                print(f"原始狀態 needs_decision: {current_state.get('needs_decision', 'None')}")
-                print(f"序列化後狀態 sender: {serialized_state.get('sender', 'None')}")
-                print(f"序列化後狀態 needs_decision: {serialized_state.get('needs_decision', 'None')}")
-                state_json = json.dumps(serialized_state)
-                print(f"最終JSON字符串: {state_json}")
-                sse_queue.put(state_json)
-                print(f"中斷狀態已推送到SSE隊列 [線程ID: {thread_id}, 隊列大小: {sse_queue.qsize()}]")
-                return
+        # --- 最終統一中斷檢測 (替代第二層和第三層檢測) ---
+        print(f"=== 最終工作流狀態檢查 ===")
+        final_interrupt_result = check_workflow_interrupt(graph, thread_config, temp_state, thread_id)
         
-        # Normal completion - no decision needed
-        temp_state['needs_decision'] = False
+        # 應用最終檢測結果
+        temp_state = final_interrupt_result['updated_state']
+        final_needs_interrupt = final_interrupt_result['needs_interrupt']
+        
+        print(f"最終中斷檢測結果: {final_interrupt_result['interrupt_type']} - {final_interrupt_result['reason']}")
+        
+        if final_needs_interrupt:
+            print(f"🔄 檢測到最終中斷需求，推送中斷狀態")
+            
+            # 推送中斷狀態更新
+            serialized_interrupt_state = serialize_state(temp_state)
+            interrupt_json = json.dumps(serialized_interrupt_state)
+            broadcast_to_sse_connections(interrupt_json)
+            print(f"🔄 最終中斷狀態已廣播到SSE連接 [線程ID: {thread_id}, 活躍連接數: {len(active_connections)}]")
+            
+            # 更新全局狀態並退出
+            current_state = temp_state
+            print(f"✅ 最終中斷處理完成，已更新全局狀態並結束線程 [線程ID: {thread_id}]")
+            return
+        
+        # 工作流正常完成
+        print(f"工作流正常完成，無需中斷處理 [線程ID: {thread_id}]")
         current_state = temp_state
-        print(f"已更新全局狀態，不需要決策 [線程ID: {thread_id}]")
 
-        # Serialize and push the final state update via SSE
+        # 推送最終狀態更新
         serialized_state = serialize_state(current_state)
         state_json = json.dumps(serialized_state)
-        sse_queue.put(state_json)
-        print(f"最終狀態已推送到SSE隊列 [線程ID: {thread_id}, 隊列大小: {sse_queue.qsize()}]")
+        broadcast_to_sse_connections(state_json)
+        print(f"最終狀態已廣播到SSE連接 [線程ID: {thread_id}, 活躍連接數: {len(active_connections)}]")
 
     except Exception as e:
         print(f"後台處理錯誤 [線程ID: {thread_id}]: {str(e)}")
         print(f"錯誤追踪: {traceback.format_exc()}")
         # Optionally push an error state via SSE
         error_state = {**serialize_state(current_state), "error": str(e)}
-        sse_queue.put(json.dumps(error_state))
-        print(f"錯誤狀態已推送到SSE隊列 [線程ID: {thread_id}]")
+        broadcast_to_sse_connections(json.dumps(error_state))
+        print(f"錯誤狀態已廣播到SSE連接 [線程ID: {thread_id}]")
 
 
 @app.route('/')
@@ -301,19 +653,30 @@ def send_message():
         input_state = current_state.copy()
         
         if message:
-            # Add new message to state
-            print(f"添加用戶消息到狀態: '{message}'")
+            # 關鍵修復：新用戶輸入時清除所有決策相關標誌
+            print(f"添加用戶消息到狀態: '{message}' - 清除決策標誌")
             input_state["messages"] = current_state["messages"] + [HumanMessage(content=message)]
+            # 清除所有決策相關的狀態標誌，確保新工作流能正常中斷
+            input_state["user_choice_continue"] = False
+            input_state["force_process"] = False
+            input_state["process_decision"] = ""
+            input_state["workflow_in_progress"] = False
+            input_state["needs_decision"] = False
+            print("新用戶輸入，已清除所有決策標誌，允許正常中斷檢測")
         
         # Add process_decision if provided
         if process_decision:
             print(f"添加決策到狀態: process_decision={process_decision}")
             input_state["process_decision"] = process_decision
+            # 設置決策標誌，表示用戶已做出決策
+            input_state["user_choice_continue"] = True
+            input_state["workflow_in_progress"] = True
             # Add system message to show the decision
             decision_text = "重新生成假設" if process_decision == "1" else "繼續研究"
             input_state["messages"] = input_state["messages"] + [
                 HumanMessage(content=f"已選擇: {decision_text}")
             ]
+            print(f"設置決策標誌：user_choice_continue=True, workflow_in_progress=True")
         
         # Create and start the background thread
         print("創建後台線程處理消息...")
@@ -590,42 +953,143 @@ def get_file_content(filename):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# New SSE endpoint using in-memory queue
+# New SSE endpoint with improved connection management and broadcasting
 @app.route('/stream')
 def event_stream():
     print("SSE連接已建立 - 客戶端已連接到/stream端點")
+    
     def generate():
-        connection_id = f"conn_{id(generate)}"
-        print(f"SSE生成器已啟動 [ID: {connection_id}]")
+        global connection_counter
+        connection_counter += 1
+        connection_id = f"conn_{connection_counter}"
+        
+        # Create a dedicated queue for this connection
+        connection_queue = Queue()
+        active_connections[connection_id] = connection_queue
+        
+        print(f"SSE生成器已啟動 [ID: {connection_id}, 活躍連接數: {len(active_connections)}]")
+        
         try:
             # 發送初始連接確認
             initial_message = json.dumps({"status": "connected", "connection_id": connection_id})
             yield f"event: connection_established\ndata: {initial_message}\n\n"
             print(f"已發送SSE連接確認 [ID: {connection_id}]")
             
+            # 發送心跳以保持連接活躍
+            heartbeat_count = 0
+            
             while True:
                 try:
-                    # Block until a message is available
-                    print(f"等待消息... [ID: {connection_id}]")
-                    message = sse_queue.get(timeout=None) # No timeout, wait indefinitely
-                    # Format as SSE message
-                    print(f"從隊列獲取到消息，準備發送 [ID: {connection_id}]")
-                    sse_data = f"event: state_update\ndata: {message}\n\n"
-                    yield sse_data
-                    print(f"已發送SSE消息 [ID: {connection_id}]")
-                    sse_queue.task_done() # Mark message as processed
+                    # 使用超時機制避免無限阻塞
+                    print(f"等待消息... [ID: {connection_id}, 隊列大小: {connection_queue.qsize()}]")
+                    
+                    try:
+                        message = connection_queue.get(timeout=30)  # 30秒超時
+                        print(f"從隊列獲取到消息，準備發送 [ID: {connection_id}]")
+                        sse_data = f"event: state_update\ndata: {message}\n\n"
+                        yield sse_data
+                        print(f"✅ 成功發送SSE消息 [ID: {connection_id}]")
+                        
+                    except Empty:
+                        # 超時時發送心跳保持連接
+                        heartbeat_count += 1
+                        heartbeat_message = json.dumps({
+                            "type": "heartbeat",
+                            "timestamp": datetime.now().isoformat(),
+                            "connection_id": connection_id,
+                            "heartbeat_count": heartbeat_count
+                        })
+                        yield f"event: heartbeat\ndata: {heartbeat_message}\n\n"
+                        print(f"💓 發送心跳 [ID: {connection_id}, 心跳 #{heartbeat_count}]")
+                        continue
+                        
+                except GeneratorExit:
+                    print(f"SSE連接正常關閉 [ID: {connection_id}]")
+                    break
                 except Exception as e:
-                    print(f"SSE生成器錯誤 [ID: {connection_id}]: {e}")
-                    # Optionally break or handle specific errors
-                    break # Exit loop on error to prevent infinite loops on persistent issues
-        except GeneratorExit:
-            print(f"SSE連接已關閉 [ID: {connection_id}]")
+                    print(f"❌ SSE生成器錯誤 [ID: {connection_id}]: {e}")
+                    # 記錄錯誤但繼續嘗試，避免因小錯誤中斷整個連接
+                    error_message = json.dumps({
+                        "type": "error",
+                        "message": str(e),
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    try:
+                        yield f"event: error\ndata: {error_message}\n\n"
+                    except:
+                        break  # 如果連接真的斷了，退出循環
+                        
+        except Exception as e:
+            print(f"❌ SSE連接異常 [ID: {connection_id}]: {e}")
+        finally:
+            # 清理連接
+            if connection_id in active_connections:
+                del active_connections[connection_id]
+            print(f"🧹 SSE連接已清理 [ID: {connection_id}, 剩餘活躍連接數: {len(active_connections)}]")
             
     response = Response(generate(), mimetype='text/event-stream')
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['X-Accel-Buffering'] = 'no'
+    response.headers['Connection'] = 'keep-alive'
     print("SSE響應已創建並返回")
     return response
+
+# 廣播函數：將消息發送到所有活躍的SSE連接
+def broadcast_to_sse_connections(message):
+    """將消息廣播到所有活躍的SSE連接 - 修復版本，改善超時和重試機制"""
+    if not active_connections:
+        print("⚠️ 沒有活躍的SSE連接，跳過廣播")
+        return
+        
+    print(f"📡 開始廣播到 {len(active_connections)} 個活躍連接")
+    broadcasted_count = 0
+    failed_connections = []
+    retry_connections = []
+    
+    # 第一輪嘗試：使用較長的超時時間
+    for connection_id, connection_queue in active_connections.items():
+        try:
+            connection_queue.put(message, timeout=5)  # 增加到5秒超時
+            broadcasted_count += 1
+            print(f"✅ 消息已發送到連接 [ID: {connection_id}]")
+        except queue.Full:
+            print(f"⚠️ 連接隊列已滿，準備重試 [ID: {connection_id}]")
+            retry_connections.append((connection_id, connection_queue))
+        except Exception as e:
+            print(f"❌ 發送到連接失敗 [ID: {connection_id}]: {e}")
+            failed_connections.append(connection_id)
+    
+    # 第二輪重試：對隊列滿的連接進行重試
+    if retry_connections:
+        print(f"🔄 對 {len(retry_connections)} 個連接進行重試")
+        import time
+        time.sleep(0.1)  # 短暫等待，讓隊列可能有空間
+        
+        for connection_id, connection_queue in retry_connections:
+            try:
+                connection_queue.put(message, timeout=2)  # 重試時使用較短超時
+                broadcasted_count += 1
+                print(f"✅ 重試成功，消息已發送到連接 [ID: {connection_id}]")
+            except queue.Full:
+                print(f"❌ 重試失敗，隊列仍滿 [ID: {connection_id}]")
+                failed_connections.append(connection_id)
+            except Exception as e:
+                print(f"❌ 重試發送失敗 [ID: {connection_id}]: {e}")
+                failed_connections.append(connection_id)
+    
+    # 清理失敗的連接
+    for connection_id in failed_connections:
+        if connection_id in active_connections:
+            del active_connections[connection_id]
+            print(f"🧹 清理失敗連接 [ID: {connection_id}]")
+    
+    print(f"📡 廣播完成：成功 {broadcasted_count}，失敗 {len(failed_connections)}，剩餘活躍連接 {len(active_connections)}")
+    
+    # 關鍵修復：驗證廣播完整性
+    if broadcasted_count > 0:
+        print(f"✅ SSE 廣播完整性檢查：{broadcasted_count}/{len(active_connections) + len(failed_connections)} 連接成功")
+    else:
+        print(f"⚠️ SSE 廣播完整性警告：沒有任何連接成功接收消息")
 
 # 設定管理API端點
 SETTINGS_FILE = './settings.json'

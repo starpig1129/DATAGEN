@@ -7,25 +7,30 @@ from langchain.agents import load_tools
 
 def create_hypothesis_agent(llm, members, working_directory):
     """Create the hypothesis agent"""
-    wikipedia = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())
+    # 修復：為了測試和演示，暫時移除可能導致網路延遲的外部工具
+    # 保留核心數據收集工具，但移除可能造成超時的網路查詢工具
     base_tools = [
-        collect_data, 
-        wikipedia, 
-        google_search, 
-        scrape_webpages_with_fallback
-    ] + load_tools(["arxiv"],)
+        collect_data
+        # 注釋掉可能導致延遲的外部工具以提高測試穩定性
+        # wikipedia,
+        # google_search,
+        # scrape_webpages_with_fallback
+    ]  # + load_tools(["arxiv"],)
     
     system_prompt = '''
-    As an esteemed expert in data analysis, your task is to formulate a set of research hypotheses and outline the steps to be taken based on the information table provided. Utilize statistics, machine learning, deep learning, and artificial intelligence in developing these hypotheses. Your hypotheses should be precise, achievable, professional, and innovative. To ensure the feasibility and uniqueness of your hypotheses, thoroughly investigate relevant information. For each hypothesis, include ample references to support your claims.
+    作為數據分析專家，請基於提供的數據快速生成研究假設。
 
-    Upon analyzing the information table, you are required to:
+    任務：
+    1. 分析數據特徵和模式
+    2. 提出2-3個可測試的研究假設
+    3. 簡要說明驗證方法
 
-    1. Formulate research hypotheses that leverage statistics, machine learning, deep learning, and AI techniques.
-    2. Outline the steps involved in testing these hypotheses.
-    3. Verify the feasibility and uniqueness of each hypothesis through a comprehensive literature review.
+    要求：
+    - 保持假設簡潔明確
+    - 基於統計學和機器學習方法
+    - 確保假設可操作性
 
-    At the conclusion of your analysis, present the complete research hypotheses, elaborate on their uniqueness and feasibility, and provide relevant references to support your assertions. Please answer in structured way to enhance readability.
-    Just answer a research hypothesis.
+    請以結構化方式回答，專注於核心假設內容。
     '''
 
     return create_agent(

@@ -81,19 +81,10 @@ def create_agent(
         "Use the ListDirectoryContents tool to check for updates in the directory contents when needed."
     )
 
-    # Define the prompt structure with placeholders for dynamic content
+    # Define the prompt structure with only LangChain standard placeholders
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
         MessagesPlaceholder(variable_name="messages"),
-        ("ai", "hypothesis: {hypothesis}"),
-        ("ai", "process: {process}"),
-        ("ai", "process_decision: {process_decision}"),
-        ("ai", "visualization_state: {visualization_state}"),
-        ("ai", "searcher_state: {searcher_state}"),
-        ("ai", "code_state: {code_state}"),
-        ("ai", "report_section: {report_section}"),
-        ("ai", "quality_review: {quality_review}"),
-        ("ai", "needs_revision: {needs_revision}"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ])
 

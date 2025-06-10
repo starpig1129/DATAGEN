@@ -163,7 +163,9 @@ class WorkflowManager:
 
         # Compile workflow with checkpointer for state persistence
         self.memory = MemorySaver()
-        self.graph = self.workflow.compile(checkpointer=self.memory, interrupt_after=["Hypothesis"])
+        # 修復：只在 HumanChoice 節點後中斷，讓 Hypothesis 節點能完整執行並流轉到 HumanChoice
+        # 這樣可以確保決策狀態能正確觸發
+        self.graph = self.workflow.compile(checkpointer=self.memory, interrupt_after=["HumanChoice"])
 
     def get_graph(self):
         """Return the compiled workflow graph"""

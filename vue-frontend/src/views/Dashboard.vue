@@ -379,6 +379,26 @@ const systemStats = computed(() => {
   ]
 })
 
+// 代理名稱翻譯映射
+const agentNameMap: Record<string, string> = {
+  'hypothesis_agent': '假設代理',
+  'code_agent': '代碼代理',
+  'process_agent': '處理代理',
+  'visualization_agent': '視覺化代理',
+  'report_agent': '報告代理',
+  'quality_review_agent': '品質檢查代理',
+  'human_choice': '等待決策',
+  'human_review': '等待審核',
+  'System': '系統',
+  'Assistant': '助手',
+  'User': '用戶'
+}
+
+// 翻譯代理名稱的輔助函數
+const translateAgentName = (agentName: string): string => {
+  return agentNameMap[agentName] || agentName
+}
+
 // 代理狀態 - 保持原有邏輯
 const agentStatus = computed(() => {
   const baseAgents = [
@@ -428,7 +448,7 @@ const recentActivities = computed(() => {
     if (message.type === MessageType.AGENT) {
       activities.push({
         id: `msg_${message.id}`,
-        title: `${message.sender}回應`,
+        title: `${translateAgentName(message.sender)}回應`,
         description: message.content.length > 50
           ? `${message.content.substring(0, 50)}...`
           : message.content,
