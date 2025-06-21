@@ -1,4 +1,7 @@
 .env
+config.yaml
+settings.json
+settings.json.backup
 *.log
 *.csv
 data_storage/*
