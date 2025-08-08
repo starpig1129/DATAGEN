@@ -28,24 +28,42 @@ def normalize_path(file_path: str) -> str:
     return os.path.normpath(file_path)
 
 @tool
-def collect_data(data_path: Annotated[str, "Path to the CSV file"] = './data.csv'):
+def collect_data(
+    data_path: Annotated[str, "Path to the CSV file"] = './data.csv',
+    nrows: Annotated[int | None, "Number of rows to read"] = None,
+    usecols: Annotated[list[str] | None, "List of column names to read"] = None,
+    skiprows: Annotated[int | None, "Number of rows to skip at the beginning"] = None
+):
     """
-    Collect data from a CSV file.
+    Collect data from a CSV file with selective reading options.
 
-    This function attempts to read a CSV file using different encodings.
+    This function attempts to read a CSV file using different encodings and supports
+    selective data loading to avoid resource overconsumption.
+
+    Args:
+        data_path: Path to the CSV file.
+        nrows: Number of rows to read. If None, reads all rows.
+        usecols: List of column names to read. If None, reads all columns.
+        skiprows: Number of rows to skip at the beginning. If None, starts from the first row.
 
     Returns:
-    pandas.DataFrame: The data read from the CSV file.
+        pandas.DataFrame: The data read from the CSV file.
 
     Raises:
-    ValueError: If unable to read the file with any of the provided encodings.
+        ValueError: If unable to read the file with any of the provided encodings.
     """
     data_path = normalize_path(data_path)
     logger.info(f"Attempting to read CSV file: {data_path}")
     encodings = ['utf-8', 'latin1', 'iso-8859-1', 'cp1252']
     for encoding in encodings:
         try:
-            data = pd.read_csv(data_path, encoding=encoding)
+            data = pd.read_csv(
+                data_path,
+                encoding=encoding,
+                nrows=nrows,
+                usecols=usecols,
+                skiprows=skiprows
+            )
             logger.info(f"Successfully read CSV file with encoding: {encoding}")
             return data
         except Exception as e:
