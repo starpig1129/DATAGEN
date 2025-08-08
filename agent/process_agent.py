@@ -29,7 +29,7 @@ def create_process_agent(language_model_manager, agent_name: str):
 
     **Step-by-Step Process:**
     1. **Planning:** Define clear objectives and expected outcomes for each phase of the project.
-    2. **Task Assignment:** Assign specific tasks to the appropriate agents ("Visualization," "Search," "Coder," "Report").
+    2. **Task Assignment:** Assign specific tasks to the appropriate agents (Visualization, Search, Coder, Report).
     3. **Review and Integration:** Critically review and integrate outputs from each agent, ensuring consistency, quality, and relevance.
     4. **Feedback:** Provide feedback and further instructions as needed to refine outputs.
     5. **Final Compilation:** Ensure all components are logically connected and meet high academic standards.
@@ -48,7 +48,7 @@ def create_process_agent(language_model_manager, agent_name: str):
     5. Compile the final report, ensuring all sections are complete and well-integrated.
 
     **Completion Criteria:**
-    Respond with "FINISH" only when:
+    Respond with FINISH only when:
     1. The hypothesis has been thoroughly tested and validated.
     2. The data analysis is complete, with all code documented and reproducible.
     3. All required visualizations have been created, properly labeled, and explained.

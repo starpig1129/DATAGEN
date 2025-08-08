@@ -174,9 +174,19 @@ class WorkflowManager:
             }
         )
 
-        # Compile workflow
+        # Compile workflow with checkpointer (追蹤功能已禁用)
         self.memory = MemorySaver()
-        self.graph = self.workflow.compile()
+        
+        # 添加診斷日誌
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("正在初始化 MemorySaver 用於工作流程 (LangChain 追蹤已禁用)")
+        logger.info(f"MemorySaver 類型: {type(self.memory)}")
+        
+        # 編譯工作流程 - 追蹤功能已在環境變數中禁用
+        self.graph = self.workflow.compile(checkpointer=self.memory)
+        
+        logger.info("工作流程編譯成功，LangChain 追蹤已禁用")
 
     def get_graph(self):
         """Return the compiled workflow graph"""

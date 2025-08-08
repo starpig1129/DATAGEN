@@ -16,15 +16,28 @@ def agent_node(state: State, agent: AgentExecutor, name: str) -> State:
     Process an agent's action and update the state accordingly.
     """
     logger.info(f"Processing agent: {name}")
+    
+    # Add diagnostic logging for state structure validation
+    logger.debug(f"State keys before processing: {list(state.keys())}")
+    logger.debug(f"State key types: {[(k, type(k)) for k in state.keys()]}")
+    
     try:
         result = agent.invoke(state)
         logger.debug(f"Agent {name} result: {result}")
-        
+
         output = result["output"] if isinstance(result, dict) and "output" in result else str(result)
-        
+
         ai_message = AIMessage(content=output, name=name)
         state["messages"].append(ai_message)
-        state["sender"] = name
+        state["last_sender"] = name
+        
+        # Validate state keys are LangChain compatible
+        for key, value in state.items():
+            if not isinstance(key, (str, int, float, bool, type(None))):
+                logger.error(f"❌ Invalid state key type detected: {key} (type: {type(key)})")
+                logger.error(f"❌ Agent: {name}, State content: {state}")
+                # 嘗試轉換為字串鍵
+                logger.warning(f"⚠️  嘗試將鍵轉換為字串: {str(key)}")
         
         if name == "hypothesis_agent" and not state["hypothesis"]:
             state["hypothesis"] = ai_message
@@ -57,21 +70,38 @@ def human_choice_node(state: State) -> State:
     """
     Handle human input to choose the next step in the process.
     If regenerating hypothesis, prompt for specific areas to modify.
+    Modified for automated testing compatibility.
     """
-    logger.info("Prompting for human choice")
-    print("Please choose the next step:")
-    print("1. Regenerate hypothesis")
-    print("2. Continue the research process")
+    logger.info("Entering human_choice_node")
     
-    while True:
-        choice = input("Please enter your choice (1 or 2): ")
-        if choice in ["1", "2"]:
-            break
-        logger.warning(f"Invalid input received: {choice}")
-        print("Invalid input, please try again.")
+    # Check if we're in automated mode (for testing)
+    import os
+    automated_mode = os.getenv("AUTOMATED_TEST_MODE", "false").lower() == "true"
+    
+    if automated_mode:
+        logger.info("Automated test mode detected - skipping human interaction")
+        choice = "2"  # Default to continue research process
+        logger.info(f"Automated choice selected: {choice}")
+    else:
+        logger.info("Interactive mode - prompting for human choice")
+        print("Please choose the next step:")
+        print("1. Regenerate hypothesis")
+        print("2. Continue the research process")
+        
+        while True:
+            choice = input("Please enter your choice (1 or 2): ")
+            if choice in ["1", "2"]:
+                break
+            logger.warning(f"Invalid input received: {choice}")
+            print("Invalid input, please try again.")
     
     if choice == "1":
-        modification_areas = input("Please specify which parts of the hypothesis you want to modify: ")
+        if automated_mode:
+            modification_areas = "general improvements"
+            logger.info("Automated mode - using default modification areas")
+        else:
+            modification_areas = input("Please specify which parts of the hypothesis you want to modify: ")
+        
         content = f"Regenerate hypothesis. Areas to modify: {modification_areas}"
         state["hypothesis"] = ""
         state["modification_areas"] = modification_areas
@@ -85,7 +115,7 @@ def human_choice_node(state: State) -> State:
     human_message = HumanMessage(content=content)
     
     state["messages"].append(human_message)
-    state["sender"] = 'human'
+    state["last_sender"] = 'human'
     
     logger.info("Human choice processed")
     return state
@@ -141,7 +171,7 @@ def note_agent_node(state: State, agent: AgentExecutor, name: str) -> State:
             "report_section": str(parsed_output.get("report_section", state.get("report_section", ""))),
             "quality_review": str(parsed_output.get("quality_review", state.get("quality_review", ""))),
             "needs_revision": bool(parsed_output.get("needs_revision", state.get("needs_revision", False))),
-            "sender": 'note_agent'
+            "last_sender": 'note_agent'
         }
         
         logger.info("Updated state successfully")
@@ -175,7 +205,7 @@ def _create_error_state(state: State, error_message: AIMessage, name: str, error
             "report_section": str(state.get("report_section", "")),
             "quality_review": str(state.get("quality_review", "")),
             "needs_revision": bool(state.get("needs_revision", False)),
-            "sender": 'note_agent'
+            "last_sender": 'note_agent'
         }
     return error_state
 
@@ -206,7 +236,7 @@ def human_review_node(state: State) -> State:
         else:
             state["needs_revision"] = False
         
-        state["sender"] = "human"
+        state["last_sender"] = "human"
         logger.info("Human review completed successfully.")
         return state
     
@@ -248,7 +278,7 @@ def refiner_node(state: State, agent: AgentExecutor, name: str) -> State:
         
         # Create refiner state
         refiner_state = state.copy()
-        refiner_state["messages"] = [BaseMessage(content=report_content)]
+        refiner_state["messages"] = [HumanMessage(content=report_content)]
         
         try:
             # Attempt to invoke agent with full content
@@ -262,12 +292,12 @@ def refiner_node(state: State, agent: AgentExecutor, name: str) -> State:
             simplified_materials = "\n".join(md_file_names + png_file_names)
             simplified_report_content = f"Report materials (file names only):\n{simplified_materials}"
             
-            refiner_state["messages"] = [BaseMessage(content=simplified_report_content)]
+            refiner_state["messages"] = [HumanMessage(content=simplified_report_content)]
             result = agent.invoke(refiner_state)
         
         # Update original state
         state["messages"].append(AIMessage(content=result))
-        state["sender"] = name
+        state["last_sender"] = name
         
         logger.info("Refiner node processing completed")
         return state

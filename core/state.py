@@ -35,7 +35,7 @@ class State(TypedDict):
     needs_revision: bool = False
     
     # The identifier of the agent who sent the last message
-    sender: str = ""
+    last_sender: str = ""
 
 class NoteState(BaseModel):
     """Pydantic model for the entire state structure."""
@@ -49,7 +49,7 @@ class NoteState(BaseModel):
     report_section: str = Field(default="", description="Content of the report sections")
     quality_review: str = Field(default="", description="Feedback from quality review")
     needs_revision: bool = Field(default=False, description="Flag indicating if revision is needed")
-    sender: str = Field(default="", description="Identifier of the last message sender")
+    last_sender: str = Field(default="", description="Identifier of the last message sender")
 
     class Config:
         arbitrary_types_allowed = True  # Allow BaseMessage type without explicit validator

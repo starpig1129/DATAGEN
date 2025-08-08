@@ -1,20 +1,34 @@
-from langchain.agents import create_openai_functions_agent, AgentExecutor, create_tool_calling_agent # Added create_tool_calling_agent
+from langchain.agents import create_openai_functions_agent, AgentExecutor, create_tool_calling_agent  # Added create_tool_calling_agent
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain.output_parsers import PydanticOutputParser
-from langchain_core.runnables import RunnableLambda # Added RunnableLambda
+from langchain_core.runnables import RunnableLambda  # Added RunnableLambda
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI # Added Google
-from langchain_community.chat_models import ChatOllama # Added Ollama
+from langchain_google_genai import ChatGoogleGenerativeAI  # Added Google
+from langchain_community.chat_models import ChatOllama  # Added Ollama
 from typing import List, Union, Literal
 from pydantic import BaseModel, Field
 from langchain.tools import tool
 import os
+import time
+import json
+import uuid
+
 from logger import setup_logger
+
+# New core modules for capability detection, prompt templates, and robust parsing
+from core.tool_binding import detect_capabilities, build_tool_schema, bind_or_route, RouteSchema as RouterDecision, route_then_execute
+from core.prompt_templates import json_only_base_prompt, router_stage1_decision_prompt
+from core.output_guard import guarded_parse
 
 # Set up logger
 logger = setup_logger()
+
+# 診斷計數器
+api_call_counter = 0
+empty_response_counter = 0
+retry_counter = 0
 
 @tool
 def list_directory_contents(directory: str = './data_storage/') -> str:
@@ -37,7 +51,7 @@ def list_directory_contents(directory: str = './data_storage/') -> str:
         return f"Error listing directory contents: {str(e)}"
 
 def create_agent(
-    llm: Union[ChatOpenAI, ChatAnthropic, ChatGoogleGenerativeAI, ChatOllama], # Expanded type hint
+    llm: Union[ChatOpenAI, ChatAnthropic, ChatGoogleGenerativeAI, ChatOllama],  # Expanded type hint
     tools: list[tool],
     system_message: str,
     team_members: list[str],
@@ -103,15 +117,101 @@ def create_agent(
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ])
 
-    # Use the generic tool calling agent creator, compatible with OpenAI, Anthropic, Google, and potentially Ollama models supporting tool calls
-    logger.info(f"Using create_tool_calling_agent for model type: {type(llm)}")
-    agent = create_tool_calling_agent(llm, tools, prompt)
+    # Capability detection and unified tool binding/routing
+    caps = detect_capabilities(llm)
+    logger.info(f"Detected LLM capabilities: family={caps.family}, native_tools={caps.native_tools}, force_tool={caps.force_tool}, json_mode={caps.json_mode}")
 
-    logger.info("Agent runnable created successfully")
+    # Standardize tool schema for binding or routing
+    try:
+        # LangChain tools decorated by @tool expose args schema via .args or .args_schema; we best-effort wrap
+        tool_schemas = []
+        for t in tools:
+            args_schema = getattr(t, "args_schema", None)
+            if args_schema is None:
+                # Fallback: create a minimal empty-args schema
+                class _Empty(BaseModel):
+                    pass
+                schema_model = _Empty
+            else:
+                schema_model = args_schema
+            tool_schemas.append(build_tool_schema(schema_model, name=getattr(t, "name", t.name), description=getattr(t, "description", "")))
+    except Exception as e:
+        logger.error(f"Failed to build tool schemas: {e}")
+        tool_schemas = []
 
+    bound_or_llm, bind_meta = bind_or_route(llm, tool_schemas, capabilities=None, force=True)
+    logger.info(f"Tool binding mode: {bind_meta.get('mode')} (family={bind_meta.get('family')})")
 
+    # If we have native forced tool binding (OpenAI), use LangChain's create_tool_calling_agent directly
+    if bind_meta.get("mode") == "bind":
+        logger.info(f"Using create_tool_calling_agent with native tool binding for model type: {type(llm)}")
+        agent = create_tool_calling_agent(bound_or_llm, tools, prompt)
+        logger.info("Agent runnable created successfully with native binding")
+        return AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=False)
+
+    # Otherwise, implement two-stage routing:
+    # Stage 1: Ask model to choose next action via JSON-only router prompt
+    from langchain_core.prompts import ChatPromptTemplate as _CPT
+    route_prompt = _CPT.from_messages([
+        ("system", json_only_base_prompt(
+            task_instruction="Decide the next action strictly as JSON.",
+            schema_json=RouterDecision.model_json_schema(),
+            extra_notes="Choose a tool by name if beneficial, else FINISH. Provide arguments under 'input'."
+        )),
+        ("system", router_stage1_decision_prompt([ts.model_dump() for ts in tool_schemas])),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    def _router_invoke(messages):
+        # Run the router model to produce a JSON decision
+        trace_id = str(uuid.uuid4())
+        logger.info(f"[router] invoking stage-1 decision, trace_id={trace_id}")
+        raw = llm.invoke(route_prompt.format_prompt(messages=messages))
+        raw_text = getattr(raw, "content", raw)
+        parsed = guarded_parse(str(raw_text), schema=RouterDecision, allow_repair=True, trace_id=trace_id)
+        if not parsed["ok"]:
+            # L2 parse retry: strictly instruct JSON-only and retry once
+            logger.warning(f"[router] parse failed, retrying once. err={parsed['error']}, trace_id={trace_id}")
+            retry_prompt = _CPT.from_messages([
+                ("system", json_only_base_prompt(
+                    task_instruction="Your previous output was not valid JSON. Output ONLY valid JSON following the schema.",
+                    schema_json=RouterDecision.model_json_schema(),
+                    extra_notes="No text outside JSON. First character must be {."
+                )),
+                MessagesPlaceholder(variable_name="messages"),
+            ])
+            raw2 = llm.invoke(retry_prompt.format_prompt(messages=messages))
+            raw_text2 = getattr(raw2, "content", raw2)
+            parsed = guarded_parse(str(raw_text2), schema=RouterDecision, allow_repair=True, trace_id=trace_id)
+
+        if not parsed["ok"]:
+            # Final fallback to FINISH minimal response
+            logger.error(f"[router] parse ultimately failed. Falling back to FINISH. trace_id={trace_id}")
+            return RouterDecision(next="FINISH", input={}, explanation="fallback due to parse failure")
+        return parsed["data"]
+
+    # Stage 2: Execute chosen tool explicitly and feed back results if needed.
+    def _execute_and_reply(messages):
+        decision = _router_invoke(messages)
+        name_to_callable = {getattr(t, "name", t.name): t for t in tools}
+        status, tool_res = route_then_execute(decision, name_to_callable)
+        # Produce final AI message as JSON for the agent loop
+        from langchain.schema import AIMessage
+        final_payload = {
+            "next": decision.next,
+            "input": decision.input,
+            "tool_status": status,
+            "tool_result": tool_res,
+        }
+        return AIMessage(content=json.dumps(final_payload, ensure_ascii=False))
+
+    # Compose runnable chain: prompt -> llm (only used in router) -> explicit tool execution
+    router_chain = RunnableLambda(lambda x: x) | RunnableLambda(_execute_and_reply)
+
+    logger.info("Agent runnable created successfully via two-stage routing")
+    
     # Return an executor to manage the agent's task execution
-    return AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=False)
+    return AgentExecutor.from_agent_and_tools(agent=router_chain, tools=tools, verbose=False)
 
 
 def create_supervisor(
@@ -119,119 +219,103 @@ def create_supervisor(
     system_prompt: str,
     members: list[str]
 ) -> AgentExecutor:
-    # Log the start of supervisor creation
+    """Create a supervisor agent with unified capability detection and robust JSON handling."""
     logger.info("Creating supervisor")
     
     # Define options for routing, including FINISH and team members
     options = ["FINISH"] + members
-    # Dynamically create Literal type for route options validation
-    RouteOptions = Literal[tuple(options)]
 
     # Define Pydantic schema for routing decisions
     class RouteSchema(BaseModel):
         """Schema for routing decisions."""
-        next: RouteOptions = Field(description=f"The next agent to route to or 'FINISH'. Must be one of {options}")
+        next: str = Field(description=f"The next agent to route to or 'FINISH'. Must be one of {options}")
         task: str = Field(description="The task description for the next agent")
 
-    # Create Pydantic output parser based on the schema
-    parser = PydanticOutputParser(pydantic_object=RouteSchema)
-    # Get format instructions to guide the LLM
-    format_instructions = parser.get_format_instructions()
+    # Create a simplified prompt template
+    system_message_content = f"""You are a research supervisor.
 
-    # Define the function definition (useful for bind_tools context, using Pydantic schema)
-    function_def = {
-        "name": "route",
-        "description": "Select the next role and assign a task based on the conversation.",
-        "parameters": RouteSchema.model_json_schema() # Use Pydantic schema for parameters definition
-    }
+Select the next agent from: {str(options)}
 
-    # Create the prompt template, incorporating format instructions
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            # Use a placeholder for format instructions in the system prompt
-            ("system", system_prompt + "\n\n{format_instructions_placeholder}"),
-            MessagesPlaceholder(variable_name="messages"),
-            (
-                "system",
-                "Given the conversation above, who should act next? "
-                "Or should we FINISH? Select one of: {options}. "
-                "Additionally, specify the task that the selected role should perform. "
-                # Reinforce the need for the specified JSON format
-                "Respond using the required JSON format."
-            ),
-        ]
-    # Pass format_instructions via partial to avoid template variable issues
-    ).partial(
-        options=str(options),
-        team_members=", ".join(members),
-        format_instructions_placeholder=format_instructions
-    )
+Respond only with JSON format having 'next' and 'task' fields.
 
-    # Log successful creation of supervisor components
-    logger.info("Supervisor prompt and parser created successfully")
+Use "FINISH" when complete."""
 
-    # Bind the tool/function call based on the LLM type
-    if isinstance(llm, ChatOpenAI):
-        logger.info("Binding function call for OpenAI model using bind_functions")
-        # Force OpenAI model to call the 'route' function using standard format
-        bound_llm = llm.bind_functions(functions=[function_def], function_call={"name": "route"})
-    elif isinstance(llm, (ChatGoogleGenerativeAI, ChatAnthropic, ChatOllama)):
-        logger.info(f"Binding tool for {type(llm).__name__} model using bind_tools (without forcing tool_choice)")
-        # Bind the tool definition to provide context to Gemini/Anthropic/Ollama,
-        # but rely on the prompt and Pydantic parser for structuring the output,
-        # rather than forcing the call with tool_choice.
-        bound_llm = llm.bind_tools(tools=[function_def])
-    else:
-        logger.warning(f"Unsupported LLM type for specific tool binding: {type(llm)}. Supervisor will rely solely on prompt.")
-        # Fallback for unsupported models: use the LLM without specific binding.
-        bound_llm = llm
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_message_content),
+        MessagesPlaceholder(variable_name="messages"),
+        ("system", "Respond with JSON only:")
+    ])
 
-    # Define a function to log the formatted prompt before sending to LLM
-    def log_formatted_prompt(prompt_value):
-        """Logs the fully formatted prompt value before it hits the LLM."""
-        logger.info(f"Formatted prompt sent to LLM: {prompt_value.to_string()}") # Log the string representation
-        # You might want to log specific parts too, e.g., messages:
-        # logger.debug(f"Messages in formatted prompt: {prompt_value.to_messages()}")
-        return prompt_value # Pass the prompt value along the chain
+    # Capability detection and unified tool binding/routing
+    caps = detect_capabilities(llm)
+    logger.info(f"Detected LLM capabilities: family={caps.family}, native_tools={caps.native_tools}, force_tool={caps.force_tool}, json_mode={caps.json_mode}")
 
-    # Define a function to log the LLM output before parsing
-    def log_llm_output(input_data):
-        """Logs the raw output from the LLM before parsing."""
-        # Handle potential AIMessage objects or plain strings
-        raw_content = ""
-        if hasattr(input_data, 'content'):
-            raw_content = input_data.content
-            logger.info(f"Raw LLM output (AIMessage content) before parsing: {raw_content}")
-        elif isinstance(input_data, str):
-            raw_content = input_data
-            logger.info(f"Raw LLM output (string) before parsing: {raw_content}")
-        else:
-            logger.warning(f"Unexpected LLM output type before parsing: {type(input_data)}. Data: {input_data}")
-            raw_content = str(input_data) # Attempt to log string representation
+    # Standardize tool schema for binding or routing
+    tool_schemas = [build_tool_schema(RouteSchema, name="route", description="Select the next role and assign a task based on the conversation.")]
 
-        # Add specific checks for empty or invalid content
-        if not raw_content.strip():
-            logger.error("LLM output content is empty or whitespace only. Raising ValueError.")
-            raise ValueError("LLM output is empty or contains only whitespace.")
-        elif not raw_content.strip().startswith(("{", "[")): # Basic check for JSON start
-             logger.error(f"LLM output content does not appear to start with valid JSON: {raw_content[:100]}... Raising ValueError.")
-             raise ValueError(f"LLM output does not appear to be valid JSON. Starts with: {raw_content[:100]}")
+    bound_or_llm, bind_meta = bind_or_route(llm, tool_schemas, capabilities=caps, force=True)
+    logger.info(f"Tool binding mode: {bind_meta.get('mode')} (family={bind_meta.get('family')})")
 
-        return input_data # Return the original data for the next step in the chain
+    # If we have native forced tool binding (OpenAI), use LangChain's create_tool_calling_agent directly
+    if bind_meta.get("mode") == "bind":
+        logger.info(f"Using create_tool_calling_agent with native tool binding for model type: {type(llm)}")
+        agent = create_tool_calling_agent(bound_or_llm, [lambda x: x], prompt)  # Dummy tool for compatibility
+        logger.info("Supervisor agent runnable created successfully with native binding")
+        return AgentExecutor.from_agent_and_tools(agent=agent, tools=[lambda x: x], verbose=False)
 
-    log_step = RunnableLambda(log_llm_output)
+    # Otherwise, implement two-stage routing:
+    # Stage 1: Ask model to choose next action via JSON-only router prompt
+    from langchain_core.prompts import ChatPromptTemplate as _CPT
+    route_prompt = _CPT.from_messages([
+        ("system", json_only_base_prompt(
+            task_instruction="Decide the next action strictly as JSON.",
+            schema_json=RouteSchema.model_json_schema(),
+            extra_notes="Choose a team member or FINISH. Provide task description under 'task'."
+        )),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
 
-    log_prompt_step = RunnableLambda(log_formatted_prompt)
-    log_output_step = RunnableLambda(log_llm_output)
+    def _router_invoke(messages):
+        # Run the router model to produce a JSON decision
+        trace_id = str(uuid.uuid4())
+        logger.info(f"[supervisor.router] invoking decision, trace_id={trace_id}")
+        raw = llm.invoke(route_prompt.format_prompt(messages=messages))
+        raw_text = getattr(raw, "content", raw)
+        parsed = guarded_parse(str(raw_text), schema=RouteSchema, allow_repair=True, trace_id=trace_id)
+        if not parsed["ok"]:
+            # L2 parse retry: strictly instruct JSON-only and retry once
+            logger.warning(f"[supervisor.router] parse failed, retrying once. err={parsed['error']}, trace_id={trace_id}")
+            retry_prompt = _CPT.from_messages([
+                ("system", json_only_base_prompt(
+                    task_instruction="Your previous output was not valid JSON. Output ONLY valid JSON following the schema.",
+                    schema_json=RouteSchema.model_json_schema(),
+                    extra_notes="No text outside JSON. First character must be {."
+                )),
+                MessagesPlaceholder(variable_name="messages"),
+            ])
+            raw2 = llm.invoke(retry_prompt.format_prompt(messages=messages))
+            raw_text2 = getattr(raw2, "content", raw2)
+            parsed = guarded_parse(str(raw_text2), schema=RouteSchema, allow_repair=True, trace_id=trace_id)
 
-    # Return the chained operations, now including logging for prompt and output
-    return (
-        prompt
-        | log_prompt_step # Log the formatted prompt
-        | bound_llm
-        | log_output_step # Log the raw LLM output
-        | parser # Use PydanticOutputParser for robust JSON parsing
-    )
+        if not parsed["ok"]:
+            # Final fallback to FINISH minimal response
+            logger.error(f"[supervisor.router] parse ultimately failed. Falling back to FINISH. trace_id={trace_id}")
+            return RouteSchema(next="FINISH", task="fallback due to parse failure")
+        return parsed["data"]
+
+    # Stage 2: Return the decision as an AIMessage
+    def _execute_and_reply(messages):
+        decision = _router_invoke(messages)
+        from langchain.schema import AIMessage
+        return AIMessage(content=decision.json())
+
+    # Compose runnable chain: prompt -> llm (only used in router) -> explicit tool execution
+    router_chain = RunnableLambda(lambda x: x) | RunnableLambda(_execute_and_reply)
+
+    logger.info("Supervisor agent runnable created successfully via two-stage routing")
+    
+    # Return an executor to manage the agent's task execution
+    return AgentExecutor.from_agent_and_tools(agent=router_chain, tools=[lambda x: x], verbose=False)
 
 from core.state import NoteState
 from langchain.output_parsers import PydanticOutputParser

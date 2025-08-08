@@ -1,205 +1,343 @@
-# Import necessary libraries
-import yaml
 import os
-from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_community.chat_models import ChatOllama
-from logger import setup_logger
-# import os # Needed to check for API keys - Already imported above
+import yaml
+import openai
+import anthropic
+from google import genai
+from google.genai import types
+from abc import ABC, abstractmethod
+from typing import Any, Iterator, Dict, Type, List, Optional
 
-DEFAULT_CONFIG = {
-    'default_model': {
-        'provider': 'openai',
-        'model_name': 'gpt-4o-mini'
-    },
-    'json_model': { # Specific model for JSON output
-        'provider': 'openai',
-        'model_name': 'gpt-4o'
-    },
-    'agents': {} # Placeholder for agent-specific models
+from langchain_core.messages import (
+    AIMessage,
+    AIMessageChunk,
+    BaseMessage,
+    HumanMessage,
+    ToolMessage,
+)
+from langchain_core.runnables import Runnable
+from langchain_core.tools import BaseTool
+from langchain_core.utils.function_calling import convert_to_openai_tool
+from logger import setup_logger
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+logger = setup_logger()
+
+# --- Abstract Base Class for Models ---
+
+class AbstractLanguageModel(Runnable, ABC):
+    """
+    Abstract Base Class for all language model implementations, aligned with LangChain.
+    """
+    def __init__(self, model_config: Dict[str, Any]):
+        self.model_config = model_config
+        self.client = None
+        self.bound_tools: Optional[List[BaseTool]] = None
+        self._initialize_client()
+
+    @abstractmethod
+    def _initialize_client(self):
+        """Initializes the provider-specific client."""
+        pass
+
+    def invoke(self, input: Dict[str, Any], config: Optional[Dict[str, Any]] = None) -> AIMessage:
+        """
+        Sends a single request to the model and returns the complete response.
+        """
+        messages = input.get("messages", [])
+        return self._invoke_internal(messages, self.bound_tools)
+
+    def stream(self, input: Dict[str, Any], config: Optional[Dict[str, Any]] = None) -> Iterator[AIMessageChunk]:
+        """
+        Sends a request and streams the response back chunk by chunk.
+        """
+        messages = input.get("messages", [])
+        yield from self._stream_internal(messages, self.bound_tools)
+
+    @abstractmethod
+    def _invoke_internal(self, messages: List[BaseMessage], tools: Optional[List[BaseTool]] = None) -> AIMessage:
+        pass
+
+    @abstractmethod
+    def _stream_internal(self, messages: List[BaseMessage], tools: Optional[List[BaseTool]] = None) -> Iterator[AIMessageChunk]:
+        pass
+
+    def with_config(self, config: Dict[str, Any]) -> 'AbstractLanguageModel':
+        """
+        Allows overriding model parameters for a single call.
+        Returns a new instance with the updated configuration.
+        """
+        new_config = {**self.model_config, **config}
+        return self.__class__(model_config=new_config)
+
+    def bind_tools(self, tools: List[BaseTool]) -> 'AbstractLanguageModel':
+        """
+        Binds tools to the model for function calling.
+        Returns a new model instance with the tools bound.
+        """
+        self.bound_tools = tools
+        return self
+
+# --- Concrete Model Implementations ---
+
+class OpenAIModel(AbstractLanguageModel):
+    """
+    Concrete implementation for OpenAI models.
+    """
+    def _initialize_client(self):
+        api_key_env = self.model_config.get('api_key_env', 'OPENAI_API_KEY')
+        api_key = os.getenv(api_key_env)
+        if not api_key:
+            raise ValueError(f"API key environment variable '{api_key_env}' not set for OpenAI.")
+        
+        base_url = self.model_config.get('base_url')
+        self.client = openai.OpenAI(api_key=api_key, base_url=base_url)
+
+    def _invoke_internal(self, messages: List[BaseMessage], tools: Optional[List[BaseTool]] = None) -> AIMessage:
+        if not messages:
+            return AIMessage(content="")
+            
+        params = {
+            "model": self.model_config.get('model_name'),
+            "temperature": self.model_config.get('temperature', 0.2),
+            "max_tokens": self.model_config.get('max_tokens', 2048),
+            "messages": [msg.dict() for msg in messages],
+        }
+        
+        if tools:
+            params["tools"] = [convert_to_openai_tool(tool) for tool in tools]
+        
+        if 'response_format' in self.model_config:
+            params['response_format'] = self.model_config['response_format']
+
+        response = self.client.chat.completions.create(**params)
+        message = response.choices[0].message
+        return AIMessage(
+            content=message.content or "",
+            tool_calls=message.tool_calls or [],
+            raw_response=response
+        )
+
+    def _stream_internal(self, messages: List[BaseMessage], tools: Optional[List[BaseTool]] = None) -> Iterator[AIMessageChunk]:
+        if not messages:
+            yield AIMessageChunk(content="")
+            return
+
+        params = {
+            "model": self.model_config.get('model_name'),
+            "temperature": self.model_config.get('temperature', 0.2),
+            "max_tokens": self.model_config.get('max_tokens', 2048),
+            "messages": [msg.dict() for msg in messages],
+            "stream": True,
+        }
+        
+        if tools:
+            params["tools"] = [convert_to_openai_tool(tool) for tool in tools]
+
+        if 'response_format' in self.model_config:
+            params['response_format'] = self.model_config['response_format']
+
+        stream = self.client.chat.completions.create(**params)
+        for chunk in stream:
+            delta = chunk.choices[0].delta
+            yield AIMessageChunk(
+                content=delta.content or "",
+                tool_call_chunks=delta.tool_calls or [],
+                raw_response=chunk
+            )
+
+class GoogleModel(AbstractLanguageModel):
+    """
+    Concrete implementation for Google's Generative AI models, using the new google-genai API.
+    """
+    def _initialize_client(self):
+        api_key_env = self.model_config.get('api_key_env', 'GOOGLE_API_KEY')
+        api_key = os.getenv(api_key_env)
+        if not api_key:
+            raise ValueError(f"API key environment variable '{api_key_env}' not set for Google.")
+        
+        # The new API uses a client instance, no global configure.
+        self.client = genai.Client(api_key=api_key)
+
+    def _invoke_internal(self, messages: List[BaseMessage], tools: Optional[List[BaseTool]] = None) -> AIMessage:
+        if not messages:
+            return AIMessage(content="")
+            
+        contents = [msg.content for msg in messages]
+        
+        generation_config = types.GenerateContentConfig(
+            temperature=self.model_config.get('temperature', 0.2),
+            max_output_tokens=self.model_config.get('max_tokens', 2048),
+        )
+
+        # The new API uses client.models.generate_content
+        response = self.client.models.generate_content(
+            model=self.model_config.get('model_name'),
+            contents=contents,
+            config=generation_config
+            # Note: The new google-genai SDK handles tools differently.
+            # This basic implementation does not yet support tool calling for GoogleModel.
+        )
+        
+        return AIMessage(
+            content=response.text,
+            raw_response=response
+        )
+
+    def _stream_internal(self, messages: List[BaseMessage], tools: Optional[List[BaseTool]] = None) -> Iterator[AIMessageChunk]:
+        if not messages:
+            yield AIMessageChunk(content="")
+            return
+
+        contents = [msg.content for msg in messages]
+        
+        generation_config = types.GenerateContentConfig(
+            temperature=self.model_config.get('temperature', 0.2),
+            max_output_tokens=self.model_config.get('max_tokens', 2048),
+        )
+
+        # The new API uses client.models.generate_content_stream
+        response = self.client.models.generate_content_stream(
+            model=self.model_config.get('model_name'),
+            contents=contents,
+            config=generation_config
+        )
+        
+        for chunk in response:
+            yield AIMessageChunk(
+                content=chunk.text,
+                raw_response=chunk
+            )
+
+class AnthropicModel(AbstractLanguageModel):
+    """
+    Concrete implementation for Anthropic models.
+    """
+    def _initialize_client(self):
+        api_key_env = self.model_config.get('api_key_env', 'ANTHROPIC_API_KEY')
+        api_key = os.getenv(api_key_env)
+        if not api_key:
+            raise ValueError(f"API key environment variable '{api_key_env}' not set for Anthropic.")
+        
+        self.client = anthropic.Anthropic(api_key=api_key)
+
+    def _invoke_internal(self, messages: List[BaseMessage], tools: Optional[List[BaseTool]] = None) -> AIMessage:
+        if not messages:
+            return AIMessage(content="")
+
+        response = self.client.messages.create(
+            model=self.model_config.get('model_name'),
+            max_tokens=self.model_config.get('max_tokens', 2048),
+            temperature=self.model_config.get('temperature', 0.2),
+            messages=[msg.dict() for msg in messages]
+        )
+        return AIMessage(
+            content=response.content[0].text,
+            raw_response=response
+        )
+
+    def _stream_internal(self, messages: List[BaseMessage], tools: Optional[List[BaseTool]] = None) -> Iterator[AIMessageChunk]:
+        if not messages:
+            yield AIMessageChunk(content="")
+            return
+            
+        with self.client.messages.stream(
+            model=self.model_config.get('model_name'),
+            max_tokens=self.model_config.get('max_tokens', 2048),
+            temperature=self.model_config.get('temperature', 0.2),
+            messages=[msg.dict() for msg in messages]
+        ) as stream:
+            for chunk in stream.text_stream:
+                yield AIMessageChunk(content=chunk)
+
+# --- Model Factory ---
+
+PROVIDER_MAP: Dict[str, Type[AbstractLanguageModel]] = {
+    'openai': OpenAIModel,
+    'google': GoogleModel,
+    'anthropic': AnthropicModel,
 }
 
-def load_model_config(config_path='config.yaml'):
-    """Loads model configuration from a YAML file."""
-    logger = setup_logger()
-    try:
-        # Check if config file exists
-        if not os.path.exists(config_path):
-            logger.warning(f"Configuration file '{config_path}' not found. Using default model settings.")
-            # Create a default config.yaml if it doesn't exist, based on the example
-            example_path = 'config.yaml.example'
-            if os.path.exists(example_path):
-                try:
-                    with open(example_path, 'r') as f_example, open(config_path, 'w') as f_config:
-                        f_config.write(f_example.read())
-                    logger.info(f"Created default '{config_path}' from example.")
-                    # Try loading the newly created config file
-                    with open(config_path, 'r') as f:
-                        config = yaml.safe_load(f)
-                        # Merge with defaults to ensure all keys exist
-                        merged_config = DEFAULT_CONFIG.copy()
-                        # Deep merge might be better, but for this structure, update should suffice
-                        if config: # Check if config is not None
-                            if 'default_model' in config:
-                                merged_config['default_model'].update(config['default_model'])
-                            if 'json_model' in config:
-                                merged_config['json_model'].update(config['json_model'])
-                            if 'agents' in config:
-                                merged_config['agents'].update(config['agents'])
-                        return merged_config
-                except Exception as e:
-                    logger.error(f"Error creating/reading default config file '{config_path}': {e}")
-                    return DEFAULT_CONFIG # Fallback to hardcoded defaults
-            else:
-                logger.warning(f"Example config '{example_path}' not found. Cannot create default config.")
-                return DEFAULT_CONFIG # Fallback to hardcoded defaults
+class LanguageModelFactory:
+    def __init__(self, provider_configs: Dict[str, Any]):
+        self._models_cache: Dict[str, AbstractLanguageModel] = {}
+        self.provider_configs = provider_configs
 
-        # Load existing config file
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-            if not config:
-                logger.warning(f"Configuration file '{config_path}' is empty. Using default model settings.")
-                return DEFAULT_CONFIG
-            # Merge with defaults to ensure all keys exist
-            merged_config = DEFAULT_CONFIG.copy()
-            # Deep merge might be better, but for this structure, update should suffice
-            if 'default_model' in config:
-                merged_config['default_model'].update(config['default_model'])
-            if 'json_model' in config:
-                 merged_config['json_model'].update(config['json_model'])
-            if 'agents' in config:
-                merged_config['agents'].update(config['agents'])
-            logger.info(f"Loaded model configuration from '{config_path}'.")
-            return merged_config
-    except yaml.YAMLError as e:
-        logger.error(f"Error parsing YAML file '{config_path}': {e}. Using default model settings.")
-        return DEFAULT_CONFIG
-    except Exception as e:
-        logger.error(f"Error loading configuration file '{config_path}': {e}. Using default model settings.")
-        return DEFAULT_CONFIG
+    def create_model(self, model_name: str, model_config: Dict[str, Any]) -> AbstractLanguageModel:
+        cache_key = model_name
+        if cache_key in self._models_cache:
+            return self._models_cache[cache_key]
+
+        provider = model_config.get('provider')
+        if not provider or provider not in PROVIDER_MAP:
+            raise ValueError(f"Unsupported or missing provider: {provider}")
+
+        base_provider_config = self.provider_configs.get(provider, {})
+        final_config = {**base_provider_config, **model_config}
+        
+        ModelClass = PROVIDER_MAP[provider]
+        
+        try:
+            model_instance = ModelClass(model_config=final_config)
+            self._models_cache[cache_key] = model_instance
+            logger.info(f"Successfully created model '{model_name}' with provider '{provider}'.")
+            return model_instance
+        except Exception as e:
+            logger.error(f"Failed to create model '{model_name}': {e}")
+            raise
+
+# --- Language Model Manager ---
 
 class LanguageModelManager:
     def __init__(self, config_path='config.yaml'):
-        """Initialize the language model manager"""
-        self.logger = setup_logger()
-        self.config = load_model_config(config_path)
-        self.models = {} # Cache for initialized models { (provider, model_name, is_json): model_instance }
+        self.config = self._load_config(config_path)
+        provider_configs = self.config.get('provider_configs', {})
+        self.model_definitions = self.config.get('models', {})
+        self.agent_map = self.config.get('agent_models', {})
+        self.factory = LanguageModelFactory(provider_configs)
 
-    def _initialize_model(self, provider, model_name, is_json_model=False):
-        """Initializes a single language model instance based on provider and name."""
-        cache_key = (provider, model_name, is_json_model)
-        if cache_key in self.models:
-            return self.models[cache_key]
-
-        model_instance = None
-        api_key_env_var = {
-            'openai': 'OPENAI_API_KEY',
-            'anthropic': 'ANTHROPIC_API_KEY',
-            'google': 'GOOGLE_API_KEY',
-            'ollama': None # Ollama typically doesn't require an API key via env var
-        }.get(provider)
-
-        # Check for API key if required
-        if api_key_env_var and not os.getenv(api_key_env_var):
-            self.logger.warning(f"{api_key_env_var} not found. Cannot initialize {provider} model '{model_name}'.")
-            return None
-
-        # Common parameters (can be customized further if needed from config)
-        params = {'model': model_name, 'temperature': 0, 'max_tokens': 4096}
-        if provider == 'google':
-             params['convert_system_message_to_human'] = True # Specific to Google model
-
+    def _load_config(self, path: str) -> Dict[str, Any]:
+        if not os.path.exists(path):
+            logger.warning(f"Configuration file '{path}' not found. Using empty config.")
+            return {}
         try:
-            if provider == 'openai':
-                if is_json_model:
-                    # Ensure the specified model actually supports JSON mode if possible
-                    # For now, we assume gpt-4o and similar models do.
-                    params['model_kwargs'] = {"response_format": {"type": "json_object"}}
-                    self.logger.info(f"Initializing OpenAI model {model_name} with JSON mode.")
-                model_instance = ChatOpenAI(**params)
-            elif provider == 'anthropic':
-                model_instance = ChatAnthropic(**params)
-            elif provider == 'google':
-                model_instance = ChatGoogleGenerativeAI(**params)
-            elif provider == 'ollama':
-                # Ollama might have different base URL, allow customization if needed
-                # Remove unsupported params for Ollama if necessary
-                ollama_params = {'model': model_name, 'temperature': 0}
-                # Add base_url if specified in config? For now, use default.
-                # ollama_params['base_url'] = self.config.get('ollama_base_url', 'http://localhost:11434')
-                model_instance = ChatOllama(**ollama_params)
-            else:
-                self.logger.error(f"Unsupported LLM provider: {provider}")
-                return None
-
-            self.logger.info(f"Initialized {provider} model '{model_name}' {'(JSON mode)' if is_json_model else ''} successfully.")
-            self.models[cache_key] = model_instance
-            return model_instance
-
+            with open(path, 'r') as f:
+                config = yaml.safe_load(f)
+                logger.info(f"Successfully loaded configuration from '{path}'.")
+                return config or {}
+        except yaml.YAMLError as e:
+            logger.error(f"Error parsing YAML file '{path}': {e}. Using empty config.")
+            return {}
         except Exception as e:
-            self.logger.error(f"Error initializing {provider} model '{model_name}': {e}")
-            # Log specific details if helpful, e.g., connection errors for Ollama
-            if provider == 'ollama':
-                 self.logger.error("Ensure the Ollama server is running and the model is available locally.")
-            return None
+            logger.error(f"Error loading configuration file '{path}': {e}. Using empty config.")
+            return {}
 
-    def get_model(self, agent_name=None):
+    def get_model(self, agent_name: str = None) -> AbstractLanguageModel:
         """
-        Gets the appropriate language model based on the agent name specified in the config.
-        Falls back to the default model if the agent is not specified or config is missing.
+        Gets the appropriate language model based on the agent name.
+        Falls back to the 'default' model if the agent is not specified or not found.
         """
-        model_config = self.config.get('default_model', DEFAULT_CONFIG['default_model']) # Start with default
-
-        if agent_name and agent_name in self.config.get('agents', {}):
-            agent_specific_config = self.config['agents'][agent_name]
-            # Use agent config only if both provider and model_name are present
-            if agent_specific_config and 'provider' in agent_specific_config and 'model_name' in agent_specific_config:
-                 model_config = agent_specific_config
-                 self.logger.info(f"Using model config for agent '{agent_name}': {model_config}")
-            else:
-                 self.logger.warning(f"Incomplete or invalid model config for agent '{agent_name}'. Falling back to default.")
-                 model_config = self.config.get('default_model', DEFAULT_CONFIG['default_model']) # Fallback explicitly
-        elif agent_name:
-             self.logger.info(f"No specific model config found for agent '{agent_name}'. Using default.")
-             model_config = self.config.get('default_model', DEFAULT_CONFIG['default_model']) # Use default
+        if agent_name:
+            model_key = self.agent_map.get(agent_name, self.agent_map.get('default', 'default'))
         else:
-             self.logger.info("No agent name provided. Using default model config.")
-             model_config = self.config.get('default_model', DEFAULT_CONFIG['default_model']) # Use default
+            model_key = self.agent_map.get('default', 'default')
+            
+        if not model_key or model_key not in self.model_definitions:
+             raise ValueError(f"Model key '{model_key}' not found in model definitions.")
 
+        model_config = self.model_definitions[model_key]
+        return self.factory.create_model(model_name=model_key, model_config=model_config)
 
-        provider = model_config.get('provider')
-        model_name = model_config.get('model_name')
+    def get_json_model(self) -> AbstractLanguageModel:
+        """
+        Gets the language model specifically configured for JSON output.
+        Falls back to 'default_json' or raises an error if not found.
+        """
+        model_key = self.agent_map.get('json_model', 'default_json')
+        
+        if not model_key or model_key not in self.model_definitions:
+             raise ValueError(f"JSON model key '{model_key}' not found in model definitions.")
 
-        if not provider or not model_name:
-            self.logger.error("Invalid model configuration (missing provider or model_name). Cannot get model.")
-            # Fallback to hardcoded default if config is severely broken
-            provider = DEFAULT_CONFIG['default_model']['provider']
-            model_name = DEFAULT_CONFIG['default_model']['model_name']
-            self.logger.warning(f"Falling back to hardcoded default: {provider} - {model_name}")
-
-        return self._initialize_model(provider, model_name, is_json_model=False) # Standard model
-
-    def get_json_model(self):
-        """Gets the language model configured for JSON output."""
-        # Use 'json_model' config if available, otherwise fallback to 'default_model'
-        model_config = self.config.get('json_model', self.config.get('default_model', DEFAULT_CONFIG['json_model']))
-
-        provider = model_config.get('provider')
-        model_name = model_config.get('model_name')
-
-        if not provider or not model_name:
-             self.logger.error("Invalid JSON model configuration. Cannot get JSON model.")
-             # Fallback to hardcoded default JSON model
-             provider = DEFAULT_CONFIG['json_model']['provider']
-             model_name = DEFAULT_CONFIG['json_model']['model_name']
-             self.logger.warning(f"Falling back to hardcoded default JSON model: {provider} - {model_name}")
-
-        # Currently, only OpenAI provider explicitly supports JSON mode via parameters
-        is_json_mode_provider = (provider == 'openai')
-
-        if not is_json_mode_provider:
-            self.logger.warning(f"Provider '{provider}' for JSON model might not explicitly support JSON mode parameter. Using standard initialization for model '{model_name}'. Ensure the model itself can follow JSON instructions.")
-
-        # Initialize specifically for JSON output if provider supports it, otherwise standard init
-        return self._initialize_model(provider, model_name, is_json_model=is_json_mode_provider)
+        model_config = self.model_definitions[model_key]
+        return self.factory.create_model(model_name=model_key, model_config=model_config)

@@ -28,30 +28,79 @@ def normalize_path(file_path: str) -> str:
     return os.path.normpath(file_path)
 
 @tool
-def collect_data(data_path: Annotated[str, "Path to the CSV file"] = './data.csv'):
+def collect_data(data_path: Annotated[str, "Path to the data file (supports CSV, Markdown, TXT formats)"] = './data.csv'):
     """
-    Collect data from a CSV file.
+    Collect data from various file formats.
 
-    This function attempts to read a CSV file using different encodings.
+    This function detects the file type based on extension and reads the file accordingly:
+    - CSV files: Returns pandas DataFrame
+    - Markdown/TXT files: Returns string content
+    - Other formats: Attempts text reading as fallback
+
+    Args:
+        data_path (str): Path to the data file
 
     Returns:
-    pandas.DataFrame: The data read from the CSV file.
+        pandas.DataFrame or str: The data read from the file, format depends on file type.
 
     Raises:
-    ValueError: If unable to read the file with any of the provided encodings.
+        ValueError: If unable to read the file with any of the provided encodings.
+        FileNotFoundError: If the file does not exist.
     """
     data_path = normalize_path(data_path)
-    logger.info(f"Attempting to read CSV file: {data_path}")
+    
+    # Check if file exists
+    if not os.path.exists(data_path):
+        logger.error(f"File not found: {data_path}")
+        raise FileNotFoundError(f"File not found: {data_path}")
+    
+    # Get file extension
+    file_extension = os.path.splitext(data_path)[1].lower()
+    logger.info(f"Attempting to read file: {data_path} (extension: {file_extension})")
+    
     encodings = ['utf-8', 'latin1', 'iso-8859-1', 'cp1252']
-    for encoding in encodings:
-        try:
-            data = pd.read_csv(data_path, encoding=encoding)
-            logger.info(f"Successfully read CSV file with encoding: {encoding}")
-            return data
-        except Exception as e:
-            logger.warning(f"Error with encoding {encoding}: {e}")
-    logger.error("Unable to read file with provided encodings")
-    raise ValueError("Unable to read file with provided encodings")
+    
+    # Handle CSV files
+    if file_extension == '.csv':
+        logger.info("Detected CSV file format")
+        for encoding in encodings:
+            try:
+                data = pd.read_csv(data_path, encoding=encoding)
+                logger.info(f"Successfully read CSV file with encoding: {encoding}")
+                return data
+            except Exception as e:
+                logger.warning(f"Error reading CSV with encoding {encoding}: {e}")
+        logger.error("Unable to read CSV file with provided encodings")
+        raise ValueError("Unable to read CSV file with provided encodings")
+    
+    # Handle Markdown and text files
+    elif file_extension in ['.md', '.txt', '.markdown']:
+        logger.info(f"Detected text-based file format: {file_extension}")
+        for encoding in encodings:
+            try:
+                with open(data_path, 'r', encoding=encoding) as file:
+                    content = file.read()
+                logger.info(f"Successfully read text file with encoding: {encoding}")
+                return content
+            except Exception as e:
+                logger.warning(f"Error reading text file with encoding {encoding}: {e}")
+        logger.error("Unable to read text file with provided encodings")
+        raise ValueError("Unable to read text file with provided encodings")
+    
+    # Handle other file types - attempt text reading as fallback
+    else:
+        logger.info(f"Unknown file extension '{file_extension}', attempting text reading as fallback")
+        for encoding in encodings:
+            try:
+                with open(data_path, 'r', encoding=encoding) as file:
+                    content = file.read()
+                logger.info(f"Successfully read file as text with encoding: {encoding}")
+                return content
+            except Exception as e:
+                logger.warning(f"Error reading file as text with encoding {encoding}: {e}")
+        
+        logger.error("Unable to read file with provided encodings")
+        raise ValueError(f"Unable to read file '{data_path}' with provided encodings. Supported formats: CSV, Markdown (.md), Text (.txt)")
 
 @tool
 def create_document(

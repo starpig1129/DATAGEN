@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
 import os
+# 在導入任何 LangChain 元件前就禁用追蹤以避免 TypeError
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+os.environ["LANGCHAIN_TRACING"] = "false"
+
 from typing import Dict, Any
 from logger import setup_logger
 from langchain_core.messages import HumanMessage
@@ -25,8 +29,19 @@ class MultiAgentSystem:
         """Initialize environment variables"""
         os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
         os.environ["LANGCHAIN_API_KEY"] = LANGCHAIN_API_KEY
-        os.environ["LANGCHAIN_TRACING_V2"] = "true"
-        os.environ["LANGCHAIN_PROJECT"] = "Multi-Agent Data Analysis System"
+        
+        # 禁用 LangChain 追蹤以避免 TypeError 問題
+        os.environ["LANGCHAIN_TRACING_V2"] = "false"
+        os.environ["LANGCHAIN_TRACING"] = "false"
+        
+        # 移除 LANGCHAIN_PROJECT 設定以確保追蹤完全禁用
+        if "LANGCHAIN_PROJECT" in os.environ:
+            del os.environ["LANGCHAIN_PROJECT"]
+        
+        # 添加診斷日誌確認追蹤已禁用
+        self.logger.info("LangChain 追蹤已禁用以避免 TypeError 問題")
+        self.logger.info(f"LANGCHAIN_TRACING_V2: {os.environ.get('LANGCHAIN_TRACING_V2')}")
+        self.logger.info(f"LANGCHAIN_TRACING: {os.environ.get('LANGCHAIN_TRACING')}")
 
         if not os.path.exists(WORKING_DIRECTORY):
             os.makedirs(WORKING_DIRECTORY)
@@ -57,6 +72,9 @@ class MultiAgentSystem:
         for event in events:
             message = event["messages"][-1]
             if isinstance(message, tuple):
+                # 診斷日誌：記錄 tuple 訊息的詳細資訊
+                logger.warning(f"⚠️  發現 tuple 訊息 - 類型: {type(message)}, 內容: {message}")
+                logger.warning(f"⚠️  事件詳情: {event}")
                 print(message, end='', flush=True)
             else:
                 message.pretty_print()

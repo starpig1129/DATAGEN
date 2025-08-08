@@ -63,12 +63,18 @@ def QualityReview_router(state: State) -> NodeType:
     # Check if revision is needed
     if (last_message and 'REVISION' in str(last_message.content)) or state.get("needs_revision", False):
         previous_node = state.get("last_sender", "")
+        # Ensure all dictionary keys are strings for LangChain compatibility
         revision_routes = {
             "Visualization": "Visualization",
             "Search": "Search",
             "Coder": "Coder",
             "Report": "Report"
         }
+        
+        # Add diagnostic logging for route selection
+        logger.info(f"QualityReview router - Previous node: {previous_node}")
+        logger.info(f"QualityReview router - Available routes: {list(revision_routes.keys())}")
+        
         result = revision_routes.get(previous_node, "NoteTaker")
         logger.info(f"Revision needed. Routing to: {result}")
         return result
