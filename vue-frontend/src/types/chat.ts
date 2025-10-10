@@ -63,6 +63,15 @@ export interface ChatUIState {
   showDecisionButtons: boolean
   isScrolledToBottom: boolean
   unreadCount: number
+  selectedMessages: Set<string>
+  selectionMode: boolean
+}
+
+// 消息選擇相關
+export interface MessageSelectionState {
+  selectedIds: Set<string>
+  isInSelectionMode: boolean
+  lastSelectedId?: string
 }
 
 // 輸入框狀態
@@ -80,4 +89,30 @@ export interface DecisionButton {
   variant: 'primary' | 'secondary' | 'success' | 'warning' | 'danger'
   icon?: string
   disabled?: boolean
+}
+
+// 消息批量操作
+export enum BulkActionType {
+  DELETE = 'DELETE',
+  COPY = 'COPY',
+  EXPORT = 'EXPORT',
+  MARK_READ = 'MARK_READ',
+  ARCHIVE = 'ARCHIVE'
+}
+
+export interface BulkAction {
+  type: BulkActionType
+  label: string
+  icon?: string
+  enabled: boolean
+  shortcut?: string
+}
+
+// 選擇模式配置
+export interface SelectionConfig {
+  maxSelections?: number
+  allowMultiSelect: boolean
+  showSelectAll: boolean
+  enableBulkActions: boolean
+  availableActions: BulkActionType[]
 }
