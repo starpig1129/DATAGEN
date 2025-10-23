@@ -11,7 +11,7 @@ class MultiAgentSystem:
         self.setup_environment()
         self.lm_manager = LanguageModelManager()
         self.workflow_manager = WorkflowManager(
-            language_models=self.lm_manager.get_models(),
+            lm_manager=self.lm_manager,
             working_directory=load_cfg.WORKING_DIRECTORY
         )
 

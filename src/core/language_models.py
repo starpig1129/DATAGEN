@@ -1,35 +1,44 @@
-from langchain_openai import ChatOpenAI
 from ..logger import setup_logger
+from ..llm.factory import ProviderFactory
 
 class LanguageModelManager:
     def __init__(self):
         """Initialize the language model manager"""
         self.logger = setup_logger()
-        self.llm = None
-        self.power_llm = None
-        self.json_llm = None
-        self.initialize_llms()
-
-    def initialize_llms(self):
-        """Initialize language models"""
-        try:
-            self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=4096)
-            self.power_llm = ChatOpenAI(model="gpt-4o", temperature=0.5, max_tokens=4096)
-            self.json_llm = ChatOpenAI(
-                model="gpt-4o",
-                model_kwargs={"response_format": {"type": "json_object"}},
-                temperature=0,
-                max_tokens=4096
-            )
-            self.logger.info("Language models initialized successfully.")
-        except Exception as e:
-            self.logger.error(f"Error initializing language models: {str(e)}")
-            raise
-
-    def get_models(self):
-        """Return all initialized language models"""
-        return {
-            "llm": self.llm,
-            "power_llm": self.power_llm,
-            "json_llm": self.json_llm
+        self.provider_factory = ProviderFactory()
+        self.provider_mapping = {
+            "hypothesis_agent": "openai",
+            "process_agent": "openai",
+            "visualization_agent": "openai",
+            "code_agent": "openai",
+            "searcher_agent": "openai",
+            "report_agent": "openai",
+            "quality_review_agent": "openai",
+            "note_agent": "openai",
+            "refiner_agent": "openai"
         }
+        self.model_configs = {
+            "hypothesis_agent": {"model": "gpt-4o-mini", "temperature": 0},
+            "process_agent": {"model": "gpt-4o", "temperature": 0.5},
+            "visualization_agent": {"model": "gpt-4o-mini", "temperature": 0},
+            "code_agent": {"model": "gpt-4o", "temperature": 0.5},
+            "searcher_agent": {"model": "gpt-4o-mini", "temperature": 0},
+            "report_agent": {"model": "gpt-4o", "temperature": 0.5},
+            "quality_review_agent": {"model": "gpt-4o-mini", "temperature": 0},
+            "note_agent": {"model": "gpt-4o", "model_kwargs": {"response_format": {"type": "json_object"}}, "temperature": 0},
+            "refiner_agent": {"model": "gpt-4o", "temperature": 0.5}
+        }
+
+    def get_provider(self, agent_name: str):
+        """Get the provider for the given agent."""
+        provider_name = self.provider_mapping.get(agent_name)
+        if not provider_name:
+            raise ValueError(f"No provider configured for agent '{agent_name}'")
+        return self.provider_factory.create_provider(provider_name)
+
+    def get_model_config(self, agent_name: str) -> dict:
+        """Get the model configuration for the given agent."""
+        config = self.model_configs.get(agent_name)
+        if not config:
+            raise ValueError(f"No model config configured for agent '{agent_name}'")
+        return config

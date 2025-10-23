@@ -17,15 +17,15 @@ from ..agents.note_agent import create_note_agent
 from ..agents.refiner_agent import create_refiner_agent
 
 class WorkflowManager:
-    def __init__(self, language_models, working_directory):
+    def __init__(self, lm_manager, working_directory):
         """
-        Initialize the workflow manager with language models and working directory.
+        Initialize the workflow manager with language model manager and working directory.
         
         Args:
-            language_models (dict): Dictionary containing language model instances
+            lm_manager: The LanguageModelManager instance
             working_directory (str): Path to the working directory
         """
-        self.language_models = language_models
+        self.lm_manager = lm_manager
         self.working_directory = working_directory
         self.workflow = None
         self.memory = None
@@ -36,62 +36,64 @@ class WorkflowManager:
 
     def create_agents(self):
         """Create all system agents"""
-        # Get language models
-        llm = self.language_models["llm"]
-        power_llm = self.language_models["power_llm"]
-        json_llm = self.language_models["json_llm"]
-
         # Create agents dictionary
         agents = {}
 
         # Create each agent using their respective creation functions
         agents["hypothesis_agent"] = create_hypothesis_agent(
-            llm, 
+            self._create_model("hypothesis_agent"),
             self.members,
             self.working_directory
         )
 
-        agents["process_agent"] = create_process_agent(power_llm)
+        agents["process_agent"] = create_process_agent(self._create_model("process_agent"))
 
         agents["visualization_agent"] = create_visualization_agent(
-            llm,
+            self._create_model("visualization_agent"),
             self.members,
             self.working_directory
         )
 
         agents["code_agent"] = create_code_agent(
-            power_llm,
+            self._create_model("code_agent"),
             self.members,
             self.working_directory
         )
 
         agents["searcher_agent"] = create_search_agent(
-            llm,
+            self._create_model("searcher_agent"),
             self.members,
             self.working_directory
         )
 
         agents["report_agent"] = create_report_agent(
-            power_llm,
+            self._create_model("report_agent"),
             self.members,
             self.working_directory
         )
 
         agents["quality_review_agent"] = create_quality_review_agent(
-            llm,
+            self._create_model("quality_review_agent"),
             self.members,
             self.working_directory
         )
 
-        agents["note_agent"] = create_note_agent(json_llm)
+        agents["note_agent"] = create_note_agent(self._create_model("note_agent"))
 
         agents["refiner_agent"] = create_refiner_agent(
-            power_llm,
+            self._create_model("refiner_agent"),
             self.members,
             self.working_directory
         )
 
         return agents
+
+    def _create_model(self, agent_name: str):
+        """Create a model instance for the given agent."""
+        provider = self.lm_manager.get_provider(agent_name)
+        model_class = provider.get_model_class()
+        config = self.lm_manager.get_model_config(agent_name)
+        return model_class(**config)
 
     def setup_workflow(self):
         """Set up the workflow graph"""
