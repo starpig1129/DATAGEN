@@ -7,8 +7,7 @@ from .node import agent_node, human_choice_node, note_agent_node, human_review_n
 from .router import QualityReview_router, hypothesis_router, process_router
 
 from ..agents.factory import AgentFactory
-from ..agents.process_agent import create_process_agent
-from ..agents.note_agent import create_note_agent
+
 
 class WorkflowManager:
     def __init__(self, lm_manager, working_directory):
@@ -43,7 +42,7 @@ class WorkflowManager:
         # Create each agent using the factory
         agents["hypothesis_agent"] = agent_factory.create_agent("hypothesis_agent")
 
-        agents["process_agent"] = create_process_agent(self._create_model("process_agent"))
+        agents["process_agent"] = agent_factory.create_agent("process_agent")
 
         agents["visualization_agent"] = agent_factory.create_agent("visualization_agent")
 
@@ -55,7 +54,7 @@ class WorkflowManager:
 
         agents["quality_review_agent"] = agent_factory.create_agent("quality_review_agent")
 
-        agents["note_agent"] = create_note_agent(self._create_model("note_agent"))
+        agents["note_agent"] = agent_factory.create_agent("note_agent")
 
         agents["refiner_agent"] = agent_factory.create_agent("refiner_agent")
 

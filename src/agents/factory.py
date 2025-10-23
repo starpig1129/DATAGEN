@@ -5,6 +5,8 @@ from .report_agent import ReportAgent
 from .quality_review_agent import QualityReviewAgent
 from .refiner_agent import RefinerAgent
 from .hypothesis_agent import HypothesisAgent
+from .process_agent import ProcessAgent
+from .note_agent import NoteAgent
 
 
 class AgentFactory:
@@ -44,6 +46,8 @@ class AgentFactory:
             "quality_review_agent": QualityReviewAgent,
             "refiner_agent": RefinerAgent,
             "hypothesis_agent": HypothesisAgent,
+            "process_agent": ProcessAgent,
+            "note_agent": NoteAgent,
         }
 
         agent_class = agent_mapping.get(agent_name)
