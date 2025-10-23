@@ -1,4 +1,7 @@
-from ..create_agent import create_note_agent as base_create_note_agent
+from langchain.agents import create_openai_functions_agent, AgentExecutor
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.output_parsers import PydanticOutputParser
+from ..core.state import NoteState
 from ..tools.FileEdit import read_document
 from .base import BaseAgent
 
@@ -38,11 +41,20 @@ class NoteAgent(BaseAgent):
         Your output should be well-organized and easy to integrate with other project documentation.
         '''
 
-        # Create the agent executor using create_note_agent
-        self.agent_executor = base_create_note_agent(
-            self.llm,
-            tools,
-            system_prompt
+        # Create the agent executor directly (moved from create_note_agent)
+        parser = PydanticOutputParser(pydantic_object=NoteState)
+        output_format = parser.get_format_instructions()
+        escaped_output_format = output_format.replace("{", "{{").replace("}", "}}")
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt+"\n\nPlease format your response as a JSON object with the following structure:\n"+escaped_output_format),
+            MessagesPlaceholder(variable_name="messages"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ])
+        agent = create_openai_functions_agent(llm=self.llm, tools=tools, prompt=prompt)
+        self.agent_executor = AgentExecutor.from_agent_and_tools(
+            agent=agent,
+            tools=tools,
+            verbose=False,
         )
 
     def _get_system_prompt(self) -> str:

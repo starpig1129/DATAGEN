@@ -1,14 +1,10 @@
 from langchain.agents import create_openai_functions_agent, AgentExecutor
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
-from langchain.output_parsers import PydanticOutputParser
 from langchain_openai import ChatOpenAI
 from langchain.tools import tool
 
 import os
 
-
-from .core.state import NoteState
 from .logger import setup_logger
 
 # Set up logger
@@ -108,88 +104,5 @@ def create_agent(
     
     # Return an executor to manage the agent's task execution
     return AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=False)
-
-
-def create_supervisor(llm: ChatOpenAI, system_prompt: str, members: list[str]) -> AgentExecutor:
-    # Log the start of supervisor creation
-    logger.info("Creating supervisor")
-    
-    # Define options for routing, including FINISH and team members
-    options = ["FINISH"] + members
-    
-    # Define the function for routing and task assignment
-    function_def = {
-        "name": "route",
-        "description": "Select the next role and assign a task.",
-        "parameters": {
-            "title": "routeSchema",
-            "type": "object",
-            "properties": {
-                "next": {
-                    "title": "Next",
-                    "anyOf": [
-                        {"enum": options},
-                    ],
-                },
-                "task": {
-                    "title": "Task",
-                    "type": "string",
-                    "description": "The task to be performed by the selected agent"
-                }
-            },
-            "required": ["next", "task"],
-        },
-    }
-    
-    # Create the prompt template
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            MessagesPlaceholder(variable_name="messages"),
-            (
-                "system",
-                "Given the conversation above, who should act next? "
-                "Or should we FINISH? Select one of: {options}. "
-                "Additionally, specify the task that the selected role should perform."
-            ),
-        ]
-    ).partial(options=str(options), team_members=", ".join(members))
-    
-    # Log successful creation of supervisor
-    logger.info("Supervisor created successfully")
-    
-    # Return the chained operations
-    return (
-        prompt
-        | llm.bind_functions(functions=[function_def], function_call="route")
-        | JsonOutputFunctionsParser()
-    )
-
-
-def create_note_agent(
-    llm: ChatOpenAI,
-    tools: list,
-    system_prompt: str,
-) -> AgentExecutor:
-    """
-    Create a Note Agent that updates the entire state.
-    """
-    logger.info("Creating note agent")
-    parser = PydanticOutputParser(pydantic_object=NoteState)
-    output_format = parser.get_format_instructions()
-    escaped_output_format = output_format.replace("{", "{{").replace("}", "}}")
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt+"\n\nPlease format your response as a JSON object with the following structure:\n"+escaped_output_format),
-        MessagesPlaceholder(variable_name="messages"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ])
-    logger.debug(f"Note agent prompt: {prompt}")
-    agent = create_openai_functions_agent(llm=llm, tools=tools, prompt=prompt)
-    logger.info("Note agent created successfully")
-    return AgentExecutor.from_agent_and_tools(
-        agent=agent, 
-        tools=tools, 
-        verbose=False,
-    )
 
 logger.info("Agent creation module initialized")

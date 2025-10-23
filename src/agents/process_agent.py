@@ -1,4 +1,6 @@
-from ..create_agent import create_supervisor
+from langchain.agents import create_openai_functions_agent, AgentExecutor
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from .base import BaseAgent
 
 
@@ -72,11 +74,52 @@ class ProcessAgent(BaseAgent):
 
         members = ["Visualization", "Search", "Coder", "Report"]
 
-        # Create the agent executor using create_supervisor
-        self.agent_executor = create_supervisor(
-            self.llm,
-            system_prompt,
-            members
+        # Create the agent executor directly (moved from create_supervisor)
+        options = ["FINISH"] + members
+
+        # Define the function for routing and task assignment
+        function_def = {
+            "name": "route",
+            "description": "Select the next role and assign a task.",
+            "parameters": {
+                "title": "routeSchema",
+                "type": "object",
+                "properties": {
+                    "next": {
+                        "title": "Next",
+                        "anyOf": [
+                            {"enum": options},
+                        ],
+                    },
+                    "task": {
+                        "title": "Task",
+                        "type": "string",
+                        "description": "The task to be performed by the selected agent"
+                    }
+                },
+                "required": ["next", "task"],
+            },
+        }
+
+        # Create the prompt template
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system_prompt),
+                MessagesPlaceholder(variable_name="messages"),
+                (
+                    "system",
+                    "Given the conversation above, who should act next? "
+                    "Or should we FINISH? Select one of: {options}. "
+                    "Additionally, specify the task that the selected role should perform."
+                ),
+            ]
+        ).partial(options=str(options), team_members=", ".join(members))
+
+        # Create the agent executor
+        self.agent_executor = (
+            prompt
+            | self.llm.bind_functions(functions=[function_def], function_call="route")
+            | JsonOutputFunctionsParser()
         )
 
     def _get_system_prompt(self) -> str:
