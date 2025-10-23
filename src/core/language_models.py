@@ -1,5 +1,5 @@
 from langchain_openai import ChatOpenAI
-from logger import setup_logger
+from ..logger import setup_logger
 
 class LanguageModelManager:
     def __init__(self):

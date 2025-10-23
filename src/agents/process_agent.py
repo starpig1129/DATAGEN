@@ -1,4 +1,4 @@
-from create_agent import create_supervisor
+from ..create_agent import create_supervisor
 
 def create_process_agent(power_llm):
     """Create the process/supervisor agent"""

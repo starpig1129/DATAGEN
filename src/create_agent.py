@@ -1,11 +1,15 @@
 from langchain.agents import create_openai_functions_agent, AgentExecutor
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
+from langchain.output_parsers import PydanticOutputParser
 from langchain_openai import ChatOpenAI
-from typing import List
 from langchain.tools import tool
+
 import os
-from logger import setup_logger
+
+
+from .core.state import NoteState
+from .logger import setup_logger
 
 # Set up logger
 logger = setup_logger()
@@ -161,8 +165,6 @@ def create_supervisor(llm: ChatOpenAI, system_prompt: str, members: list[str]) -
         | JsonOutputFunctionsParser()
     )
 
-from core.state import NoteState
-from langchain.output_parsers import PydanticOutputParser
 
 def create_note_agent(
     llm: ChatOpenAI,

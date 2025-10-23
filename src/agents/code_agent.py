@@ -1,6 +1,6 @@
-from create_agent import create_agent
-from tools.basetool import execute_code, execute_command
-from tools.FileEdit import read_document
+from ..create_agent import create_agent
+from ..tools.basetool import execute_code, execute_command
+from ..tools.FileEdit import read_document
 
 def create_code_agent(power_llm, members, working_directory):
     """Create the code agent"""

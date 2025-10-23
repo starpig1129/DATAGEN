@@ -1,7 +1,7 @@
 from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage,ToolMessage
 from openai import InternalServerError
-from core.state import State
+from .state import State
 import logging
 import json
 import re

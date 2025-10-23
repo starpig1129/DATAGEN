@@ -1,9 +1,11 @@
-from create_agent import create_agent
-from tools.FileEdit import create_document, read_document, collect_data
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
-from tools.internet import google_search, scrape_webpages_with_fallback
 from langchain.agents import load_tools
+
+from ..create_agent import create_agent
+from ..tools.FileEdit import create_document, read_document, collect_data
+from ..tools.internet import google_search, scrape_webpages_with_fallback
+
 
 def create_search_agent(llm, members, working_directory):
     """Create the search agent"""

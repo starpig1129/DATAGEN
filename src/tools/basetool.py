@@ -1,11 +1,11 @@
 import os
-import logging
 import platform
 from typing import Annotated
 import subprocess
 from langchain_core.tools import tool
-from logger import setup_logger
-from load_cfg import WORKING_DIRECTORY,CONDA_PATH,CONDA_ENV
+
+from ..logger import setup_logger
+from ..load_cfg import WORKING_DIRECTORY,CONDA_PATH,CONDA_ENV
 
 # Initialize logger
 logger = setup_logger()

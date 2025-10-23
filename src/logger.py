@@ -1,4 +1,5 @@
 import logging
+
 # Configure logging
 def setup_logger(log_file:str='agent.log'):
     logger = logging.getLogger(__name__)

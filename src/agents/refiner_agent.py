@@ -1,9 +1,11 @@
-from create_agent import create_agent
-from tools.FileEdit import create_document, read_document, edit_document
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
-from tools.internet import google_search, scrape_webpages_with_fallback
 from langchain.agents import load_tools
+
+from ..create_agent import create_agent
+from ..tools.internet import google_search, scrape_webpages_with_fallback
+from ..tools.FileEdit import create_document, read_document, edit_document
+
 
 def create_refiner_agent(power_llm, members, working_directory):
     """Create the refiner agent"""

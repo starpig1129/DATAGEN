@@ -1,4 +1,3 @@
-import os
 from langchain_core.tools import tool
 from langchain_community.document_loaders import WebBaseLoader, FireCrawlLoader
 from selenium import webdriver
@@ -6,8 +5,9 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from typing import Annotated, List
 from bs4 import BeautifulSoup
-from logger import setup_logger
-from load_cfg import FIRECRAWL_API_KEY,CHROMEDRIVER_PATH
+
+from ..logger import setup_logger
+from ..load_cfg import FIRECRAWL_API_KEY,CHROMEDRIVER_PATH
 # Set up logger
 logger = setup_logger()
 

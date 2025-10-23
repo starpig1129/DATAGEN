@@ -1,18 +1,20 @@
 from typing import Dict, Any
 from langgraph.graph import StateGraph, END, START
 from langgraph.checkpoint.memory import MemorySaver
-from core.state import State
-from core.node import agent_node, human_choice_node, note_agent_node, human_review_node, refiner_node
-from core.router import QualityReview_router, hypothesis_router, process_router
-from agent.hypothesis_agent import create_hypothesis_agent
-from agent.process_agent import create_process_agent
-from agent.visualization_agent import create_visualization_agent
-from agent.code_agent import create_code_agent
-from agent.search_agent import create_search_agent
-from agent.report_agent import create_report_agent
-from agent.quality_review_agent import create_quality_review_agent
-from agent.note_agent import create_note_agent
-from agent.refiner_agent import create_refiner_agent
+
+from .state import State
+from .node import agent_node, human_choice_node, note_agent_node, human_review_node, refiner_node
+from .router import QualityReview_router, hypothesis_router, process_router
+
+from ..agents.hypothesis_agent import create_hypothesis_agent
+from ..agents.process_agent import create_process_agent
+from ..agents.visualization_agent import create_visualization_agent
+from ..agents.code_agent import create_code_agent
+from ..agents.search_agent import create_search_agent
+from ..agents.report_agent import create_report_agent
+from ..agents.quality_review_agent import create_quality_review_agent
+from ..agents.note_agent import create_note_agent
+from ..agents.refiner_agent import create_refiner_agent
 
 class WorkflowManager:
     def __init__(self, language_models, working_directory):
