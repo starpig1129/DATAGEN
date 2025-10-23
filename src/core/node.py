@@ -10,54 +10,46 @@ from pathlib import Path
 # Set up logger
 logger = logging.getLogger(__name__)
 
-def agent_node(state: State, agent: Any, name: str) -> State:
-    """
-    Process an agent's action and update the state accordingly.
-    """
+def agent_node(state: State, agent: Any, name: str) -> dict:
+    """Process an agent's action and update the state accordingly."""
     logger.info(f"Processing agent: {name}")
     try:
         result = agent.invoke(state)
-        logger.debug(f"Agent {name} result: {result}")
-        
         output = result["output"] if isinstance(result, dict) and "output" in result else str(result)
         
         ai_message = AIMessage(content=output, name=name)
-        state["messages"].append(ai_message)
-        state["sender"] = name
-        
-        if name == "hypothesis_agent" and not state["hypothesis"]:
-            state["hypothesis"] = ai_message
-            logger.info("Hypothesis updated")
+
+        updates = {
+            "messages": [ai_message],
+            "sender": name
+        }
+
+        if name == "hypothesis_agent":
+            updates["hypothesis"] = output
         elif name == "process_agent":
-            state["process_decision"] = ai_message
-            logger.info("Process decision updated")
+            updates["process_decision"] = output
         elif name == "visualization_agent":
-            state["visualization_state"] = ai_message
+            updates["visualization_state"] = output
             logger.info("Visualization state updated")
         elif name == "searcher_agent":
-            state["searcher_state"] = ai_message
+            updates["searcher_state"] = output
             logger.info("Searcher state updated")
         elif name == "report_agent":
-            state["report_section"] = ai_message
+            updates["report_section"] = output
             logger.info("Report section updated")
         elif name == "quality_review_agent":
-            state["quality_review"] = ai_message
-            state["needs_revision"] = "revision needed" in output.lower()
-            logger.info(f"Quality review updated. Needs revision: {state['needs_revision']}")
-        
-        logger.info(f"Agent {name} processing completed")
-        return state
-    except Exception as e:
-        logger.error(f"Error occurred while processing agent {name}: {str(e)}", exc_info=True)
-        error_message = AIMessage(content=f"Error: {str(e)}", name=name)
-        return {"messages": [error_message]}
+            updates["quality_review"] = output
+            updates["needs_revision"] = "revision needed" in output.lower()
 
-def human_choice_node(state: State) -> State:
-    """
-    Handle human input to choose the next step in the process.
-    If regenerating hypothesis, prompt for specific areas to modify.
-    """
-    logger.info("Prompting for human choice")
+        
+        return updates
+        
+    except Exception as e:
+        logger.error(f"Error: {str(e)}", exc_info=True)
+        return {"messages": [AIMessage(content=f"Error: {str(e)}", name=name)]}
+
+def human_choice_node(state: State) -> dict:
+    """Handle human input to choose the next step."""
     print("Please choose the next step:")
     print("1. Regenerate hypothesis")
     print("2. Continue the research process")
@@ -66,30 +58,24 @@ def human_choice_node(state: State) -> State:
         choice = input("Please enter your choice (1 or 2): ")
         if choice in ["1", "2"]:
             break
-        logger.warning(f"Invalid input received: {choice}")
         print("Invalid input, please try again.")
     
+    updates = {
+        "messages": [HumanMessage(content="")],
+        "sender": "human"
+    }
+    
     if choice == "1":
-        modification_areas = input("Please specify which parts of the hypothesis you want to modify: ")
-        content = f"Regenerate hypothesis. Areas to modify: {modification_areas}"
-        state["hypothesis"] = ""
-        state["modification_areas"] = modification_areas
-        logger.info("Hypothesis cleared for regeneration")
-        logger.info(f"Areas to modify: {modification_areas}")
+        modification_areas = input("Specify areas to modify: ")
+        updates["messages"][0].content = f"Regenerate hypothesis. Areas: {modification_areas}"
+        updates["hypothesis"] = ""  # Clear hypothesis
     else:
-        content = "Continue the research process"
-        state["process"] = "Continue the research process"
-        logger.info("Continuing research process")
+        updates["messages"][0].content = "Continue the research process"
+        updates["process"] = "Continue the research process"
     
-    human_message = HumanMessage(content=content)
-    
-    state["messages"].append(human_message)
-    state["sender"] = 'human'
-    
-    logger.info("Human choice processed")
-    return state
+    return updates
 
-def create_message(message: dict[str], name: str) -> BaseMessage:
+def create_message(message: dict[str, Any], name: str) -> BaseMessage:
     """
     Create a BaseMessage object based on the message type.
     """
@@ -104,15 +90,17 @@ def note_agent_node(state: State, agent: Any, name: str) -> State:
     Process the note agent's action and update the entire state.
     """
     logger.info(f"Processing note agent: {name}")
+    output = ""
     try:
-        current_messages = state.get("messages", [])
+        current_messages = list(state.get("messages", []))
         
-        head_messages, tail_messages = [], []
+        head_messages: list[BaseMessage] = []
+        tail_messages: list[BaseMessage] = []
         
         if len(current_messages) > 6:
-            head_messages = current_messages[:2] 
-            tail_messages = current_messages[-2:]
-            state = {**state, "messages": current_messages[2:-2]}
+            head_messages = list(current_messages[:2]) 
+            tail_messages = list(current_messages[-2:])
+            state = {**state, "messages": list(current_messages[2:-2])}
             logger.debug("Trimmed messages for processing")
         
         result = agent.invoke(state)
@@ -125,7 +113,7 @@ def note_agent_node(state: State, agent: Any, name: str) -> State:
 
         new_messages = [create_message(msg, name) for msg in parsed_output.get("messages", [])]
         
-        messages = new_messages if new_messages else current_messages
+        messages: list[BaseMessage] = list(new_messages) if new_messages else list(current_messages)
         
         combined_messages = head_messages + messages + tail_messages
         
@@ -164,7 +152,7 @@ def _create_error_state(state: State, error_message: AIMessage, name: str, error
     """
     logger.info(f"Creating error state for {name}: {error_type}")
     error_state:State = {
-            "messages": state.get("messages", []) + [error_message],
+            "messages": list(state.get("messages", [])) + [error_message],
             "hypothesis": str(state.get("hypothesis", "")),
             "process": str(state.get("process", "")),
             "process_decision": str(state.get("process_decision", "")),
@@ -178,7 +166,7 @@ def _create_error_state(state: State, error_message: AIMessage, name: str, error
         }
     return error_state
 
-def human_review_node(state: State) -> State:
+def human_review_node(state: State) -> dict:
     """
     Display current state to the user and update the state based on user input.
     Includes error handling for robustness.
@@ -194,30 +182,26 @@ def human_review_node(state: State) -> State:
                 break
             print("Invalid input. Please enter 'yes' or 'no'.")
         
+        updates: dict[str, Any] = {"sender": "human"}
+        
         if user_input == 'yes':
             while True:
-                additional_request = input("Please enter your additional analysis request: ").strip()
+                additional_request = input("Please enter your request: ").strip()
                 if additional_request:
-                    state["messages"].append(HumanMessage(content=additional_request))
-                    state["needs_revision"] = True
+                    updates["messages"] = [HumanMessage(content=additional_request)]
+                    updates["needs_revision"] = True
                     break
-                print("Request cannot be empty. Please try again.")
+                print("Request cannot be empty.")
         else:
-            state["needs_revision"] = False
+            updates["needs_revision"] = False
         
-        state["sender"] = "human"
-        logger.info("Human review completed successfully.")
-        return state
-    
-    except KeyboardInterrupt:
-        logger.warning("Human review interrupted by user.")
-        return None
-    
+        return updates
+        
     except Exception as e:
-        logger.error(f"An error occurred during human review: {str(e)}", exc_info=True)
-        return None
+        logger.error(f"Error: {str(e)}", exc_info=True)
+        return {"messages": [AIMessage(content=f"Error: {str(e)}", name="human_review")]}
 
-def refiner_node(state: State, agent: Any, name: str) -> State:
+def refiner_node(state: State, agent: Any, name: str) -> dict:
     """
     Read MD file contents and PNG file names from the specified storage path,
     add them as report materials to a new message,
@@ -248,32 +232,16 @@ def refiner_node(state: State, agent: Any, name: str) -> State:
         # Create refiner state
         refiner_state = state.copy()
         refiner_state["messages"] = [HumanMessage(content=report_content)]
+    
+        result = agent.invoke(refiner_state)
+        output = result["output"] if isinstance(result, dict) else str(result)
         
-        try:
-            # Attempt to invoke agent with full content
-            result = agent.invoke(refiner_state)
-        except Exception as token_error:
-            # If token limit is exceeded, retry with only MD file names
-            logger.warning("Token limit exceeded. Retrying with MD file names only.")
-            md_file_names = [f"MD file: '{md_file.name}'" for md_file in md_files]
-            png_file_names = [f"PNG file: '{png_file.name}'" for png_file in png_files]
-            
-            simplified_materials = "\n".join(md_file_names + png_file_names)
-            simplified_report_content = f"Report materials (file names only):\n{simplified_materials}"
-
-            refiner_state["messages"] = [HumanMessage(content=simplified_report_content)]
-            result = agent.invoke(refiner_state)
-        
-        # Update original state
-        output = result["output"] if isinstance(result, dict) and "output" in result else str(result)
-        state["messages"].append(AIMessage(content=output, name=name))
-        state["sender"] = name
-        
-        logger.info("Refiner node processing completed")
-        return state
+        return {
+            "messages": [AIMessage(content=output, name=name)],
+            "sender": name
+        }
     except Exception as e:
-        logger.error(f"Error occurred while processing refiner node: {str(e)}", exc_info=True)
-        state["messages"].append(AIMessage(content=f"Error: {str(e)}", name=name))
-        return state
+        logger.error(f"Error in refiner_node: {str(e)}", exc_info=True)
+        return {"messages": [AIMessage(content=f"Error: {str(e)}", name=name)]}
     
 logger.info("Agent processing module initialized")

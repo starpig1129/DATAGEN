@@ -1,12 +1,15 @@
-from langchain_core.messages import BaseMessage
-from typing import Sequence, TypedDict
+from typing import Sequence, TypedDict, Annotated
 from typing_extensions import NotRequired
 from pydantic import BaseModel, Field
+
+from langchain_core.messages import BaseMessage
+from langgraph.graph.message import add_messages
+
 
 class State(TypedDict):
     """TypedDict for the entire state structure."""
     # The sequence of messages exchanged in the conversation
-    messages: Sequence[BaseMessage]
+    messages: Annotated[Sequence[BaseMessage], add_messages]
 
     # The complete content of the research hypothesis
     hypothesis: NotRequired[str]
