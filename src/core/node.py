@@ -1,5 +1,5 @@
 from typing import Any
-from langchain_core.messages import AIMessage, HumanMessage, BaseMessage,ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
 from openai import InternalServerError
 from .state import State
 import logging
@@ -7,11 +7,10 @@ import json
 import re
 import os
 from pathlib import Path
-from langchain.agents import AgentExecutor
 # Set up logger
 logger = logging.getLogger(__name__)
 
-def agent_node(state: State, agent: AgentExecutor, name: str) -> State:
+def agent_node(state: State, agent: Any, name: str) -> State:
     """
     Process an agent's action and update the state accordingly.
     """
@@ -100,7 +99,7 @@ def create_message(message: dict[str], name: str) -> BaseMessage:
     logger.debug(f"Creating message of type {message_type} for {name}")
     return HumanMessage(content=content) if message_type == "human" else AIMessage(content=content, name=name)
 
-def note_agent_node(state: State, agent: AgentExecutor, name: str) -> State:
+def note_agent_node(state: State, agent: Any, name: str) -> State:
     """
     Process the note agent's action and update the entire state.
     """
@@ -217,8 +216,8 @@ def human_review_node(state: State) -> State:
     except Exception as e:
         logger.error(f"An error occurred during human review: {str(e)}", exc_info=True)
         return None
-    
-def refiner_node(state: State, agent: AgentExecutor, name: str) -> State:
+
+def refiner_node(state: State, agent: Any, name: str) -> State:
     """
     Read MD file contents and PNG file names from the specified storage path,
     add them as report materials to a new message,
@@ -248,7 +247,7 @@ def refiner_node(state: State, agent: AgentExecutor, name: str) -> State:
         
         # Create refiner state
         refiner_state = state.copy()
-        refiner_state["messages"] = [BaseMessage(content=report_content)]
+        refiner_state["messages"] = [HumanMessage(content=report_content)]
         
         try:
             # Attempt to invoke agent with full content
@@ -261,12 +260,13 @@ def refiner_node(state: State, agent: AgentExecutor, name: str) -> State:
             
             simplified_materials = "\n".join(md_file_names + png_file_names)
             simplified_report_content = f"Report materials (file names only):\n{simplified_materials}"
-            
-            refiner_state["messages"] = [BaseMessage(content=simplified_report_content)]
+
+            refiner_state["messages"] = [HumanMessage(content=simplified_report_content)]
             result = agent.invoke(refiner_state)
         
         # Update original state
-        state["messages"].append(AIMessage(content=result))
+        output = result["output"] if isinstance(result, dict) and "output" in result else str(result)
+        state["messages"].append(AIMessage(content=output, name=name))
         state["sender"] = name
         
         logger.info("Refiner node processing completed")

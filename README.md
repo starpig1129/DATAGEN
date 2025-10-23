@@ -74,8 +74,8 @@ git clone https://github.com/starpig1129/DATAGEN.git
 ```
 2. Create and activate a Conda virtual environment:
 ```bash
-conda create -n data_assistant python=3.10
-conda activate data_assistant
+conda create -n datagen python=3.10
+conda activate datagen
 ```
 3. Install dependencies:
 ```bash

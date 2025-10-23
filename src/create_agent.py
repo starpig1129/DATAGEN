@@ -1,17 +1,11 @@
-from langchain.agents import create_openai_functions_agent, AgentExecutor
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
 from langchain.tools import tool
-
 import os
-
 from .logger import setup_logger
 
-# Set up logger
 logger = setup_logger()
 
-@tool
-def list_directory_contents(directory: str = './data_storage/') -> str:
+def _list_directory_contents(directory: str = './data_storage/') -> str:
     """
     List the contents of the specified directory.
     
@@ -25,31 +19,23 @@ def list_directory_contents(directory: str = './data_storage/') -> str:
         logger.info(f"Listing contents of directory: {directory}")
         contents = os.listdir(directory)
         logger.debug(f"Directory contents: {contents}")
-        return f"Directory contents :\n" + "\n".join(contents)
+        return f"Directory contents:\n" + "\n".join(contents)
     except Exception as e:
         logger.error(f"Error listing directory contents: {str(e)}")
         return f"Error listing directory contents: {str(e)}"
+@tool
+def list_directory_contents(directory: str = './data_storage/') -> str:
+    """List the contents of the specified directory."""
+    return _list_directory_contents(directory)
 
-def create_agent(
-    llm: ChatOpenAI,
-    tools: list[tool],
-    system_message: str,
+def create_base_agent(
+    model,
+    tools: list,
+    role_prompt: str,
     team_members: list[str],
     working_directory: str = './data_storage/'
-) -> AgentExecutor:
-    """
-    Create an agent with the given language model, tools, system message, and team members.
-    
-    Parameters:
-        llm (ChatOpenAI): The language model to use for the agent.
-        tools (list[tool]): A list of tools the agent can use.
-        system_message (str): A message defining the agent's role and tasks.
-        team_members (list[str]): A list of team member roles for collaboration.
-        working_directory (str): The directory where the agent's data will be stored.
-        
-    Returns:
-        AgentExecutor: An executor that manages the agent's task execution.
-    """
+):
+    """Create an agent with the given parameters."""
     
     logger.info("Creating agent")
 
@@ -57,14 +43,11 @@ def create_agent(
     if list_directory_contents not in tools:
         tools.append(list_directory_contents)
 
-    # Prepare the tool names and team members for the system prompt
+    # Prepare system prompt
     tool_names = ", ".join([tool.name for tool in tools])
     team_members_str = ", ".join(team_members)
+    initial_directory_contents = _list_directory_contents(working_directory)
 
-    # List the initial contents of the working directory
-    initial_directory_contents = list_directory_contents(working_directory)
-
-    # Create the system prompt for the agent
     system_prompt = (
         "You are a specialized AI assistant in a data analysis team. "
         "Your role is to complete specific tasks in the research process. "
@@ -72,7 +55,7 @@ def create_agent(
         "If you can't fully complete a task, explain what you've done and what's needed next. "
         "Always aim for accurate and clear outputs. "
         f"You have access to the following tools: {tool_names}. "
-        f"Your specific role: {system_message}\n"
+        f"Your specific role: {role_prompt}\n"
         "Work autonomously according to your specialty, using the tools available to you. "
         "Do not ask for clarification. "
         "Your other team members (and other teams) will collaborate with you based on their specialties. "
@@ -81,28 +64,12 @@ def create_agent(
         "Use the ListDirectoryContents tool to check for updates in the directory contents when needed."
     )
 
-    # Define the prompt structure with placeholders for dynamic content
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        MessagesPlaceholder(variable_name="messages"),
-        ("ai", "hypothesis: {hypothesis}"),
-        ("ai", "process: {process}"),
-        ("ai", "process_decision: {process_decision}"),
-        ("ai", "visualization_state: {visualization_state}"),
-        ("ai", "searcher_state: {searcher_state}"),
-        ("ai", "code_state: {code_state}"),
-        ("ai", "report_section: {report_section}"),
-        ("ai", "quality_review: {quality_review}"),
-        ("ai", "needs_revision: {needs_revision}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ])
-
-    # Create the agent using the defined prompt and tools
-    agent = create_openai_functions_agent(llm=llm, tools=tools, prompt=prompt)
+    # Create agent
+    agent = create_agent(
+        model=model,
+        tools=tools,
+        system_prompt=system_prompt
+    )
     
     logger.info("Agent created successfully")
-    
-    # Return an executor to manage the agent's task execution
-    return AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=False)
-
-logger.info("Agent creation module initialized")
+    return agent

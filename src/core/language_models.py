@@ -18,15 +18,15 @@ class LanguageModelManager:
             "refiner_agent": "openai"
         }
         self.model_configs = {
-            "hypothesis_agent": {"model": "gpt-4o-mini", "temperature": 0},
-            "process_agent": {"model": "gpt-4o", "temperature": 0.5},
-            "visualization_agent": {"model": "gpt-4o-mini", "temperature": 0},
-            "code_agent": {"model": "gpt-4o", "temperature": 0.5},
-            "searcher_agent": {"model": "gpt-4o-mini", "temperature": 0},
-            "report_agent": {"model": "gpt-4o", "temperature": 0.5},
-            "quality_review_agent": {"model": "gpt-4o-mini", "temperature": 0},
-            "note_agent": {"model": "gpt-4o", "model_kwargs": {"response_format": {"type": "json_object"}}, "temperature": 0},
-            "refiner_agent": {"model": "gpt-4o", "temperature": 0.5}
+            "hypothesis_agent": {"model": "gpt-5-nano-2025-08-07", "temperature": 1.0},
+            "process_agent": {"model": "gpt-5-mini-2025-08-07", "temperature": 1.0},
+            "visualization_agent": {"model": "gpt-5-nano-2025-08-07", "temperature": 1.0},
+            "code_agent": {"model": "gpt-5-mini-2025-08-07", "temperature": 1.0},
+            "searcher_agent": {"model": "gpt-5-nano-2025-08-07", "temperature": 1.0},
+            "report_agent": {"model": "gpt-5-mini-2025-08-07", "temperature": 1.0},
+            "quality_review_agent": {"model": "gpt-5-nano-2025-08-07", "temperature": 1.0},
+            "note_agent": {"model": "gpt-5-mini-2025-08-07", "model_kwargs": {"response_format": {"type": "json_object"}}, "temperature": 1.0},
+            "refiner_agent": {"model": "gpt-5-mini-2025-08-07", "temperature": 1.0}
         }
 
     def get_provider(self, agent_name: str):

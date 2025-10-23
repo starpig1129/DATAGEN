@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from langchain.agents import AgentExecutor
 from langchain_openai import ChatOpenAI
 
-from ..create_agent import create_agent
+from ..create_agent import create_base_agent
 from ..core.language_models import LanguageModelManager
 
 
@@ -33,15 +32,15 @@ class BaseAgent(ABC):
         self.working_directory = working_directory
 
         # Create the language model using the manager
-        self.llm = self._create_model()
+        self.model = self._create_model()
 
         # Get agent-specific configuration from subclasses
         system_prompt = self._get_system_prompt()
         tools = self._get_tools()
 
         # Create the agent executor using the common create_agent function
-        self.agent_executor = create_agent(
-            self.llm,
+        self.agent = create_base_agent(
+            self.model,
             tools,
             system_prompt,
             team_members,
@@ -65,7 +64,7 @@ class BaseAgent(ABC):
         Returns:
             A dictionary representing the updated state.
         """
-        return self.agent_executor.invoke(state)
+        return self.agent.invoke(state)
 
     @abstractmethod
     def _get_system_prompt(self) -> str:

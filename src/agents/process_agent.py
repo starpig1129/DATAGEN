@@ -1,9 +1,17 @@
-from langchain.agents import create_openai_functions_agent, AgentExecutor
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
+from pydantic import BaseModel, Field
+from typing import Literal
+
 from .base import BaseAgent
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-
+class RouteSchema(BaseModel):
+    """Select the next role and assign a task."""
+    next: Literal["FINISH", "Visualization", "Search", "Coder", "Report"] = Field(
+        description="The next role to act"
+    )
+    task: str = Field(
+        description="The task to be performed by the selected agent"
+    )
 class ProcessAgent(BaseAgent):
     """Agent responsible for overseeing and coordinating the data analysis project."""
 
@@ -73,35 +81,8 @@ class ProcessAgent(BaseAgent):
         """
 
         members = ["Visualization", "Search", "Coder", "Report"]
-
-        # Create the agent executor directly (moved from create_supervisor)
         options = ["FINISH"] + members
 
-        # Define the function for routing and task assignment
-        function_def = {
-            "name": "route",
-            "description": "Select the next role and assign a task.",
-            "parameters": {
-                "title": "routeSchema",
-                "type": "object",
-                "properties": {
-                    "next": {
-                        "title": "Next",
-                        "anyOf": [
-                            {"enum": options},
-                        ],
-                    },
-                    "task": {
-                        "title": "Task",
-                        "type": "string",
-                        "description": "The task to be performed by the selected agent"
-                    }
-                },
-                "required": ["next", "task"],
-            },
-        }
-
-        # Create the prompt template
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system_prompt),
@@ -115,11 +96,10 @@ class ProcessAgent(BaseAgent):
             ]
         ).partial(options=str(options), team_members=", ".join(members))
 
-        # Create the agent executor
-        self.agent_executor = (
+        # Create the agent with structured output
+        self.agent = (
             prompt
-            | self.llm.bind_functions(functions=[function_def], function_call="route")
-            | JsonOutputFunctionsParser()
+            | self.llm.with_structured_output(RouteSchema)
         )
 
     def _get_system_prompt(self) -> str:

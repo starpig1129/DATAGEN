@@ -1,6 +1,6 @@
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
-from langchain.agents import load_tools
+from langchain_community.agent_toolkits.load_tools import load_tools
 
 from .base import BaseAgent
 from ..tools.FileEdit import create_document, read_document, collect_data
