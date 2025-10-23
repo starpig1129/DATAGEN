@@ -4,6 +4,6 @@ settings.json
 settings.json.backup
 *.log
 *.csv
-data_storage/*
+data/*
 *__pycache__/
 chromedriver/*

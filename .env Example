@@ -1,5 +1,5 @@
 # Your data storage path(required)
-WORKING_DIRECTORY =./data_storage/
+WORKING_DIRECTORY =./data
 
 # Anaconda installation path(required)
 CONDA_PATH = /home/user/anaconda3
