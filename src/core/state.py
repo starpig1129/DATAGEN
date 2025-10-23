@@ -1,5 +1,6 @@
 from langchain_core.messages import BaseMessage
 from typing import Sequence, TypedDict
+from typing_extensions import NotRequired
 from pydantic import BaseModel, Field
 
 class State(TypedDict):
@@ -8,34 +9,34 @@ class State(TypedDict):
     messages: Sequence[BaseMessage]
 
     # The complete content of the research hypothesis
-    hypothesis: str = ""
+    hypothesis: NotRequired[str]
     
     # The complete content of the research process
-    process: str = ""
+    process: NotRequired[str]
     
     # next process
-    process_decision: str = ""
+    process_decision: NotRequired[str]
     
     # The current state of data visualization planning and execution
-    visualization_state: str = ""
+    visualization_state: NotRequired[str]
     
     # The current state of the search process, including queries and results
-    searcher_state: str = ""
+    searcher_state: NotRequired[str]
     
     # The current state of Coder development, including scripts and outputs
-    code_state: str = ""
+    code_state: NotRequired[str]
     
     # The content of the report sections being written
-    report_section: str = ""
+    report_section: NotRequired[str]
     
     # The feedback and comments from the quality review process
-    quality_review: str = ""
+    quality_review: NotRequired[str]
     
     # A boolean flag indicating if the current output requires revision
-    needs_revision: bool = False
+    needs_revision: NotRequired[bool]
     
     # The identifier of the agent who sent the last message
-    sender: str = ""
+    sender: NotRequired[str]
 
 class NoteState(BaseModel):
     """Pydantic model for the entire state structure."""
