@@ -6,15 +6,9 @@ from .state import State
 from .node import agent_node, human_choice_node, note_agent_node, human_review_node, refiner_node
 from .router import QualityReview_router, hypothesis_router, process_router
 
-from ..agents.hypothesis_agent import create_hypothesis_agent
+from ..agents.factory import AgentFactory
 from ..agents.process_agent import create_process_agent
-from ..agents.visualization_agent import create_visualization_agent
-from ..agents.code_agent import create_code_agent
-from ..agents.search_agent import create_search_agent
-from ..agents.report_agent import create_report_agent
-from ..agents.quality_review_agent import create_quality_review_agent
 from ..agents.note_agent import create_note_agent
-from ..agents.refiner_agent import create_refiner_agent
 
 class WorkflowManager:
     def __init__(self, lm_manager, working_directory):
@@ -39,52 +33,31 @@ class WorkflowManager:
         # Create agents dictionary
         agents = {}
 
-        # Create each agent using their respective creation functions
-        agents["hypothesis_agent"] = create_hypothesis_agent(
-            self._create_model("hypothesis_agent"),
-            self.members,
-            self.working_directory
+        # Create agent factory
+        agent_factory = AgentFactory(
+            language_model_manager=self.lm_manager,
+            team_members=self.members,
+            working_directory=self.working_directory
         )
+
+        # Create each agent using the factory
+        agents["hypothesis_agent"] = agent_factory.create_agent("hypothesis_agent")
 
         agents["process_agent"] = create_process_agent(self._create_model("process_agent"))
 
-        agents["visualization_agent"] = create_visualization_agent(
-            self._create_model("visualization_agent"),
-            self.members,
-            self.working_directory
-        )
+        agents["visualization_agent"] = agent_factory.create_agent("visualization_agent")
 
-        agents["code_agent"] = create_code_agent(
-            self._create_model("code_agent"),
-            self.members,
-            self.working_directory
-        )
+        agents["code_agent"] = agent_factory.create_agent("code_agent")
 
-        agents["searcher_agent"] = create_search_agent(
-            self._create_model("searcher_agent"),
-            self.members,
-            self.working_directory
-        )
+        agents["searcher_agent"] = agent_factory.create_agent("searcher_agent")
 
-        agents["report_agent"] = create_report_agent(
-            self._create_model("report_agent"),
-            self.members,
-            self.working_directory
-        )
+        agents["report_agent"] = agent_factory.create_agent("report_agent")
 
-        agents["quality_review_agent"] = create_quality_review_agent(
-            self._create_model("quality_review_agent"),
-            self.members,
-            self.working_directory
-        )
+        agents["quality_review_agent"] = agent_factory.create_agent("quality_review_agent")
 
         agents["note_agent"] = create_note_agent(self._create_model("note_agent"))
 
-        agents["refiner_agent"] = create_refiner_agent(
-            self._create_model("refiner_agent"),
-            self.members,
-            self.working_directory
-        )
+        agents["refiner_agent"] = agent_factory.create_agent("refiner_agent")
 
         return agents
 
