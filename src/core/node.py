@@ -69,16 +69,16 @@ def human_choice_node(state: State) -> dict:
         print("Invalid input, please try again.")
     
     updates = {
-        "messages": [HumanMessage(content="")],
+        "messages": [],
         "sender": "human"
     }
     
     if choice == "1":
         modification_areas = input("Specify areas to modify: ")
-        updates["messages"][0].content = f"Regenerate hypothesis. Areas: {modification_areas}"
+        updates["messages"] = [HumanMessage(content=f"Regenerate hypothesis. Areas: {modification_areas}")]
         updates["hypothesis"] = ""  # Clear hypothesis
     else:
-        updates["messages"][0].content = "Continue the research process"
+        updates["messages"] = [HumanMessage(content="Continue the research process")]
         updates["process"] = "Continue the research process"
     
     return updates

@@ -22,29 +22,10 @@ def hypothesis_router(state: State) -> NodeType:
         NodeType: 'Hypothesis' if no hypothesis exists, otherwise 'Process'.
     """
     logger.info("Entering hypothesis_router")
-    hypothesis: Union[AIMessage, str, None] = state.get("hypothesis")
-    
-    try:
-        if isinstance(hypothesis, AIMessage):
-            hypothesis_content = hypothesis.content
-            logger.debug("Hypothesis is an AIMessage")
-        elif isinstance(hypothesis, str):
-            hypothesis_content = hypothesis
-            logger.debug("Hypothesis is a string")
-        else:
-            hypothesis_content = ""
-            logger.warning(f"Unexpected hypothesis type: {type(hypothesis)}")
-            
-        if not isinstance(hypothesis_content, str):
-            hypothesis_content = str(hypothesis_content)
-            logger.warning("Converting hypothesis content to string")
-    except Exception as e:
-        logger.error(f"Error processing hypothesis: {e}")
-        hypothesis_content = ""
-    
-    result = "Hypothesis" if not hypothesis_content.strip() else "Process"
-    logger.info(f"hypothesis_router decision: {result}")
-    return result
+    if state.get("process") == "Continue the research process":
+        return "Process"
+    else:
+        return "Hypothesis"
 
 def QualityReview_router(state: State) -> str:
     """

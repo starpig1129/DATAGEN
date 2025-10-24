@@ -1,4 +1,7 @@
 from .openai import OpenAIProvider
+from .anthropic import AnthropicProvider
+from .google import GoogleProvider
+from .ollama import OllamaProvider
 
 
 class ProviderFactory:
@@ -20,5 +23,11 @@ class ProviderFactory:
         """
         if provider_name == "openai":
             return OpenAIProvider()
+        elif provider_name == "anthropic":
+            return AnthropicProvider()
+        elif provider_name == "google":
+            return GoogleProvider()
+        elif provider_name == "ollama":
+            return OllamaProvider()
         else:
             raise NotImplementedError(f"Provider creation for '{provider_name}' is not implemented.")
