@@ -1,5 +1,6 @@
 from langgraph.graph import StateGraph, END, START
 from langgraph.checkpoint.memory import MemorySaver
+from typing import cast
 
 from .state import State
 from .node import agent_node, human_choice_node, note_agent_node, human_review_node, refiner_node
@@ -65,23 +66,36 @@ class WorkflowManager:
         model_class = provider.get_model_class()
         config = self.lm_manager.get_model_config(agent_name)
         return model_class(**config)
-
     def setup_workflow(self):
         """Set up the workflow graph"""
         self.workflow = StateGraph(State)
         
+        # helper wrappers to cast the generic node input to our State type
+        def _wrap_agent_node(agent, name):
+            def action(state, config=None, store=None):
+                return agent_node(cast(State, state), agent, name)
+            return action
+        def _wrap_note_agent(agent, name):
+            def action(state, config=None, store=None):
+                return note_agent_node(cast(State, state), agent, name)
+            return action
+        def _wrap_refiner(agent, name):
+            def action(state, config=None, store=None):
+                return refiner_node(cast(State, state), agent, name)
+            return action
+
         # Add nodes
-        self.workflow.add_node("Hypothesis", lambda state: agent_node(state, self.agents["hypothesis_agent"], "hypothesis_agent"))
-        self.workflow.add_node("Process", lambda state: agent_node(state, self.agents["process_agent"], "process_agent"))
-        self.workflow.add_node("Visualization", lambda state: agent_node(state, self.agents["visualization_agent"], "visualization_agent"))
-        self.workflow.add_node("Search", lambda state: agent_node(state, self.agents["searcher_agent"], "searcher_agent"))
-        self.workflow.add_node("Coder", lambda state: agent_node(state, self.agents["code_agent"], "code_agent"))
-        self.workflow.add_node("Report", lambda state: agent_node(state, self.agents["report_agent"], "report_agent"))
-        self.workflow.add_node("QualityReview", lambda state: agent_node(state, self.agents["quality_review_agent"], "quality_review_agent"))
-        self.workflow.add_node("NoteTaker", lambda state: note_agent_node(state, self.agents["note_agent"], "note_agent"))
+        self.workflow.add_node("Hypothesis", _wrap_agent_node(self.agents["hypothesis_agent"], "hypothesis_agent"))
+        self.workflow.add_node("Process", _wrap_agent_node(self.agents["process_agent"], "process_agent"))
+        self.workflow.add_node("Visualization", _wrap_agent_node(self.agents["visualization_agent"], "visualization_agent"))
+        self.workflow.add_node("Search", _wrap_agent_node(self.agents["searcher_agent"], "searcher_agent"))
+        self.workflow.add_node("Coder", _wrap_agent_node(self.agents["code_agent"], "code_agent"))
+        self.workflow.add_node("Report", _wrap_agent_node(self.agents["report_agent"], "report_agent"))
+        self.workflow.add_node("QualityReview", _wrap_agent_node(self.agents["quality_review_agent"], "quality_review_agent"))
+        self.workflow.add_node("NoteTaker", _wrap_note_agent(self.agents["note_agent"], "note_agent"))
         self.workflow.add_node("HumanChoice", human_choice_node)
         self.workflow.add_node("HumanReview", human_review_node)
-        self.workflow.add_node("Refiner", lambda state: refiner_node(state, self.agents["refiner_agent"], "refiner_agent"))
+        self.workflow.add_node("Refiner", _wrap_refiner(self.agents["refiner_agent"], "refiner_agent"))
 
         # Add edges
         self.workflow.add_edge(START, "Hypothesis")
