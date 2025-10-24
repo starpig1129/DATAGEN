@@ -232,7 +232,7 @@ def refiner_node(state: State, agent: Any, name: str) -> dict:
         result = agent.invoke(refiner_state)
         message = result.get("messages")[-1]
         output = message.content
-        ai_message = AIMessage(content=output.feedback , name=name)
+        ai_message = AIMessage(content=output , name=name)
         
         return {
             "messages": [ai_message],
