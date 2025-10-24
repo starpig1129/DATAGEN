@@ -1,12 +1,12 @@
 from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
-from openai import InternalServerError
-from .state import State
 import logging
 import json
-import re
-import os
 from pathlib import Path
+
+from .state import State
+from ..config import WORKING_DIRECTORY
+
 # Set up logger
 logger = logging.getLogger(__name__)
 
@@ -205,7 +205,7 @@ def refiner_node(state: State, agent: Any, name: str) -> dict:
     """
     try:
         # Get storage path
-        storage_path = Path(os.getenv('STORAGE_PATH', WORKING_DIRECTORY)
+        storage_path = Path(WORKING_DIRECTORY)
         
         # Collect materials
         materials = []
