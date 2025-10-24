@@ -1,3 +1,6 @@
+from typing import List
+
+from ..core.language_models import LanguageModelManager
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, edit_document
 from .base import BaseAgent
@@ -7,7 +10,7 @@ from ..config import WORKING_DIRECTORY
 class ReportAgent(BaseAgent):
     """Agent responsible for drafting comprehensive research reports."""
 
-    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the ReportAgent.
 

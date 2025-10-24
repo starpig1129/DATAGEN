@@ -22,7 +22,7 @@ class WorkflowManager:
         self.workflow = None
         self.memory = None
         self.graph = None
-        self.members = ["Hypothesis", "Process", "Visualization", "Search", "Coder", "Report", "QualityReview", "Refiner"]
+        self.members = ["Hypothesis", "Process", "Visualization", "Search", "Coder", "Report", "QualityReview", "note", "Refiner"]
         self.agents = self.create_agents()
         self.setup_workflow()
 

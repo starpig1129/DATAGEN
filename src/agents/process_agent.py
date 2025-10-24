@@ -1,10 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import Literal ,List
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.agents import create_agent
-from langchain.agents.structured_output import ToolStrategy
-
+from ..core.language_models import LanguageModelManager
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
 
@@ -20,7 +17,7 @@ class ProcessRouteSchema(BaseModel):
 class ProcessAgent(BaseAgent):
     """Agent responsible for overseeing and coordinating the data analysis project."""
 
-    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the ProcessAgent.
 
@@ -29,18 +26,17 @@ class ProcessAgent(BaseAgent):
             team_members: List of team member roles for collaboration.
             working_directory: The directory where the agent's data will be stored.
         """
-        # Set attributes as in BaseAgent
-        self.agent_name = "process_agent"
-        self.language_model_manager = language_model_manager
-        self.team_members = team_members
-        self.working_directory = working_directory
+        super().__init__(
+            agent_name="process_agent",
+            language_model_manager=language_model_manager,
+            team_members=team_members,
+            working_directory=working_directory,
+            response_format=ProcessRouteSchema
+        )
 
-        # Create the language model
-        self.model = self._create_model()
-
-        # Define system prompt and members
-        system_prompt = """
-        You are a research supervisor responsible for overseeing and coordinating a comprehensive data analysis project, resulting in a complete and cohesive research report. Your primary tasks include:
+    def _get_system_prompt(self) -> str:
+        """Get the system prompt for ProcessAgent."""
+        return """SYSTEM_PROMPT:You are a research supervisor responsible for overseeing and coordinating a comprehensive data analysis project, resulting in a complete and cohesive research report. Your primary tasks include:
 
         1. Validating and refining the research hypothesis to ensure it is clear, specific, and testable.
         2. Orchestrating a thorough data analysis process, with all code well-documented and reproducible.
@@ -84,13 +80,6 @@ class ProcessAgent(BaseAgent):
 
         Ensure that the final report delivers a clear, insightful analysis, addressing all aspects of the hypothesis and meeting the highest academic standards.
         """
-        
-        # Create the agent
-        self.agent = create_agent(model=self.model, system_prompt=system_prompt,response_format=ProcessRouteSchema)
-
-    def _get_system_prompt(self) -> str:
-        """Not used in this agent."""
-        return ""
 
     def _get_tools(self):
         """Not used in this agent."""

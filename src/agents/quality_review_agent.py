@@ -1,10 +1,11 @@
-from typing import Literal
+from typing import Literal, List
 from pydantic import BaseModel, Field
 
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, edit_document
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
+from ..core.language_models import LanguageModelManager
 
 class QualityOutput(BaseModel):
     """Pydantic model for quality review output."""
@@ -18,7 +19,7 @@ class QualityOutput(BaseModel):
 class QualityReviewAgent(BaseAgent):
     """Agent responsible for reviewing and ensuring the quality of research outputs."""
 
-    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the QualityReviewAgent.
 
@@ -28,14 +29,15 @@ class QualityReviewAgent(BaseAgent):
             working_directory: The directory where the agent's data will be stored.
         """
         super().__init__(
-            agent_name="quality_review_agent",
-            language_model_manager=language_model_manager,
-            team_members=team_members,
-            working_directory=working_directory
+            agent_name="quality_review_agent", 
+            language_model_manager=language_model_manager, 
+            team_members=team_members, 
+            working_directory=working_directory, 
+            response_format=QualityOutput
         )
 
     def _get_system_prompt(self) -> str:
-        """Get the system prompt for quality review."""
+        """Get the system prompt for the QualityReviewAgent."""
         return '''
         You are a meticulous quality control expert responsible for reviewing and ensuring the high standard of all research outputs. Your tasks include:
 
@@ -47,6 +49,7 @@ class QualityReviewAgent(BaseAgent):
         After your review, if revisions are needed, respond with 'REVISION' as a prefix, set needs_revision=True, and provide specific feedback on parts that need improvement. If no revisions are necessary, respond with 'CONTINUE' as a prefix and set needs_revision=False.
         '''
 
-    def _get_tools(self):
-        """Get the list of tools for quality review."""
+    def _get_tools(self) -> List:
+        """Get the list of tools for the QualityReviewAgent."""
         return [create_document, read_document, edit_document, list_directory]
+

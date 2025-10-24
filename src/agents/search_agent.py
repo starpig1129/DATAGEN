@@ -1,7 +1,10 @@
+from typing import List
+
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_community.agent_toolkits.load_tools import load_tools
 
+from ..core.language_models import LanguageModelManager
 from .base import BaseAgent
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, collect_data
@@ -11,7 +14,7 @@ from ..config import WORKING_DIRECTORY
 class SearchAgent(BaseAgent):
     """Agent responsible for gathering and summarizing research information."""
 
-    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the SearchAgent.
 
