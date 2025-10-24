@@ -6,7 +6,7 @@ from .base import BaseAgent
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, collect_data
 from ..tools.internet import google_search, scrape_webpages
-from ..load_cfg import WORKING_DIRECTORY
+from ..config import WORKING_DIRECTORY
 
 class SearchAgent(BaseAgent):
     """Agent responsible for gathering and summarizing research information."""

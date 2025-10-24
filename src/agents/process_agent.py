@@ -6,7 +6,7 @@ from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
 
 from .base import BaseAgent
-from ..load_cfg import WORKING_DIRECTORY
+from ..config import WORKING_DIRECTORY
 
 class ProcessRouteSchema(BaseModel):
     """Select the next role and assign a task."""

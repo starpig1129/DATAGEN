@@ -1,7 +1,7 @@
 from ..tools.basetool import execute_code, execute_command, list_directory
 from ..tools.FileEdit import read_document
 from .base import BaseAgent
-from ..load_cfg import WORKING_DIRECTORY
+from ..config import WORKING_DIRECTORY
 
 class CodeAgent(BaseAgent):
     """Agent responsible for writing and executing Python code for data processing."""

@@ -4,7 +4,7 @@ import pandas as pd
 from typing import Dict, Annotated, List
 
 from ..logger import setup_logger
-from ..load_cfg import WORKING_DIRECTORY
+from ..config import WORKING_DIRECTORY
 
 # Set up logger
 logger = setup_logger()

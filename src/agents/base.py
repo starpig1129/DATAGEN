@@ -7,7 +7,7 @@ from langchain.agents import create_agent
 
 from ..logger import setup_logger
 from ..core.language_models import LanguageModelManager
-from ..load_cfg import WORKING_DIRECTORY
+from ..config import WORKING_DIRECTORY
 logger = setup_logger()
 
 class BaseAgent(ABC):

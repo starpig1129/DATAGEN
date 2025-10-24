@@ -7,7 +7,7 @@ from langchain_core.messages import BaseMessage
 from ..tools.FileEdit import read_document
 from ..tools.basetool import list_directory
 from .base import BaseAgent
-from ..load_cfg import WORKING_DIRECTORY
+from ..config import WORKING_DIRECTORY
 
 class NoteState(BaseModel):
     """Pydantic model for the entire state structure."""

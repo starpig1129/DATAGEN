@@ -6,7 +6,7 @@ from .base import BaseAgent
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import collect_data
 from ..tools.internet import google_search, scrape_webpages
-from ..load_cfg import WORKING_DIRECTORY
+from ..config import WORKING_DIRECTORY
 
 class HypothesisAgent(BaseAgent):
     """Agent responsible for generating research hypotheses."""

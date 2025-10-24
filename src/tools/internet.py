@@ -7,7 +7,7 @@ from typing import Annotated, List
 from bs4 import BeautifulSoup
 
 from ..logger import setup_logger
-from ..load_cfg import FIRECRAWL_API_KEY,CHROMEDRIVER_PATH
+from ..config import FIRECRAWL_API_KEY,CHROMEDRIVER_PATH
 # Set up logger
 logger = setup_logger()
 
