@@ -5,7 +5,7 @@ import subprocess
 from langchain_core.tools import tool
 
 from ..logger import setup_logger
-from ..config import WORKING_DIRECTORY,CONDA_PATH,CONDA_ENV
+from ..config import WORKING_DIRECTORY,CONDA_ENV
 
 # Initialize logger
 logger = setup_logger()

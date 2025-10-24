@@ -18,13 +18,14 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
         
         if name == "process_agent":
             output = result["structured_response"]    
-            ai_message = AIMessage(content=output.task)
+            ai_message = AIMessage(content=output.task , name=name)
         elif name == "quality_review_agent":
             output = result["structured_response"]
-            ai_message = AIMessage(content=output.feedback)
+            ai_message = AIMessage(content=output.feedback , name=name)
         else:
-            ai_message = result.get("messages")[-1]
-            output = ai_message.content
+            message = result.get("messages")[-1]
+            output = message.content
+            ai_message = AIMessage(content=output, name=name)
 
         updates = {
             "messages": [ai_message],
@@ -51,7 +52,7 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
     except Exception as e:
         logger.error(f"Error in {name}: {str(e)}", exc_info=True)
         return {
-            "messages": [AIMessage(content=f"Error: {str(e)}")],
+            "messages": [AIMessage(content=f"Error: {str(e)}", name=name)],
             "sender": name
         }
 
@@ -82,12 +83,12 @@ def human_choice_node(state: State) -> dict:
     
     return updates
 
-def create_message(message: dict[str, Any], name: str) -> BaseMessage:
+def create_message(message: BaseMessage, name: str) -> BaseMessage:
     """
     Create a BaseMessage object based on the message type.
     """
-    content = message.get("content", "")
-    message_type = message.get("type", "").lower()
+    content = message.content
+    message_type = message.type.lower()
     
     logger.debug(f"Creating message of type {message_type} for {name}")
     return HumanMessage(content=content) if message_type == "human" else AIMessage(content=content, name=name)
@@ -114,10 +115,7 @@ def note_agent_node(state: State, agent: Any, name: str) -> State:
         logger.debug(f"Note agent {name} result: {result}")
         output = result["structured_response"]
 
-        parsed_output = json.loads(output)
-        logger.debug(f"Parsed output: {parsed_output}")
-
-        new_messages = [create_message(msg, name) for msg in parsed_output.get("messages", [])]
+        new_messages = [create_message(msg, name) for msg in output.messages]
         
         messages: list[BaseMessage] = list(new_messages) if new_messages else list(current_messages)
         
@@ -125,15 +123,15 @@ def note_agent_node(state: State, agent: Any, name: str) -> State:
         
         updated_state: State = {
             "messages": combined_messages,
-            "hypothesis": str(parsed_output.get("hypothesis", state.get("hypothesis", ""))),
-            "process": str(parsed_output.get("process", state.get("process", ""))),
-            "process_decision": str(parsed_output.get("process_decision", state.get("process_decision", ""))),
-            "visualization_state": str(parsed_output.get("visualization_state", state.get("visualization_state", ""))),
-            "searcher_state": str(parsed_output.get("searcher_state", state.get("searcher_state", ""))),
-            "code_state": str(parsed_output.get("code_state", state.get("code_state", ""))),
-            "report_section": str(parsed_output.get("report_section", state.get("report_section", ""))),
-            "quality_review": str(parsed_output.get("quality_review", state.get("quality_review", ""))),
-            "needs_revision": bool(parsed_output.get("needs_revision", state.get("needs_revision", False))),
+            "hypothesis": str(output.hypothesis),
+            "process": str(output.process),
+            "process_decision": str(output.process_decision),
+            "visualization_state": str(output.visualization_state),
+            "searcher_state": str(output.searcher_state),
+            "code_state": str(output.code_state),
+            "report_section": str(output.report_section),
+            "quality_review": str(output.quality_review),
+            "needs_revision": bool(output.needs_revision),
             "sender": 'note_agent'
         }
         
@@ -230,14 +228,17 @@ def refiner_node(state: State, agent: Any, name: str) -> dict:
         # Create refiner state
         refiner_state = state.copy()
         refiner_state["messages"] = [HumanMessage(content=report_content)]
-    
+        
         result = agent.invoke(refiner_state)
-        output = result["output"] if isinstance(result, dict) else str(result)
+        message = result.get("messages")[-1]
+        output = message.content
+        ai_message = AIMessage(content=output.feedback , name=name)
         
         return {
-            "messages": [AIMessage(content=output, name=name)],
+            "messages": [ai_message],
             "sender": name
         }
+        
     except Exception as e:
         logger.error(f"Error in refiner_node: {str(e)}", exc_info=True)
         return {"messages": [AIMessage(content=f"Error: {str(e)}", name=name)]}

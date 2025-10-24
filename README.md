@@ -87,9 +87,6 @@ pip install -r requirements.txt
 # Your data storage path(required)
 DATA_STORAGE_PATH =./data_storage/
 
-# Anaconda installation path(required)
-CONDA_PATH = /home/user/anaconda3
-
 # Conda environment name(required)
 CONDA_ENV = envname
 
