@@ -1,12 +1,12 @@
 from ..tools.basetool import execute_code, execute_command, list_directory
 from ..tools.FileEdit import read_document
 from .base import BaseAgent
-
+from ..load_cfg import WORKING_DIRECTORY
 
 class VisualizationAgent(BaseAgent):
     """Agent responsible for creating data visualizations."""
 
-    def __init__(self, language_model_manager, team_members, working_directory='./data_storage/'):
+    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
         """
         Initialize the VisualizationAgent.
 

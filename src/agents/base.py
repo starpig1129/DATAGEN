@@ -7,7 +7,7 @@ from langchain.agents import create_agent
 
 from ..logger import setup_logger
 from ..core.language_models import LanguageModelManager
-
+from ..load_cfg import WORKING_DIRECTORY
 logger = setup_logger()
 
 class BaseAgent(ABC):
@@ -18,7 +18,7 @@ class BaseAgent(ABC):
         agent_name: str,
         language_model_manager: LanguageModelManager,
         team_members: List[str],
-        working_directory: str = './data_storage/'
+        working_directory: str = WORKING_DIRECTORY
     ):
         """
         Initialize the base agent with common creation logic.
@@ -47,7 +47,6 @@ class BaseAgent(ABC):
             tools,
             system_prompt,
             team_members,
-            working_directory
         )
     def _create_base_agent(
         self,
@@ -55,7 +54,6 @@ class BaseAgent(ABC):
         tools: list,
         role_prompt: str,
         team_members: list[str],
-        working_directory: str = './data_storage/'
         ):
             """Create an agent with the given parameters."""
             

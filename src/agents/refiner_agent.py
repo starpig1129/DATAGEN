@@ -6,12 +6,12 @@ from .base import BaseAgent
 from  ..tools.basetool import list_directory
 from ..tools.internet import google_search, scrape_webpages
 from ..tools.FileEdit import create_document, read_document, edit_document
-
+from ..load_cfg import WORKING_DIRECTORY
 
 class RefinerAgent(BaseAgent):
     """Agent responsible for optimizing and enhancing research reports."""
 
-    def __init__(self, language_model_manager, team_members, working_directory='./data_storage/'):
+    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
         """
         Initialize the RefinerAgent.
 

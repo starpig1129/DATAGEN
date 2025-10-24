@@ -7,6 +7,7 @@ from langchain_core.messages import BaseMessage
 from ..tools.FileEdit import read_document
 from ..tools.basetool import list_directory
 from .base import BaseAgent
+from ..load_cfg import WORKING_DIRECTORY
 
 class NoteState(BaseModel):
     """Pydantic model for the entire state structure."""
@@ -28,7 +29,7 @@ class NoteState(BaseModel):
 class NoteAgent(BaseAgent):
     """Agent responsible for taking notes on the research process."""
 
-    def __init__(self, language_model_manager, team_members, working_directory='./data_storage/'):
+    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
         """
         Initialize the NoteAgent.
 

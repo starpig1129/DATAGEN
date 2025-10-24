@@ -6,6 +6,7 @@ from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
 
 from .base import BaseAgent
+from ..load_cfg import WORKING_DIRECTORY
 
 class ProcessRouteSchema(BaseModel):
     """Select the next role and assign a task."""
@@ -19,7 +20,7 @@ class ProcessRouteSchema(BaseModel):
 class ProcessAgent(BaseAgent):
     """Agent responsible for overseeing and coordinating the data analysis project."""
 
-    def __init__(self, language_model_manager, team_members, working_directory='./data_storage/'):
+    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
         """
         Initialize the ProcessAgent.
 

@@ -205,7 +205,7 @@ def refiner_node(state: State, agent: Any, name: str) -> dict:
     """
     try:
         # Get storage path
-        storage_path = Path(os.getenv('STORAGE_PATH', './data_storage/'))
+        storage_path = Path(os.getenv('STORAGE_PATH', WORKING_DIRECTORY)
         
         # Collect materials
         materials = []

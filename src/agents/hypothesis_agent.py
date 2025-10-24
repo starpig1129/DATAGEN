@@ -6,12 +6,12 @@ from .base import BaseAgent
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import collect_data
 from ..tools.internet import google_search, scrape_webpages
-
+from ..load_cfg import WORKING_DIRECTORY
 
 class HypothesisAgent(BaseAgent):
     """Agent responsible for generating research hypotheses."""
 
-    def __init__(self, language_model_manager, team_members, working_directory='./data_storage/'):
+    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
         """
         Initialize the HypothesisAgent.
 

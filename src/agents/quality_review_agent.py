@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, edit_document
 from .base import BaseAgent
+from ..load_cfg import WORKING_DIRECTORY
 
 class QualityOutput(BaseModel):
     """Pydantic model for quality review output."""
@@ -17,7 +18,7 @@ class QualityOutput(BaseModel):
 class QualityReviewAgent(BaseAgent):
     """Agent responsible for reviewing and ensuring the quality of research outputs."""
 
-    def __init__(self, language_model_manager, team_members, working_directory='./data_storage/'):
+    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
         """
         Initialize the QualityReviewAgent.
 

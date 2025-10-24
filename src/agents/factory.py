@@ -7,12 +7,12 @@ from .refiner_agent import RefinerAgent
 from .hypothesis_agent import HypothesisAgent
 from .process_agent import ProcessAgent
 from .note_agent import NoteAgent
-
+from ..load_cfg import WORKING_DIRECTORY
 
 class AgentFactory:
     """A factory class for creating agents."""
 
-    def __init__(self, language_model_manager, team_members, working_directory='./data_storage/'):
+    def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
         """
         Initialize the AgentFactory.
 
