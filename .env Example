@@ -1,5 +1,5 @@
 # Your data storage path(required)
-WORKING_DIRECTORY =./data
+WORKING_DIRECTORY =./data/
 
 # Conda environment name(required)
 CONDA_ENV = data_assistant
@@ -11,9 +11,12 @@ CHROMEDRIVER_PATH =./chromedriver-linux64/chromedriver
 # Note: If this key is missing, query capabilities may be reduced
 FIRECRAWL_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# OpenAI API key (required)
-# Warning: This key is essential; the program will not run without it
+# OpenAI API key (optional)
 OPENAI_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# Anthropic API key (optional)
+ANTHROPIC_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# Google API key (optional)
+GOOGLE_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # LangChain API key (optional)
 # Used for monitoring the processing

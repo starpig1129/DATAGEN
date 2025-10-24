@@ -1,13 +1,13 @@
 # DATAGEN (Previously AI-Data-Analysis-MultiAgent)
 
-![DATAGEN Banner](DATAGEN.jpg "DATAGEN Banner")
+![DATAGEN Banner](./docs/DATAGEN.jpg "DATAGEN Banner")
 
 ## About DATAGEN
 DATAGEN is a powerful brand name that represents our vision of leveraging artificial intelligence technology for data generation and analysis. The name combines "DATA" and "GEN"(generation), perfectly embodying the core functionality of this project - automated data analysis and research through a multi-agent system.
 
 Visit us at [DATAGEN Digital](https://datagen.digital/)(website under development) to learn more about our vision and services.
 
-![System Architecture](Architecture.png)
+![System Architecture](./docs/Architecture.png)
 ## Overview
 
 DATAGEN is an advanced AI-powered data analysis and research platform that utilizes multiple specialized agents to streamline tasks such as data analysis, visualization, and report generation. Our platform leverages cutting-edge technologies including LangChain, OpenAI's GPT models, and LangGraph to handle complex research processes, integrating diverse AI architectures for optimal performance.
@@ -85,7 +85,7 @@ pip install -r requirements.txt
 **Rename `.env Example` to `.env` and fill all the values**
 ```sh
 # Your data storage path(required)
-DATA_STORAGE_PATH =./data_storage/
+DATA_STORAGE_PATH =./data/
 
 # Conda environment name(required)
 CONDA_ENV = envname
@@ -97,9 +97,12 @@ CHROMEDRIVER_PATH =./chromedriver-linux64/chromedriver
 # Note: If this key is missing, query capabilities may be reduced
 FIRECRAWL_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# OpenAI API key (required)
-# Warning: This key is essential; the program will not run without it
+# OpenAI API key (optional)
 OPENAI_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# Anthropic API key (optional)
+ANTHROPIC_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# Google API key (optional)
+GOOGLE_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # LangChain API key (optional)
 # Used for monitoring the processing
@@ -176,16 +179,21 @@ agents:
   hypothesis_agent:
     provider: openai
     model_config:
-      model: gpt-5-nano-2025-08-07
+      model: gpt-5-nano
       temperature: 1.0
   note_agent:
-    provider: openai
+    provider: google
     model_config:
-      model: gpt-5-nano-2025-08-07
+      model: gemini-2.5-pro
+      temperature: 1.0
+  code_agent:
+    provider: anthropic
+    model_config:
+      model: claude-haiku-4-5
       temperature: 1.0
 ```
 
-- **provider**: Specifies the language model provider (currently supports `openai`)
+- **provider**: Specifies the language model provider to use (e.g., openai, google, anthropic)
 - **model_config**: Contains model-specific configuration parameters
   - `model`: The specific model name to use
   - `temperature`: Controls the randomness of model output (range: 0.0-2.0)
