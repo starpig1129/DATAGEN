@@ -18,7 +18,10 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
         
         if name == "process_agent":
             output = result["structured_response"]    
-            ai_message = AIMessage(content=output.task)  
+            ai_message = AIMessage(content=output.task)
+        elif name == "quality_review_agent":
+            output = result["structured_response"]
+            ai_message = AIMessage(content=output.feedback)
         else:
             ai_message = result.get("messages")[-1]
             output = ai_message.content
@@ -40,8 +43,8 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
         elif name == "report_agent":
             updates["report_section"] = output
         elif name == "quality_review_agent":
-            updates["quality_review"] = output
-            updates["needs_revision"] = "revision needed" in output.lower()
+            updates["quality_review"] = output.feedback
+            updates["needs_revision"] = output.needs_revision
         
         return updates
         

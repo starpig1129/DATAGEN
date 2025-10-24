@@ -10,7 +10,7 @@ FIRECRAWL_API_KEY = os.getenv('FIRECRAWL_API_KEY')
 # Get working directory from environment variable
 WORKING_DIRECTORY = os.getenv('WORKING_DIRECTORY', './data')
 # Get Conda-related paths from environment variables
-CONDA_PATH = os.getenv('CONDA_PATH', '/home/user/anaconda3')
+CONDA_PATH = os.environ.get('CONDA_PATH', os.path.expanduser('~/anaconda3'))
 CONDA_ENV = os.getenv('CONDA_ENV', 'base')
 # Get ChromeDriver
 CHROMEDRIVER_PATH = os.getenv('CHROMEDRIVER_PATH', './chromedriver/chromedriver')

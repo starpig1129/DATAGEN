@@ -17,26 +17,17 @@ if not os.path.exists(WORKING_DIRECTORY):
 
 def get_platform_specific_command(command: str) -> tuple:
     """
-    Get platform-specific command execution details.
+    Get platform-specific command execution details using conda run.
     Returns a tuple of (shell_command, shell_type, executable)
     """
+    conda_command = f"conda run -n {CONDA_ENV} {command}"
+    
     system = platform.system().lower()
     if system == "windows":
-        # Windows-specific command
-        conda_commands = [
-            f"call {os.path.join(CONDA_PATH, 'Scripts', 'activate.bat')}",
-            f"conda activate {CONDA_ENV}",
-            command
-        ]
-        return (" && ".join(conda_commands), True, None)
+        return (conda_command, True, None)
     else:
-        # Unix-like systems (Linux, macOS)
-        conda_commands = [
-            f"source {os.path.join(CONDA_PATH, 'etc/profile.d/conda.sh')}",
-            f"conda activate {CONDA_ENV}",
-            command
-        ]
-        return (" && ".join(conda_commands), True, "/bin/bash")
+        return (conda_command, True, "/bin/bash")
+
 
 @tool
 def execute_code(
@@ -155,15 +146,14 @@ def execute_command(
 logger.info("Module initialized successfully")
 
 @tool
-def list_directory(directory: Annotated[str, "Path to the directory to list."] = WORKING_DIRECTORY) -> Annotated[str, "Contents of the directory"]:
-    """
-    List the contents of the specified directory.
-    """
+def list_directory(directory: Annotated[str, "Path to the directory to list."]
+) -> Annotated[str, "Contents of the directory"]:
+    """List the contents of the specified directory."""
     try:
+        if not directory:
+            directory = WORKING_DIRECTORY
         logger.info(f"Listing contents of directory: {directory}")
         contents = os.listdir(directory)
-        logger.debug(f"Directory contents: {contents}")
         return f"Directory contents:\n" + "\n".join(contents)
     except Exception as e:
-        logger.error(f"Error listing directory contents: {str(e)}")
-        return f"Error listing directory contents: {str(e)}"
+        return f"Error: {str(e)}"

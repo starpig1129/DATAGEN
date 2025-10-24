@@ -1,7 +1,9 @@
 import os
+from typing import Annotated, List
+from pydantic import BaseModel, Field
+
 from langchain_core.tools import tool
 import pandas as pd
-from typing import Dict, Annotated, List
 
 from ..logger import setup_logger
 from ..config import WORKING_DIRECTORY
@@ -130,52 +132,36 @@ def write_document(
         logger.error(f"Error while saving document: {str(e)}")
         return f"Error while saving document: {str(e)}"
 
+class LineInsert(BaseModel):
+    line_number: int = Field(description="Line number to insert at")
+    text: str = Field(description="Text to insert")
+
+
 @tool
 def edit_document(
     file_name: Annotated[str, "Name of the file to edit"],
-    inserts: Annotated[Dict[int, str], "Dictionary of line numbers and text to insert"]
+    inserts: Annotated[List[LineInsert], "List of line insertions"]
 ) -> Annotated[str, "Message indicating where the document was saved"]:
-    """
-    Edit a document by inserting text at specific line numbers.
-
-    This function reads an existing document, inserts new text at specified line numbers,
-    and saves the modified document.
-
-    Example:
-        file_name = "example.txt"
-        inserts = {
-            1: "This is the first line to insert.",
-            3: "This is the third line to insert."
-        }
-        result = edit_document(file_name=file_name, inserts=inserts)
-        print(result)
-        # Output: "Document edited and saved to /path/to/example.txt"
-    """
+    """Edit a document by inserting text at specific line numbers."""
     try:
         file_path = normalize_path(file_name)
-        logger.info(f"Editing document: {file_path}")
         with open(file_path, "r", encoding='utf-8') as file:
             lines = file.readlines()
 
-        sorted_inserts = sorted(inserts.items())
+        inserts_dict = {insert.line_number: insert.text for insert in inserts}
+        sorted_inserts = sorted(inserts_dict.items())
 
         for line_number, text in sorted_inserts:
             if 1 <= line_number <= len(lines) + 1:
                 lines.insert(line_number - 1, text + "\n")
-            else:
-                logger.error(f"Line number out of range: {line_number}")
-                return f"Error: Line number {line_number} is out of range."
-
+        
         with open(file_path, "w", encoding='utf-8') as file:
             file.writelines(lines)
-
-        logger.info(f"Document edited successfully: {file_path}")
+        
         return f"Document edited and saved to {file_path}"
-    except FileNotFoundError:
-        logger.error(f"File not found: {file_name}")
-        return f"Error: The file {file_name} was not found."
     except Exception as e:
-        logger.error(f"Error while editing document: {str(e)}")
         return f"Error while editing document: {str(e)}"
+
+
 
 logger.info("Document management tools initialized")
