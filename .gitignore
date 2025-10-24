@@ -1,9 +1,6 @@
 .env
-config.yaml
-settings.json
-settings.json.backup
 *.log
-*.csv
 data/*
 *__pycache__/
-chromedriver/*
+chromedriver
+.roomodes

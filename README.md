@@ -165,6 +165,32 @@ The system uses LangGraph to create a state graph that manages the entire resear
 
 You can customize the system behavior by modifying the agent creation and workflow definition in `main.ipynb`.
 
+### Agent Model Configuration
+
+Users can customize each agent's language model provider and model configuration by editing the `config/agent_models.yaml` file. This allows for optimization of model selection and parameters based on different agent requirements.
+
+Here's an example structure of `config/agent_models.yaml`:
+
+```yaml
+agents:
+  hypothesis_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-nano-2025-08-07
+      temperature: 1.0
+  note_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-nano-2025-08-07
+      temperature: 1.0
+```
+
+- **provider**: Specifies the language model provider (currently supports `openai`)
+- **model_config**: Contains model-specific configuration parameters
+  - `model`: The specific model name to use
+  - `temperature`: Controls the randomness of model output (range: 0.0-2.0)
+  - `model_kwargs`: (Optional) Additional model-specific parameters, such as `response_format` for specifying response format
+
 ## Notes
 
 - Ensure you have sufficient OpenAI API credits, as the system will make multiple API calls.

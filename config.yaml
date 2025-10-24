@@ -1,0 +1,39 @@
+# 1. Provider Configurations: Central place for provider-level settings.
+provider_configs:
+  openai:
+    api_key_env: OPENAI_API_KEY
+  google:
+    api_key_env: GOOGLE_API_KEY
+    safety_settings:
+      - category: HARM_CATEGORY_HARASSMENT
+        threshold: BLOCK_NONE
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+  ollama:
+    base_url: "http://localhost:11434/v1"
+
+# 2. Model Definitions: Define specific model instances.
+models:
+  default:
+    provider: openai
+    model_name: gpt-4o-mini
+    temperature: 0.2
+  default_json:
+    provider: openai
+    model_name: gpt-4o
+    response_format:
+      type: json_object
+  code_generator:
+    provider: anthropic
+    model_name: claude-sonnet-4-5
+    max_tokens: 4096
+  report_writer:
+    provider: google
+    model_name: gemini-2.5-flash
+
+# 3. Agent to Model Mapping: Map agents to the defined models.
+agent_models:
+  default: default
+  json_model: default_json
+  code_agent: code_generator
+  report_agent: report_writer

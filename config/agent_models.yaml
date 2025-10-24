@@ -1,0 +1,46 @@
+agents:
+  hypothesis_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-nano-2025-08-07
+      temperature: 1.0
+  process_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-2025-08-07
+      temperature: 1.0
+  visualization_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-nano-2025-08-07
+      temperature: 1.0
+  code_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-mini-2025-08-07
+      temperature: 1.0
+  searcher_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-nano-2025-08-07
+      temperature: 1.0
+  report_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-nano-2025-08-07
+      temperature: 1.0
+  quality_review_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-mini-2025-08-07
+      temperature: 1.0
+  note_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-2025-08-07
+      temperature: 1.0
+  refiner_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-nano-2025-08-07
+      temperature: 1.0
