@@ -1,5 +1,7 @@
+from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, edit_document
 from .base import BaseAgent
+
 
 
 class ReportAgent(BaseAgent):
@@ -40,4 +42,4 @@ class ReportAgent(BaseAgent):
 
     def _get_tools(self):
         """Get the list of tools for report writing."""
-        return [create_document, read_document, edit_document]
+        return [create_document, read_document, edit_document,list_directory]

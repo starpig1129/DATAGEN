@@ -1,11 +1,14 @@
+import os
 from abc import ABC, abstractmethod
 from typing import List
 
 from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
 
-from ..create_agent import create_base_agent
+from ..logger import setup_logger
 from ..core.language_models import LanguageModelManager
 
+logger = setup_logger()
 
 class BaseAgent(ABC):
     """An abstract base class for all agents."""
@@ -39,13 +42,53 @@ class BaseAgent(ABC):
         tools = self._get_tools()
 
         # Create the agent executor using the common create_agent function
-        self.agent = create_base_agent(
+        self.agent = self._create_base_agent(
             self.model,
             tools,
             system_prompt,
             team_members,
             working_directory
         )
+    def _create_base_agent(
+        self,
+        model,
+        tools: list,
+        role_prompt: str,
+        team_members: list[str],
+        working_directory: str = './data_storage/'
+        ):
+            """Create an agent with the given parameters."""
+            
+            logger.info("Creating agent")
+
+            # Prepare system prompt
+            tool_names = ", ".join([tool.name for tool in tools])
+            team_members_str = ", ".join(team_members)
+
+            system_prompt = (
+                "You are a specialized AI assistant in a data analysis team. "
+                "Your role is to complete specific tasks in the research process. "
+                "Use the provided tools to make progress on your task. "
+                "If you can't fully complete a task, explain what you've done and what's needed next. "
+                "Always aim for accurate and clear outputs. "
+                f"You have access to the following tools: {tool_names}. "
+                f"Your specific role: {role_prompt}\n"
+                "Work autonomously according to your specialty, using the tools available to you. "
+                "Do not ask for clarification. "
+                "Your other team members (and other teams) will collaborate with you based on their specialties. "
+                f"You are chosen for a reason! You are one of the following team members: {team_members_str}.\n"
+                "Use the ListDirectoryContents tool to check for updates in the directory contents when needed."
+            )
+
+            # Create agent
+            agent = create_agent(
+                model=model,
+                tools=tools,
+                system_prompt=system_prompt
+            )
+            
+            logger.info("Agent created successfully")
+            return agent
 
     def _create_model(self) -> ChatOpenAI:
         """Create a model instance for this agent."""

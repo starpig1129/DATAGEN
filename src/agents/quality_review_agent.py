@@ -1,6 +1,18 @@
+from typing import Literal
+from pydantic import BaseModel, Field
+
+from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, edit_document
 from .base import BaseAgent
 
+class QualityOutput(BaseModel):
+    """Pydantic model for quality review output."""
+    next: Literal["CONTINUE", "REVISION"] = Field(
+        description="Indicates whether to continue or request revision"
+    )
+    feedback: str = Field(
+        description="Specific feedback on parts that need improvement"
+    )
 
 class QualityReviewAgent(BaseAgent):
     """Agent responsible for reviewing and ensuring the quality of research outputs."""
@@ -36,4 +48,4 @@ class QualityReviewAgent(BaseAgent):
 
     def _get_tools(self):
         """Get the list of tools for quality review."""
-        return [create_document, read_document, edit_document]
+        return [create_document, read_document, edit_document, list_directory]

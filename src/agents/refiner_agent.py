@@ -3,6 +3,7 @@ from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_community.agent_toolkits.load_tools import load_tools
 
 from .base import BaseAgent
+from  ..tools.basetool import list_directory
 from ..tools.internet import google_search, scrape_webpages_with_fallback
 from ..tools.FileEdit import create_document, read_document, edit_document
 
@@ -58,7 +59,8 @@ class RefinerAgent(BaseAgent):
             edit_document,
             wikipedia,
             google_search,
-            scrape_webpages_with_fallback
+            scrape_webpages_with_fallback,
+            list_directory
         ] + load_tools(["arxiv"])
 
         return base_tools

@@ -5,6 +5,7 @@ from langchain.agents import create_agent
 from langchain_core.messages import BaseMessage
 
 from ..tools.FileEdit import read_document
+from ..tools.basetool import list_directory
 from .base import BaseAgent
 
 class NoteState(BaseModel):
@@ -46,7 +47,7 @@ class NoteAgent(BaseAgent):
         self.model = self._create_model()
 
         # Define tools and system prompt
-        tools = [read_document]
+        tools = [read_document, list_directory]
         system_prompt = '''
         You are a meticulous research process note-taker. Your main responsibility is to observe, summarize, and document the actions and findings of the research team. Your tasks include:
 

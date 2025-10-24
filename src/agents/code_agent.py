@@ -1,4 +1,4 @@
-from ..tools.basetool import execute_code, execute_command
+from ..tools.basetool import execute_code, execute_command, list_directory
 from ..tools.FileEdit import read_document
 from .base import BaseAgent
 
@@ -40,4 +40,4 @@ class CodeAgent(BaseAgent):
 
     def _get_tools(self):
         """Get the list of tools for code generation and execution."""
-        return [read_document, execute_code, execute_command]
+        return [read_document, execute_code, execute_command, list_directory]

@@ -163,3 +163,23 @@ def execute_command(
         return f"Error: {e.stderr}"
 
 logger.info("Module initialized successfully")
+
+@tool
+def list_directory(directory: str = './data_storage/') -> str:
+    """
+    List the contents of the specified directory.
+    
+    Args:
+        directory (str): The path to the directory to list. Defaults to the data storage directory.
+    
+    Returns:
+        str: A string representation of the directory contents.
+    """
+    try:
+        logger.info(f"Listing contents of directory: {directory}")
+        contents = os.listdir(directory)
+        logger.debug(f"Directory contents: {contents}")
+        return f"Directory contents:\n" + "\n".join(contents)
+    except Exception as e:
+        logger.error(f"Error listing directory contents: {str(e)}")
+        return f"Error listing directory contents: {str(e)}"
