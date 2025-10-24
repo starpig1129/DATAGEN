@@ -1,10 +1,28 @@
-from langchain.agents import create_agent
-from langchain.agents.structured_output import ToolStrategy
+from pydantic import BaseModel, Field
+from typing import Sequence
 
-from ..core.state import NoteState
+from langchain.agents import create_agent
+from langchain_core.messages import BaseMessage
+
 from ..tools.FileEdit import read_document
 from .base import BaseAgent
 
+class NoteState(BaseModel):
+    """Pydantic model for the entire state structure."""
+    messages: Sequence[BaseMessage] = Field(default_factory=list, description="List of message dictionaries")
+    hypothesis: str = Field(default="", description="Current research hypothesis")
+    process: str = Field(default="", description="Current research process")
+    process_decision: str = Field(default="", description="Decision about the next process step")
+    visualization_state: str = Field(default="", description="Current state of data visualization")
+    searcher_state: str = Field(default="", description="Current state of the search process")
+    code_state: str = Field(default="", description="Current state of code development")
+    report_section: str = Field(default="", description="Content of the report sections")
+    quality_review: str = Field(default="", description="Feedback from quality review")
+    needs_revision: bool = Field(default=False, description="Flag indicating if revision is needed")
+    sender: str = Field(default="", description="Identifier of the last message sender")
+
+    class Config:
+        arbitrary_types_allowed = True  # Allow BaseMessage type without explicit validator
 
 class NoteAgent(BaseAgent):
     """Agent responsible for taking notes on the research process."""
@@ -41,10 +59,7 @@ class NoteAgent(BaseAgent):
         Your output should be well-organized and easy to integrate with other project documentation.
         '''
 
-        # Create the agent executor directly (moved from create_note_agent)
-        response_format = ToolStrategy(NoteState)
-
-        self.agent = create_agent(model=self.model, tools=tools, system_prompt=system_prompt,response_format=response_format)
+        self.agent = create_agent(model=self.model, tools=tools, system_prompt=system_prompt,response_format=NoteState)
 
     def _get_system_prompt(self) -> str:
         """Not used in this agent."""

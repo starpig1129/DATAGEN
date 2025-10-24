@@ -1,5 +1,5 @@
 from .state import State
-from typing import Literal, Union, Dict, List, Optional
+from typing import Literal, Union, Dict, List, Optional, cast
 from langchain_core.messages import AIMessage
 import logging
 import json
@@ -88,45 +88,17 @@ def process_router(state: State) -> ProcessNodeType:
         ProcessNodeType: The next process node to route to based on the process decision.
     """
     logger.info("Entering process_router")
-    process_decision: Union[AIMessage, Dict, str, None] = state.get("process_decision", "")
+    process_decision = state.get("process_decision", "")
     
-    decision_str: str = ""
-    
-    try:
-        if isinstance(process_decision, AIMessage):
-            logger.debug("Process decision is an AIMessage")
-            try:
-                decision_dict = json.loads(process_decision.content.replace("'", '"'))
-                decision_str = str(decision_dict.get('next', ''))
-            except json.JSONDecodeError as e:
-                logger.warning(f"JSON parse error: {e}. Using content directly.")
-                decision_str = process_decision.content
-        elif isinstance(process_decision, dict):
-            decision_str = str(process_decision.get('next', ''))
-        else:
-            decision_str = str(process_decision)
-    except Exception as e:
-        logger.error(f"Error processing decision: {e}")
-        decision_str = ""
-    
-    # Define valid decisions
     valid_decisions = {"Coder", "Search", "Visualization", "Report"}
     
-    if decision_str in valid_decisions:
-        logger.info(f"Valid process decision: {decision_str}")
-        return decision_str
+    if process_decision in valid_decisions:
+        return cast(ProcessNodeType, process_decision)
     
-    if decision_str == "FINISH":
-        logger.info("Process decision is FINISH. Ending process.")
+    if process_decision == "FINISH":
         return "Refiner"
     
-    # If decision_str is empty or not a valid decision, return "Process"
-    if not decision_str or decision_str not in valid_decisions:
-        logger.warning(f"Invalid or empty process decision: {decision_str}. Defaulting to 'Process'.")
-        return "Process"
-    
-    # Default to "Process"
-    logger.info("Defaulting to 'Process'")
+    logger.warning(f"Invalid decision: {process_decision}. Defaulting to 'Process'.")
     return "Process"
 
 logger.info("Router module initialized")

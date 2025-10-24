@@ -1,6 +1,6 @@
 from typing import Sequence, TypedDict, Annotated
 from typing_extensions import NotRequired
-from pydantic import BaseModel, Field
+
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -41,19 +41,4 @@ class State(TypedDict):
     # The identifier of the agent who sent the last message
     sender: NotRequired[str]
 
-class NoteState(BaseModel):
-    """Pydantic model for the entire state structure."""
-    messages: Sequence[BaseMessage] = Field(default_factory=list, description="List of message dictionaries")
-    hypothesis: str = Field(default="", description="Current research hypothesis")
-    process: str = Field(default="", description="Current research process")
-    process_decision: str = Field(default="", description="Decision about the next process step")
-    visualization_state: str = Field(default="", description="Current state of data visualization")
-    searcher_state: str = Field(default="", description="Current state of the search process")
-    code_state: str = Field(default="", description="Current state of code development")
-    report_section: str = Field(default="", description="Content of the report sections")
-    quality_review: str = Field(default="", description="Feedback from quality review")
-    needs_revision: bool = Field(default=False, description="Flag indicating if revision is needed")
-    sender: str = Field(default="", description="Identifier of the last message sender")
 
-    class Config:
-        arbitrary_types_allowed = True  # Allow BaseMessage type without explicit validator

@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
 from typing import Literal
 
-from .base import BaseAgent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.agents import create_agent
+from langchain.agents.structured_output import ToolStrategy
 
-class RouteSchema(BaseModel):
+from .base import BaseAgent
+
+class ProcessRouteSchema(BaseModel):
     """Select the next role and assign a task."""
     next: Literal["FINISH", "Visualization", "Search", "Coder", "Report"] = Field(
         description="The next role to act"
@@ -12,6 +15,7 @@ class RouteSchema(BaseModel):
     task: str = Field(
         description="The task to be performed by the selected agent"
     )
+    
 class ProcessAgent(BaseAgent):
     """Agent responsible for overseeing and coordinating the data analysis project."""
 
@@ -31,7 +35,7 @@ class ProcessAgent(BaseAgent):
         self.working_directory = working_directory
 
         # Create the language model
-        self.llm = self._create_model()
+        self.model = self._create_model()
 
         # Define system prompt and members
         system_prompt = """
@@ -79,28 +83,9 @@ class ProcessAgent(BaseAgent):
 
         Ensure that the final report delivers a clear, insightful analysis, addressing all aspects of the hypothesis and meeting the highest academic standards.
         """
-
-        members = ["Visualization", "Search", "Coder", "Report"]
-        options = ["FINISH"] + members
-
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", system_prompt),
-                MessagesPlaceholder(variable_name="messages"),
-                (
-                    "system",
-                    "Given the conversation above, who should act next? "
-                    "Or should we FINISH? Select one of: {options}. "
-                    "Additionally, specify the task that the selected role should perform."
-                ),
-            ]
-        ).partial(options=str(options), team_members=", ".join(members))
-
-        # Create the agent with structured output
-        self.agent = (
-            prompt
-            | self.llm.with_structured_output(RouteSchema)
-        )
+        
+        # Create the agent
+        self.agent = create_agent(model=self.model, system_prompt=system_prompt,response_format=ProcessRouteSchema)
 
     def _get_system_prompt(self) -> str:
         """Not used in this agent."""

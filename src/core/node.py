@@ -15,9 +15,13 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
     logger.info(f"Processing agent: {name}")
     try:
         result = agent.invoke(state)
-        output = result["output"] if isinstance(result, dict) and "output" in result else str(result)
         
-        ai_message = AIMessage(content=output, name=name)
+        if name == "process_agent":
+            output = result["structured_response"]    
+            ai_message = AIMessage(content=output.task)  
+        else:
+            ai_message = result.get("messages")[-1]
+            output = ai_message.content
 
         updates = {
             "messages": [ai_message],
@@ -27,26 +31,26 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
         if name == "hypothesis_agent":
             updates["hypothesis"] = output
         elif name == "process_agent":
-            updates["process_decision"] = output
+            updates["process"] = output.task
+            updates["process_decision"] = output.next
         elif name == "visualization_agent":
             updates["visualization_state"] = output
-            logger.info("Visualization state updated")
         elif name == "searcher_agent":
             updates["searcher_state"] = output
-            logger.info("Searcher state updated")
         elif name == "report_agent":
             updates["report_section"] = output
-            logger.info("Report section updated")
         elif name == "quality_review_agent":
             updates["quality_review"] = output
             updates["needs_revision"] = "revision needed" in output.lower()
-
         
         return updates
         
     except Exception as e:
-        logger.error(f"Error: {str(e)}", exc_info=True)
-        return {"messages": [AIMessage(content=f"Error: {str(e)}", name=name)]}
+        logger.error(f"Error in {name}: {str(e)}", exc_info=True)
+        return {
+            "messages": [AIMessage(content=f"Error: {str(e)}")],
+            "sender": name
+        }
 
 def human_choice_node(state: State) -> dict:
     """Handle human input to choose the next step."""
@@ -105,10 +109,9 @@ def note_agent_node(state: State, agent: Any, name: str) -> State:
         
         result = agent.invoke(state)
         logger.debug(f"Note agent {name} result: {result}")
-        output = result["output"] if isinstance(result, dict) and "output" in result else str(result)
+        output = result["structured_response"]
 
-        cleaned_output = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', output)
-        parsed_output = json.loads(cleaned_output)
+        parsed_output = json.loads(output)
         logger.debug(f"Parsed output: {parsed_output}")
 
         new_messages = [create_message(msg, name) for msg in parsed_output.get("messages", [])]
@@ -133,14 +136,6 @@ def note_agent_node(state: State, agent: Any, name: str) -> State:
         
         logger.info("Updated state successfully")
         return updated_state
-
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {e}", exc_info=True)
-        return _create_error_state(state, AIMessage(content=f"Error parsing output: {output}", name=name), name, "JSON decode error")
-
-    except InternalServerError as e:
-        logger.error(f"OpenAI Internal Server Error: {e}", exc_info=True)
-        return _create_error_state(state, AIMessage(content=f"OpenAI Error: {str(e)}", name=name), name, "OpenAI error")
 
     except Exception as e:
         logger.error(f"Unexpected error in note_agent_node: {e}", exc_info=True)
