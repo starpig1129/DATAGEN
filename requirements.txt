@@ -5,6 +5,7 @@ langchain-openai==1.0.1
 langchain-anthropic==1.0.0
 langchain-google-genai==3.0.0
 langchain-ollama==1.0.0
+langchain-groq==1.0.0
 arxiv==2.2.0
 beautifulsoup4==4.14.2
 langgraph==1.0.1
