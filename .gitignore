@@ -1,6 +1,6 @@
 .env
 *.log
-data/*
+data
 *__pycache__/
 chromedriver
 .roomodes
