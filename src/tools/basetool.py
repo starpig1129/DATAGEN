@@ -42,20 +42,15 @@ def get_platform_specific_command(command: str) -> tuple:
 def execute_code(
     input_code: Annotated[str, "The Python code to execute."],
     codefile_name: Annotated[str, "The Python code file name or full path."] = 'code.py'
-):
+) -> Annotated[dict, "Execution result including output and file path"]:
     """
     Execute Python code in a specified conda environment and return the result.
 
     This function takes Python code as input, writes it to a file, executes it in the specified
     conda environment, and returns the output or any errors encountered during execution.
 
-    Args:
-    input_code (str): The Python code to be executed.
-    codefile_name (str): The name of the file to save the code in, or the full path.
-
-    Returns:
-    dict: A dictionary containing the execution result, output, and file path.
     """
+    code_file_path = None
     try:
         # Ensure WORKING_DIRECTORY exists
         os.makedirs(WORKING_DIRECTORY, exist_ok=True)
@@ -133,11 +128,6 @@ def execute_command(
     and returns the output or any errors encountered during execution.
     Please use pip to install the package.
 
-    Args:
-    command (str): The command to be executed in the Conda environment.
-
-    Returns:
-    str: The output of the command or an error message.
     """
     try:
         # Get platform-specific command
@@ -165,15 +155,9 @@ def execute_command(
 logger.info("Module initialized successfully")
 
 @tool
-def list_directory(directory: str = './data_storage/') -> str:
+def list_directory(directory: Annotated[str, "Path to the directory to list."] = WORKING_DIRECTORY) -> Annotated[str, "Contents of the directory"]:
     """
     List the contents of the specified directory.
-    
-    Args:
-        directory (str): The path to the directory to list. Defaults to the data storage directory.
-    
-    Returns:
-        str: A string representation of the directory contents.
     """
     try:
         logger.info(f"Listing contents of directory: {directory}")

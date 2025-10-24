@@ -12,20 +12,12 @@ from ..load_cfg import FIRECRAWL_API_KEY,CHROMEDRIVER_PATH
 logger = setup_logger()
 
 @tool
-def google_search(query: Annotated[str, "The search query to use"]) -> str:
+def google_search(query: Annotated[str, "The search query to use"]) -> Annotated[str, "The top 5 Google search results."]:
     """
     Perform a Google search based on the given query and return the top 5 results.
 
     This function uses Selenium to perform a headless Google search and BeautifulSoup to parse the results.
 
-    Args:
-    query (str): The search query to use.
-
-    Returns:
-    str: A string containing the titles, snippets, and links of the top 5 search results.
-
-    Raises:
-    Exception: If there's an error during the search process.
     """
     try:
         logger.info(f"Performing Google search for query: {query}")
@@ -58,21 +50,12 @@ def google_search(query: Annotated[str, "The search query to use"]) -> str:
     except Exception as e:
         logger.error(f"Error during Google search: {str(e)}")
         return f'Error: {e}'
-@tool
-def scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> str:
+\
+def _scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> Annotated[str, "The scraped content from WebBaseLoader."]:
     """
     Scrape the provided web pages for detailed information using WebBaseLoader.
 
     This function uses the WebBaseLoader to load and scrape the content of the provided URLs.
-
-    Args:
-    urls (List[str]): A list of URLs to scrape.
-
-    Returns:
-    str: A string containing the concatenated content of all scraped web pages.
-
-    Raises:
-    Exception: If there's an error during the scraping process.
     """
     try:
         logger.info(f"Scraping webpages: {urls}")
@@ -84,55 +67,53 @@ def scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> str
     except Exception as e:
         logger.error(f"Error during webpage scraping: {str(e)}")
         raise  # Re-raise the exception to be caught by the calling function
-@tool
-def FireCrawl_scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> str:
+
+def _firecrawl_scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> Annotated[str, "The scraped content from FireCrawl."]:
     """
     Scrape the provided web pages for detailed information using FireCrawlLoader.
 
     This function uses the FireCrawlLoader to load and scrape the content of the provided URLs.
 
-    Args:
-    urls (List[str]): A list of URLs to scrape.
-
-    Returns:
-    Any: The result of the FireCrawlLoader's load operation.
-
-    Raises:
-    Exception: If there's an error during the scraping process or if the API key is not set.
     """
     if not FIRECRAWL_API_KEY:
         raise ValueError("FireCrawl API key is not set")
 
     try:
         logger.info(f"Scraping webpages using FireCrawl: {urls}")
-        loader = FireCrawlLoader(
-            api_key=FIRECRAWL_API_KEY,
-            url=urls,
-            mode="scrape"
-        )
-        result = loader.load()
+        results = []
+        for url in urls:
+            loader = FireCrawlLoader(
+                api_key=FIRECRAWL_API_KEY,
+                url=url,
+                mode="scrape"
+            )
+            res = loader.load()
+            # Normalize different possible return types from the loader
+            if isinstance(res, list):
+                for doc in res:
+                    if hasattr(doc, "page_content"):
+                        results.append(str(doc.page_content))
+                    else:
+                        results.append(str(doc))
+            else:
+                results.append(str(res))
+        aggregated = "\n\n".join(results)
         logger.info("FireCrawl scraping completed successfully")
-        return result
+        return aggregated
     except Exception as e:
         logger.error(f"Error during FireCrawl scraping: {str(e)}")
         raise  # Re-raise the exception to be caught by the calling function
 @tool
-def scrape_webpages_with_fallback(urls: Annotated[List[str], "List of URLs to scrape"]) -> str:
+def scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> Annotated[str, "The scraped content from either FireCrawl or WebBaseLoader."]:
     """
     Attempt to scrape webpages using FireCrawl, falling back to WebBaseLoader if unsuccessful.
-
-    Args:
-    urls (List[str]): A list of URLs to scrape.
-
-    Returns:
-    str: The scraped content from either FireCrawl or WebBaseLoader.
     """
     try:
-        return FireCrawl_scrape_webpages(urls)
+        return _firecrawl_scrape_webpages(urls)
     except Exception as e:
         logger.warning(f"FireCrawl scraping failed: {str(e)}. Falling back to WebBaseLoader.")
         try:
-            return scrape_webpages(urls)
+            return _scrape_webpages(urls)
         except Exception as e:
             logger.error(f"Both scraping methods failed. Error: {str(e)}")
             return f"Error: Unable to scrape webpages using both methods. {str(e)}"

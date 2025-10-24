@@ -5,7 +5,7 @@ from langchain_community.agent_toolkits.load_tools import load_tools
 from .base import BaseAgent
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import collect_data
-from ..tools.internet import google_search, scrape_webpages_with_fallback
+from ..tools.internet import google_search, scrape_webpages
 
 
 class HypothesisAgent(BaseAgent):
@@ -50,7 +50,7 @@ class HypothesisAgent(BaseAgent):
             collect_data,
             wikipedia,
             google_search,
-            scrape_webpages_with_fallback,
+            scrape_webpages,
             list_directory
         ] + load_tools(["arxiv"])
 

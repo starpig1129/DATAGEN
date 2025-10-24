@@ -1,6 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Any
 
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
@@ -97,15 +97,15 @@ class BaseAgent(ABC):
         config = self.language_model_manager.get_model_config(self.agent_name)
         return model_class(**config)
 
-    def invoke(self, state: dict) -> dict:
+    def invoke(self, state: Any) -> Any:
         """
         Invokes the agent with a given state.
 
         Args:
-            state: The current state of the workflow.
+            state: The current state of the workflow, accepts any input understood by the underlying agent.
 
         Returns:
-            A dictionary representing the updated state.
+            The agent's response (type may vary).
         """
         return self.agent.invoke(state)
 

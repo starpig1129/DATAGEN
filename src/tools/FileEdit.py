@@ -1,7 +1,7 @@
 import os
 from langchain_core.tools import tool
 import pandas as pd
-from typing import Dict, Optional, Annotated, List
+from typing import Dict, Annotated, List
 
 from ..logger import setup_logger
 from ..load_cfg import WORKING_DIRECTORY
@@ -34,24 +34,9 @@ def collect_data(
     nrows: Annotated[int | None, "Number of rows to read"] = None,
     usecols: Annotated[list[str] | None, "List of column names to read"] = None,
     skiprows: Annotated[int | None, "Number of rows to skip at the beginning"] = None
-):
+) -> Annotated[pd.DataFrame, "The collected data from the CSV file"]:
     """
     Collect data from a CSV file with selective reading options.
-
-    This function attempts to read a CSV file using different encodings and supports
-    selective data loading to avoid resource overconsumption.
-
-    Args:
-        data_path: Path to the CSV file.
-        nrows: Number of rows to read. If None, reads all rows.
-        usecols: List of column names to read. If None, reads all columns.
-        skiprows: Number of rows to skip at the beginning. If None, starts from the first row.
-
-    Returns:
-        pandas.DataFrame: The data read from the CSV file.
-
-    Raises:
-        ValueError: If unable to read the file with any of the provided encodings.
     """
     data_path = normalize_path(data_path)
     logger.info(f"Attempting to read CSV file: {data_path}")
@@ -76,14 +61,12 @@ def collect_data(
 def create_document(
     points: Annotated[List[str], "List of points to be included in the document"],
     file_name: Annotated[str, "Name of the file to save the document"]
-) -> str:
+) -> Annotated[str, "Message indicating where the document was saved"]:
     """
     Create and save a text document in Markdown format.
 
     This function takes a list of points and writes them as numbered items in a Markdown file.
-    
-    Returns:
-    str: A message indicating where the outline was saved or an error message.
+
     """
     try:
         file_path = normalize_path(file_name)
@@ -100,40 +83,37 @@ def create_document(
 @tool
 def read_document(
     file_name: Annotated[str, "Name of the file to read"],
-    start: Annotated[Optional[int], "Starting line number to read from"] = None,
-    end: Annotated[Optional[int], "Ending line number to read to"] = None
-) -> str:
+    start: Annotated[int, "Starting line number (use 0 for beginning)"],
+    end: Annotated[int, "Ending line number (use -1 for end of file)"]
+) -> Annotated[str, "Content of the document"]:
     """
     Read the specified document.
 
     This function reads a document from the specified file and returns its content.
-    Optionally, it can return a specific range of lines.
 
-    Returns:
-    str: The content of the document or an error message.
     """
     try:
         file_path = normalize_path(file_name)
-        logger.info(f"Reading document: {file_path}")
         with open(file_path, "r", encoding='utf-8') as file:
             lines = file.readlines()
-        if start is None:
-            start = 0
-        content = "\n".join(lines[start:end])
-        logger.info(f"Document read successfully: {file_path}")
+        
+        # Handle special values
+        if start == 0 and end == -1:
+            content = "\n".join(lines)
+        elif end == -1:
+            content = "\n".join(lines[start:])
+        else:
+            content = "\n".join(lines[start:end])
+            
         return content
-    except FileNotFoundError:
-        logger.error(f"File not found: {file_name}")
-        return f"Error: The file {file_name} was not found."
     except Exception as e:
-        logger.error(f"Error while reading document: {str(e)}")
-        return f"Error while reading document: {str(e)}"
+        return f"Error: {str(e)}"
 
 @tool
 def write_document(
     content: Annotated[str, "Content to be written to the document"],
     file_name: Annotated[str, "Name of the file to save the document"]
-) -> str:
+) -> Annotated[str, "Message indicating where the document was saved"]:
     """
     Create and save a Markdown document.
 
@@ -154,19 +134,12 @@ def write_document(
 def edit_document(
     file_name: Annotated[str, "Name of the file to edit"],
     inserts: Annotated[Dict[int, str], "Dictionary of line numbers and text to insert"]
-) -> str:
+) -> Annotated[str, "Message indicating where the document was saved"]:
     """
     Edit a document by inserting text at specific line numbers.
 
     This function reads an existing document, inserts new text at specified line numbers,
     and saves the modified document.
-
-    Args:
-        file_name (str): Name of the file to edit.
-        inserts (Dict[int, str]): Dictionary where keys are line numbers and values are text to insert.
-
-    Returns:
-        str: A message indicating the result of the operation.
 
     Example:
         file_name = "example.txt"
