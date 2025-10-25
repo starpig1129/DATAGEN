@@ -11,11 +11,13 @@ import { onMounted, onUnmounted, watch } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAppStore } from '@/stores/app'
 import { useSettingsStore } from '@/stores/settings'
+import { useRealTimeStore } from '@/stores/realtime'
 import { setLocale } from '@/i18n'
 
 // 應用程式 store
 const appStore = useAppStore()
 const settingsStore = useSettingsStore()
+const realtimeStore = useRealTimeStore()
 
 // 監聽設定變更，全域應用
 watch(() => settingsStore.currentLanguage, async (newLanguage) => {
@@ -35,10 +37,13 @@ watch(() => settingsStore.currentTheme, (newTheme) => {
 // 初始化應用程式
 onMounted(() => {
   appStore.initialize()
-  
+
+  // 初始化 WebSocket 實時連接
+  realtimeStore.initialize()
+
   // 監聽視窗大小變化
   window.addEventListener('resize', handleResize)
-  
+
   // 監聽網路狀態變化
   window.addEventListener('online', handleOnline)
   window.addEventListener('offline', handleOffline)

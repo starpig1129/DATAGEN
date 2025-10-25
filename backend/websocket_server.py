@@ -3,13 +3,18 @@ import json
 import logging
 import websockets
 from websockets.legacy.server import WebSocketServerProtocol
-from typing import Set, Dict, Any
+from typing import Set, Dict, Any, Optional
 from datetime import datetime
 import threading
 import time
 from dataclasses import dataclass, asdict
 from queue import Queue
 import uuid
+
+# 導入 MultiAgentSystem
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 # 配置日誌
 logging.basicConfig(level=logging.INFO)
@@ -334,6 +339,55 @@ async def handle_websocket(websocket: WebSocketServerProtocol):
     finally:
         await ws_manager.unregister(websocket)
 
+async def run_analysis_async(websocket: WebSocketServerProtocol, user_input: str):
+    """異步運行分析任務"""
+    try:
+        # 延遲導入 MultiAgentSystem 以避免循環導入
+        from src.system import MultiAgentSystem
+
+        # 建立 MultiAgentSystem 實例
+        system = MultiAgentSystem()
+
+        # 定義 WebSocket 回調函數
+        def websocket_callback(agent_id: str, status: str, progress: int, task: str):
+            """WebSocket 回調函數，用於廣播代理狀態更新"""
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(ws_manager.send_agent_status(agent_id, status, progress, task))
+            except RuntimeError:
+                # 沒有運行的事件循環，創建新的
+                asyncio.run(ws_manager.send_agent_status(agent_id, status, progress, task))
+
+        # 運行分析
+        system.run(user_input, websocket_callback=websocket_callback)
+
+        # 發送分析完成消息
+        completion_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="analysis_completed",
+            data={
+                "message": "分析已完成",
+                "timestamp": datetime.now().isoformat()
+            },
+            timestamp=int(time.time() * 1000)
+        )
+        await ws_manager.send_to_client(websocket, completion_msg)
+
+    except Exception as e:
+        logger.error(f"分析任務失敗: {e}")
+        # 發送錯誤消息
+        error_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="analysis_error",
+            data={
+                "message": f"分析失敗: {str(e)}",
+                "timestamp": datetime.now().isoformat()
+            },
+            timestamp=int(time.time() * 1000)
+        )
+        await ws_manager.send_to_client(websocket, error_msg)
+
+
 async def handle_client_message(websocket: WebSocketServerProtocol, data: Dict[str, Any]):
     """處理客戶端發送的消息"""
     message_type = data.get("type", "unknown")
@@ -378,7 +432,7 @@ async def handle_client_message(websocket: WebSocketServerProtocol, data: Dict[s
         # 手動觸發更新
         update_type = data.get("updateType", "all")
         logger.info(f"手動觸發更新: {update_type}")
-        
+
         if update_type in ["all", "charts"]:
             # TODO: Replace with actual data from backend logic
             await ws_manager.send_chart_data("performance_chart", {
@@ -388,6 +442,37 @@ async def handle_client_message(websocket: WebSocketServerProtocol, data: Dict[s
                     "data": [12, 19, 15, 17, 14]
                 }]
             })
-            
+
+    elif message_type == "start_analysis":
+        # 處理分析請求
+        user_input = data.get("userInput", "")
+        if not user_input:
+            error_msg = WebSocketMessage(
+                id=str(uuid.uuid4()),
+                type="error",
+                data={"message": "缺少 userInput 參數"},
+                timestamp=int(time.time() * 1000)
+            )
+            await ws_manager.send_to_client(websocket, error_msg)
+            return
+
+        logger.info(f"開始分析: {user_input[:50]}...")
+
+        # 發送分析開始確認
+        start_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="analysis_started",
+            data={
+                "message": "分析已開始",
+                "userInput": user_input,
+                "timestamp": datetime.now().isoformat()
+            },
+            timestamp=int(time.time() * 1000)
+        )
+        await ws_manager.send_to_client(websocket, start_msg)
+
+        # 在新的異步任務中運行分析
+        asyncio.create_task(run_analysis_async(websocket, user_input))
+
     else:
         logger.warning(f"未知消息類型: {message_type}")

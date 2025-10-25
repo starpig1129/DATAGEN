@@ -27,8 +27,13 @@ class MultiAgentSystem:
             os.makedirs(config.WORKING_DIRECTORY)
             self.logger.info(f"Created working directory: {config.WORKING_DIRECTORY}")
 
-    def run(self, user_input: str) -> None:
-        """Run the multi-agent system with user input"""
+    def run(self, user_input: str, websocket_callback=None) -> None:
+        """Run the multi-agent system with user input
+
+        Args:
+            user_input: The user's input for analysis
+            websocket_callback: Optional callback function for WebSocket broadcasting
+        """
         graph = self.workflow_manager.get_graph()
         events = graph.stream(
             {
@@ -119,8 +124,13 @@ class MultiAgentSystem:
                     task_description = "需要修改和優化"
                     progress = 10
 
-                # 呼叫 WebSocket 廣播
-                broadcast_agent_update(agent_name.lower().replace(" ", "_"), status, progress, task_description)
+                # 根據 websocket_callback 的存在決定輸出方式
+                if websocket_callback:
+                    # 通過 WebSocket 廣播代理狀態
+                    websocket_callback(agent_name.lower().replace(" ", "_"), status, progress, task_description)
+                else:
+                    # 直接呼叫 WebSocket 廣播（保持向後兼容性）
+                    broadcast_agent_update(agent_name.lower().replace(" ", "_"), status, progress, task_description)
 
             message = event["messages"][-1]
             if isinstance(message, tuple):

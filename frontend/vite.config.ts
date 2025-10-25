@@ -16,7 +16,7 @@ export default defineConfig({
     }),
     nodePolyfills({
       // 啟用特定的 polyfills
-      include: ['buffer', 'process', 'util'],
+      include: ['buffer', 'process', 'util', 'crypto'],
       // 設定全局變量
       globals: {
         Buffer: true,
