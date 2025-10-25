@@ -18,6 +18,7 @@ class DevServerManager:
 
     def __init__(self):
         self.backend_process: Optional[subprocess.Popen] = None
+        self.backend_http_process: Optional[subprocess.Popen] = None
         self.frontend_process: Optional[subprocess.Popen] = None
         self.running = False
 
@@ -63,6 +64,27 @@ class DevServerManager:
             print(f"❌ 前端服務啟動失敗: {e}")
             raise
 
+    async def start_backend_http(self) -> subprocess.Popen:
+        """啟動後端 HTTP API 服務"""
+        print("🚀 啟動後端 HTTP API 服務...")
+        try:
+            # 切換到 backend 目錄
+            backend_dir = os.path.join(os.path.dirname(__file__), "backend")
+            process = subprocess.Popen(
+                [sys.executable, "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5001", "--reload"],
+                cwd=backend_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            print(f"✅ 後端 HTTP API 服務已啟動 (PID: {process.pid})")
+            return process
+        except Exception as e:
+            print(f"❌ 後端 HTTP API 服務啟動失敗: {e}")
+            raise
+
     def open_browser(self, delay: float = 3.0):
         """打開瀏覽器"""
         def _open_browser():
@@ -78,7 +100,10 @@ class DevServerManager:
         """監控進程狀態"""
         while self.running:
             if self.backend_process and self.backend_process.poll() is not None:
-                print("⚠️  後端服務已停止")
+                print("⚠️  後端 WebSocket 服務已停止")
+                break
+            if self.backend_http_process and self.backend_http_process.poll() is not None:
+                print("⚠️  後端 HTTP API 服務已停止")
                 break
             if self.frontend_process and self.frontend_process.poll() is not None:
                 print("⚠️  前端服務已停止")
@@ -95,14 +120,17 @@ class DevServerManager:
         try:
             # 並發啟動後端和前端服務
             backend_task = asyncio.create_task(self.start_backend())
+            backend_http_task = asyncio.create_task(self.start_backend_http())
             frontend_task = asyncio.create_task(self.start_frontend())
 
             self.backend_process = await backend_task
+            self.backend_http_process = await backend_http_task
             self.frontend_process = await frontend_task
 
             print("=" * 50)
             print("🎉 所有服務已啟動！")
             print("📊 後端 WebSocket 服務: ws://localhost:8765")
+            print("🔗 後端 HTTP API 服務: http://localhost:5001")
             print("🌐 前端開發伺服器: http://localhost:5173")
             print("=" * 50)
 
@@ -127,7 +155,9 @@ class DevServerManager:
         processes_to_stop = []
 
         if self.backend_process:
-            processes_to_stop.append(("後端", self.backend_process))
+            processes_to_stop.append(("後端 WebSocket", self.backend_process))
+        if self.backend_http_process:
+            processes_to_stop.append(("後端 HTTP API", self.backend_http_process))
         if self.frontend_process:
             processes_to_stop.append(("前端", self.frontend_process))
 

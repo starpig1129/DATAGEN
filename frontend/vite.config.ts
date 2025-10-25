@@ -1,9 +1,23 @@
+import { webcrypto } from 'crypto'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
+
+// 同步應用 crypto polyfill - 必須在 Vite 配置解析之前完成
+if (typeof globalThis.crypto === 'undefined') {
+  // @ts-ignore
+  globalThis.crypto = webcrypto
+  console.log('Vite config: Applied crypto polyfill (full webcrypto object)')
+} else if (typeof globalThis.crypto.getRandomValues !== 'function') {
+  // @ts-ignore
+  globalThis.crypto.getRandomValues = webcrypto.getRandomValues.bind(webcrypto)
+  console.log('Vite config: Applied crypto.getRandomValues polyfill')
+} else {
+  console.log('Vite config: crypto.getRandomValues already available')
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -13,16 +27,6 @@ export default defineConfig({
         defineModel: true,
         propsDestructure: true
       }
-    }),
-    nodePolyfills({
-      // 啟用特定的 polyfills
-      include: ['buffer', 'process', 'util', 'crypto'],
-      // 設定全局變量
-      globals: {
-        Buffer: true,
-        global: true,
-        process: true,
-      },
     }),
     AutoImport({
       imports: [
@@ -49,7 +53,9 @@ export default defineConfig({
     Components({
       // 移除 ElementPlusResolver 避免自動導入衝突
       dts: true
-    })
+    }),
+    // 添加 Node.js polyfills 插件來解決瀏覽器端的 Node.js 模組相容性
+    nodePolyfills()
   ],
 
   resolve: {
@@ -64,6 +70,8 @@ export default defineConfig({
       '@assets': resolve(__dirname, 'src/assets'),
       // 添加 buffer polyfill alias
       'buffer': 'buffer',
+      // 直接重定向 crypto 模組到 Node.js crypto
+      'crypto': 'crypto',
     },
   },
 
@@ -108,8 +116,6 @@ export default defineConfig({
   define: {
     __VUE_OPTIONS_API__: false,
     __VUE_PROD_DEVTOOLS__: false,
-    // 為 Plotly.js 定義全局變量
-    global: 'globalThis',
   },
 
   css: {
