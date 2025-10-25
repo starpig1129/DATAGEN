@@ -3,9 +3,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from config.settings import APP_TITLE, APP_DESCRIPTION, APP_VERSION
-from config.cors import get_cors_settings
-
 
 def create_app() -> FastAPI:
     """建立並設定 FastAPI 應用程式實例。
@@ -13,6 +10,9 @@ def create_app() -> FastAPI:
     Returns:
         FastAPI: 設定好的 FastAPI 應用程式實例。
     """
+    from config.settings import APP_TITLE, APP_DESCRIPTION, APP_VERSION
+    from config.cors import get_cors_settings
+
     app = FastAPI(
         title=APP_TITLE,
         description=APP_DESCRIPTION,
