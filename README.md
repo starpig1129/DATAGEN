@@ -1,13 +1,13 @@
 # DATAGEN (Previously AI-Data-Analysis-MultiAgent)
 
-![DATAGEN Banner](DATAGEN.jpg "DATAGEN Banner")
+![DATAGEN Banner](./docs/DATAGEN.jpg "DATAGEN Banner")
 
 ## About DATAGEN
 DATAGEN is a powerful brand name that represents our vision of leveraging artificial intelligence technology for data generation and analysis. The name combines "DATA" and "GEN"(generation), perfectly embodying the core functionality of this project - automated data analysis and research through a multi-agent system.
 
 Visit us at [DATAGEN Digital](https://datagen.digital/)(website under development) to learn more about our vision and services.
 
-![System Architecture](Architecture.png)
+![System Architecture](./docs/Architecture.png)
 ## Overview
 
 DATAGEN is an advanced AI-powered data analysis and research platform that utilizes multiple specialized agents to streamline tasks such as data analysis, visualization, and report generation. Our platform leverages cutting-edge technologies including LangChain, OpenAI's GPT models, and LangGraph to handle complex research processes, integrating diverse AI architectures for optimal performance.
@@ -100,8 +100,8 @@ git clone https://github.com/starpig1129/DATAGEN.git
 ```
 2. Create and activate a Conda virtual environment:
 ```bash
-conda create -n data_assistant python=3.10
-conda activate data_assistant
+conda create -n datagen python=3.10
+conda activate datagen
 ```
 3. Install dependencies:
 ```bash
@@ -111,10 +111,7 @@ pip install -r requirements.txt
 **Rename `.env Example` to `.env` and fill all the values**
 ```sh
 # Your data storage path(required)
-DATA_STORAGE_PATH =./data_storage/
-
-# Anaconda installation path(required)
-CONDA_PATH = /home/user/anaconda3
+DATA_STORAGE_PATH =./data/
 
 # Conda environment name(required)
 CONDA_ENV = envname
@@ -126,9 +123,12 @@ CHROMEDRIVER_PATH =./chromedriver-linux64/chromedriver
 # Note: If this key is missing, query capabilities may be reduced
 FIRECRAWL_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# OpenAI API key (required)
-# Warning: This key is essential; the program will not run without it
+# OpenAI API key (optional)
 OPENAI_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# Anthropic API key (optional)
+ANTHROPIC_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# Google API key (optional)
+GOOGLE_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # LangChain API key (optional)
 # Used for monitoring the processing
@@ -193,6 +193,37 @@ The system uses LangGraph to create a state graph that manages the entire resear
 ## Customization
 
 You can customize the system behavior by modifying the agent creation and workflow definition in `main.ipynb`.
+
+### Agent Model Configuration
+
+Users can customize each agent's language model provider and model configuration by editing the `config/agent_models.yaml` file. This allows for optimization of model selection and parameters based on different agent requirements.
+
+Here's an example structure of `config/agent_models.yaml`:
+
+```yaml
+agents:
+  hypothesis_agent:
+    provider: openai
+    model_config:
+      model: gpt-5-nano
+      temperature: 1.0
+  note_agent:
+    provider: google
+    model_config:
+      model: gemini-2.5-pro
+      temperature: 1.0
+  code_agent:
+    provider: anthropic
+    model_config:
+      model: claude-haiku-4-5
+      temperature: 1.0
+```
+
+- **provider**: Specifies the language model provider to use (e.g., openai, google, anthropic)
+- **model_config**: Contains model-specific configuration parameters
+  - `model`: The specific model name to use
+  - `temperature`: Controls the randomness of model output (range: 0.0-2.0)
+  - `model_kwargs`: (Optional) Additional model-specific parameters, such as `response_format` for specifying response format
 
 ## Notes
 

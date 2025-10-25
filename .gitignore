@@ -1,8 +1,10 @@
 .env
 *.log
-*.csv
-data_storage/*
+data
 *__pycache__/
-chromedriver/*
+chromedriver
 settings.json
 settings.json.backup
+.roomodes
+.vscode
+data
