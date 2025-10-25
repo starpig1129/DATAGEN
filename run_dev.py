@@ -71,7 +71,7 @@ class DevServerManager:
             # 切換到 backend 目錄
             backend_dir = os.path.join(os.path.dirname(__file__), "backend")
             process = subprocess.Popen(
-                [sys.executable, "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5001", "--reload"],
+                [sys.executable, "scripts/run_server.py"],
                 cwd=backend_dir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
