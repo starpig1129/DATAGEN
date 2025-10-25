@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.system import MultiAgentSystem
-from websocket_server import ws_manager
+from websocket_server import ws_manager, handle_fastapi_websocket
 
 # 創建 FastAPI 應用程式
 app = FastAPI(
@@ -67,7 +67,16 @@ class AnalysisResponse(BaseModel):
     message: str
     timestamp: str
 
+class SettingsRequest(BaseModel):
+    """設定請求"""
+    settings: Dict[str, Any]
+
 # API 路由
+
+@app.websocket("/stream")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket 端點"""
+    await handle_fastapi_websocket(websocket)
 
 @app.get("/api/system/status", response_model=SystemStatusResponse)
 async def get_system_status():
@@ -96,6 +105,15 @@ async def get_system_status():
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"獲取系統狀態失敗: {str(e)}")
+
+@app.get("/api/state")
+async def get_state():
+    """獲取應用程式狀態"""
+    return {
+        "status": "ready",
+        "agent_models": [],
+        "version": "1.0.0"
+    }
 
 @app.get("/api/files/content/{file_path:path}", response_model=FileContentResponse)
 async def get_file_content(file_path: str):
@@ -207,6 +225,55 @@ async def list_files(directory: str = ""):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"列出文件失敗: {str(e)}")
 
+@app.get("/api/files")
+async def get_files():
+    """獲取可用檔案清單"""
+    try:
+        # 構造完整路徑
+        base_path = Path.cwd()
+        full_path = base_path
+
+        # 確保目錄在專案目錄內
+        if not str(full_path).startswith(str(base_path)):
+            raise HTTPException(status_code=403, detail="禁止訪問")
+
+        # 檢查是否為目錄
+        if not full_path.exists():
+            raise HTTPException(status_code=404, detail="目錄不存在")
+
+        if not full_path.is_dir():
+            raise HTTPException(status_code=400, detail="路徑不是目錄")
+
+        # 獲取文件列表
+        files = []
+        for item in full_path.iterdir():
+            if item.is_file():
+                stat = item.stat()
+                files.append({
+                    "name": item.name,
+                    "path": str(item.relative_to(base_path)),
+                    "size": stat.st_size,
+                    "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "is_file": True
+                })
+            elif item.is_dir():
+                files.append({
+                    "name": item.name,
+                    "path": str(item.relative_to(base_path)),
+                    "is_file": False
+                })
+
+        return {
+            "directory": "",
+            "files": files,
+            "total_count": len(files)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"獲取檔案清單失敗: {str(e)}")
+
 @app.post("/api/analysis/start", response_model=AnalysisResponse)
 async def start_analysis(request: AnalysisRequest):
     """開始分析任務"""
@@ -261,6 +328,16 @@ async def get_agents_status():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"獲取代理狀態失敗: {str(e)}")
+
+@app.post("/api/settings")
+async def update_settings(request: SettingsRequest):
+    """更新設定"""
+    try:
+        # TODO: 實現設定持久化邏輯
+        # 目前僅返回成功消息
+        return {"status": "settings updated", "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新設定失敗: {str(e)}")
 
 @app.get("/health")
 async def health_check():

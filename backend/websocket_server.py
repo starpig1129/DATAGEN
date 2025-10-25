@@ -3,7 +3,7 @@ import json
 import logging
 import websockets
 from websockets.legacy.server import WebSocketServerProtocol
-from typing import Set, Dict, Any, Optional
+from typing import Set, Dict, Any, Optional, Union
 from datetime import datetime
 import threading
 import time
@@ -31,14 +31,14 @@ class WebSocketMessage:
 
 class WebSocketManager:
     """WebSocket 連接管理器"""
-    
+
     def __init__(self):
-        self.connections: Set[WebSocketServerProtocol] = set()
-        self.client_info: Dict[WebSocketServerProtocol, Dict[str, Any]] = {}
+        self.connections: Set[Union[WebSocketServerProtocol, Any]] = set()
+        self.client_info: Dict[Union[WebSocketServerProtocol, Any], Dict[str, Any]] = {}
         self.message_queue = Queue()
         self.running = False
         
-    async def register(self, websocket: WebSocketServerProtocol, client_data: Dict[str, Any] = None):
+    async def register(self, websocket: Union[WebSocketServerProtocol, Any], client_data: Optional[Dict[str, Any]] = None):
         """註冊新的 WebSocket 連接"""
         self.connections.add(websocket)
         self.client_info[websocket] = client_data or {}
@@ -62,7 +62,7 @@ class WebSocketManager:
         # 發送系統狀態
         await self.send_system_status(websocket)
 
-    async def unregister(self, websocket: WebSocketServerProtocol):
+    async def unregister(self, websocket: Union[WebSocketServerProtocol, Any]):
         """註銷 WebSocket 連接"""
         self.connections.discard(websocket)
         if websocket in self.client_info:
@@ -70,17 +70,21 @@ class WebSocketManager:
             
         logger.info(f"客戶端斷開連接: {websocket.remote_address}, 剩餘連接數: {len(self.connections)}")
 
-    async def send_to_client(self, websocket: WebSocketServerProtocol, message: WebSocketMessage):
+    async def send_to_client(self, websocket: Union[WebSocketServerProtocol, Any], message: WebSocketMessage):
         """向特定客戶端發送消息"""
         try:
             message_json = json.dumps(asdict(message), ensure_ascii=False)
-            await websocket.send(message_json)
-            logger.debug(f"消息已發送到 {websocket.remote_address}: {message.type}")
-        except websockets.exceptions.ConnectionClosed:
-            logger.warning(f"嘗試向已關閉的連接發送消息: {websocket.remote_address}")
-            await self.unregister(websocket)
+            # 檢查 WebSocket 類型並使用適當的方法
+            if hasattr(websocket, 'send_text'):
+                # FastAPI WebSocket
+                await websocket.send_text(message_json)
+            else:
+                # websockets WebSocket
+                await websocket.send(message_json)
+            logger.debug(f"消息已發送到 {getattr(websocket, 'remote_address', getattr(websocket, 'client', 'unknown'))}: {message.type}")
         except Exception as e:
-            logger.error(f"發送消息失敗 {websocket.remote_address}: {e}")
+            logger.error(f"發送消息失敗 {getattr(websocket, 'remote_address', getattr(websocket, 'client', 'unknown'))}: {e}")
+            await self.unregister(websocket)
 
     async def broadcast(self, message: WebSocketMessage, exclude: WebSocketServerProtocol = None):
         """廣播消息給所有連接的客戶端"""
@@ -299,20 +303,20 @@ def broadcast_chart_update(chart_id: str, chart_data: Dict[str, Any]):
             asyncio.run(ws_manager.send_chart_data(chart_id, chart_data))
 
 async def handle_websocket(websocket: WebSocketServerProtocol):
-    """處理 WebSocket 連接"""
+    """處理 WebSocket 連接 (原始 websockets 版本)"""
     try:
         # 等待客戶端初始化消息
         init_message = await asyncio.wait_for(websocket.recv(), timeout=10.0)
-        
+
         try:
             init_data = json.loads(init_message)
             logger.info(f"收到初始化消息: {init_data}")
         except json.JSONDecodeError:
             init_data = {"type": "init", "clientId": "unknown"}
-        
+
         # 註冊客戶端
         await ws_manager.register(websocket, init_data)
-        
+
         # 處理客戶端消息
         async for message in websocket:
             try:
@@ -329,7 +333,7 @@ async def handle_websocket(websocket: WebSocketServerProtocol):
                 await ws_manager.send_to_client(websocket, error_msg)
             except Exception as e:
                 logger.error(f"處理客戶端消息失敗: {e}")
-                
+
     except asyncio.TimeoutError:
         logger.warning(f"客戶端初始化超時: {websocket.remote_address}")
     except websockets.exceptions.ConnectionClosed:
@@ -339,8 +343,114 @@ async def handle_websocket(websocket: WebSocketServerProtocol):
     finally:
         await ws_manager.unregister(websocket)
 
+
+async def handle_fastapi_websocket(websocket: Any):
+    """處理 FastAPI WebSocket 連接"""
+    try:
+        # 等待客戶端初始化消息
+        init_message = await asyncio.wait_for(websocket.receive_text(), timeout=10.0)
+
+        try:
+            init_data = json.loads(init_message)
+            logger.info(f"收到初始化消息: {init_data}")
+        except json.JSONDecodeError:
+            init_data = {"type": "init", "clientId": "unknown"}
+
+        # 註冊客戶端
+        await ws_manager.register(websocket, init_data)
+
+        # 發送歡迎消息
+        welcome_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="connection_established",
+            data={
+                "message": "WebSocket 連接已建立",
+                "server_time": datetime.now().isoformat(),
+                "client_id": init_data.get("clientId", "unknown")
+            },
+            timestamp=int(time.time() * 1000)
+        )
+        await ws_manager.send_to_client(websocket, welcome_msg)
+
+        # 發送系統狀態
+        await ws_manager.send_system_status(websocket)
+
+        # 處理客戶端消息
+        while True:
+            try:
+                message = await websocket.receive_text()
+                data = json.loads(message)
+                await handle_client_message_fastapi(websocket, data)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON 解析錯誤: {e}")
+                error_msg = WebSocketMessage(
+                    id=str(uuid.uuid4()),
+                    type="error",
+                    data={"message": "無效的 JSON 格式"},
+                    timestamp=int(time.time() * 1000)
+                )
+                await ws_manager.send_to_client(websocket, error_msg)
+            except Exception as e:
+                logger.error(f"處理客戶端消息失敗: {e}")
+
+    except asyncio.TimeoutError:
+        logger.warning(f"客戶端初始化超時: {getattr(websocket, 'client', 'unknown')}")
+    except Exception as e:
+        logger.error(f"FastAPI WebSocket 處理錯誤: {e}")
+    finally:
+        await ws_manager.unregister(websocket)
+
 async def run_analysis_async(websocket: WebSocketServerProtocol, user_input: str):
-    """異步運行分析任務"""
+    """異步運行分析任務 (原始 websockets 版本)"""
+    try:
+        # 延遲導入 MultiAgentSystem 以避免循環導入
+        from src.system import MultiAgentSystem
+
+        # 建立 MultiAgentSystem 實例
+        system = MultiAgentSystem()
+
+        # 定義 WebSocket 回調函數
+        def websocket_callback(agent_id: str, status: str, progress: int, task: str):
+            """WebSocket 回調函數，用於廣播代理狀態更新"""
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(ws_manager.send_agent_status(agent_id, status, progress, task))
+            except RuntimeError:
+                # 沒有運行的事件循環，創建新的
+                asyncio.run(ws_manager.send_agent_status(agent_id, status, progress, task))
+
+        # 運行分析
+        system.run(user_input, websocket_callback=websocket_callback)
+
+        # 發送分析完成消息
+        completion_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="analysis_completed",
+            data={
+                "message": "分析已完成",
+                "timestamp": datetime.now().isoformat()
+            },
+            timestamp=int(time.time() * 1000)
+        )
+        await ws_manager.send_to_client(websocket, completion_msg)
+
+    except Exception as e:
+        logger.error(f"分析任務失敗: {e}")
+        # 發送錯誤消息
+        error_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="analysis_error",
+            data={
+                "message": f"分析失敗: {str(e)}",
+                "timestamp": datetime.now().isoformat()
+            },
+            timestamp=int(time.time() * 1000)
+        )
+        await ws_manager.send_to_client(websocket, error_msg)
+
+
+async def run_analysis_async_fastapi(websocket: Any, user_input: str):
+    """異步運行分析任務 (FastAPI 版本)"""
     try:
         # 延遲導入 MultiAgentSystem 以避免循環導入
         from src.system import MultiAgentSystem
@@ -389,11 +499,11 @@ async def run_analysis_async(websocket: WebSocketServerProtocol, user_input: str
 
 
 async def handle_client_message(websocket: WebSocketServerProtocol, data: Dict[str, Any]):
-    """處理客戶端發送的消息"""
+    """處理客戶端發送的消息 (原始 websockets 版本)"""
     message_type = data.get("type", "unknown")
-    
+
     logger.info(f"收到客戶端消息: {message_type} from {websocket.remote_address}")
-    
+
     if message_type == "ping":
         # 回應 ping 消息
         pong_msg = WebSocketMessage(
@@ -403,16 +513,16 @@ async def handle_client_message(websocket: WebSocketServerProtocol, data: Dict[s
             timestamp=int(time.time() * 1000)
         )
         await ws_manager.send_to_client(websocket, pong_msg)
-        
+
     elif message_type == "request_status":
         # 發送當前系統狀態
         await ws_manager.send_system_status(websocket)
-        
+
     elif message_type == "subscribe":
         # 處理訂閱請求
         subscription_type = data.get("subscription", "all")
         logger.info(f"客戶端訂閱: {subscription_type}")
-        
+
         # 根據訂閱類型發送相應數據
         if subscription_type in ["all", "agent_status"]:
             # TODO: Replace with actual data from backend logic
@@ -427,7 +537,7 @@ async def handle_client_message(websocket: WebSocketServerProtocol, data: Dict[s
                 "activeAgents": 2,
                 "lastUpdate": datetime.now().isoformat()
             })
-            
+
     elif message_type == "trigger_update":
         # 手動觸發更新
         update_type = data.get("updateType", "all")
@@ -473,6 +583,96 @@ async def handle_client_message(websocket: WebSocketServerProtocol, data: Dict[s
 
         # 在新的異步任務中運行分析
         asyncio.create_task(run_analysis_async(websocket, user_input))
+
+    else:
+        logger.warning(f"未知消息類型: {message_type}")
+
+
+async def handle_client_message_fastapi(websocket: Any, data: Dict[str, Any]):
+    """處理客戶端發送的消息 (FastAPI 版本)"""
+    message_type = data.get("type", "unknown")
+
+    logger.info(f"收到客戶端消息: {message_type} from {getattr(websocket, 'client', 'unknown')}")
+
+    if message_type == "ping":
+        # 回應 ping 消息
+        pong_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="pong",
+            data={"timestamp": datetime.now().isoformat()},
+            timestamp=int(time.time() * 1000)
+        )
+        await ws_manager.send_to_client(websocket, pong_msg)
+
+    elif message_type == "request_status":
+        # 發送當前系統狀態
+        await ws_manager.send_system_status(websocket)
+
+    elif message_type == "subscribe":
+        # 處理訂閱請求
+        subscription_type = data.get("subscription", "all")
+        logger.info(f"客戶端訂閱: {subscription_type}")
+
+        # 根據訂閱類型發送相應數據
+        if subscription_type in ["all", "agent_status"]:
+            # TODO: Replace with actual data from backend logic
+            await ws_manager.send_agent_status("search_agent", "processing", 45, "搜尋相關文獻")
+            await ws_manager.send_agent_status("analysis_agent", "idle", 0)
+
+        if subscription_type in ["all", "data_update"]:
+            # TODO: Replace with actual data from backend logic
+            await ws_manager.send_data_update("dashboard_metrics", {
+                "totalFiles": 23,
+                "totalAnalyses": 8,
+                "activeAgents": 2,
+                "lastUpdate": datetime.now().isoformat()
+            })
+
+    elif message_type == "trigger_update":
+        # 手動觸發更新
+        update_type = data.get("updateType", "all")
+        logger.info(f"手動觸發更新: {update_type}")
+
+        if update_type in ["all", "charts"]:
+            # TODO: Replace with actual data from backend logic
+            await ws_manager.send_chart_data("performance_chart", {
+                "labels": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+                "datasets": [{
+                    "label": "Performance",
+                    "data": [12, 19, 15, 17, 14]
+                }]
+            })
+
+    elif message_type == "start_analysis":
+        # 處理分析請求
+        user_input = data.get("userInput", "")
+        if not user_input:
+            error_msg = WebSocketMessage(
+                id=str(uuid.uuid4()),
+                type="error",
+                data={"message": "缺少 userInput 參數"},
+                timestamp=int(time.time() * 1000)
+            )
+            await ws_manager.send_to_client(websocket, error_msg)
+            return
+
+        logger.info(f"開始分析: {user_input[:50]}...")
+
+        # 發送分析開始確認
+        start_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="analysis_started",
+            data={
+                "message": "分析已開始",
+                "userInput": user_input,
+                "timestamp": datetime.now().isoformat()
+            },
+            timestamp=int(time.time() * 1000)
+        )
+        await ws_manager.send_to_client(websocket, start_msg)
+
+        # 在新的異步任務中運行分析
+        asyncio.create_task(run_analysis_async_fastapi(websocket, user_input))
 
     else:
         logger.warning(f"未知消息類型: {message_type}")
