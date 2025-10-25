@@ -1,7 +1,14 @@
 import typer
 import uvicorn
+import sys
+import os
+
+# Add backend to sys.path to make it importable
+backend_path = os.path.join(os.path.dirname(__file__))
+sys.path.insert(0, backend_path)
 
 app = typer.Typer()
+
 
 @app.command()
 def run(
@@ -13,11 +20,12 @@ def run(
     Starts the FastAPI backend server.
     """
     uvicorn.run(
-        "backend.app.main:app",
+        "app.main:app",
         host=host,
         port=port,
         reload=reload,
     )
+
 
 if __name__ == "__main__":
     app()
