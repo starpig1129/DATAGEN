@@ -1,6 +1,14 @@
 import os
+import sys
 from typing import Dict, Any
-from ..config.settings import (
+from pathlib import Path
+
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from config.settings import (
     OPENAI_API_KEY,
     LANGCHAIN_API_KEY,
     WORKING_DIRECTORY,

@@ -1,13 +1,20 @@
+import sys
+from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import Sequence , List
+from typing import Sequence, List
 
 from langchain_core.messages import BaseMessage
 
-from ..core.language_models import LanguageModelManager
-from ..tools.FileEdit import read_document
-from ..tools.basetool import list_directory
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from src.core.language_models import LanguageModelManager
+from src.tools.FileEdit import read_document
+from src.tools.basetool import list_directory
 from .base import BaseAgent
-from ..config import WORKING_DIRECTORY
+from config.settings import WORKING_DIRECTORY
 
 class NoteState(BaseModel):
     """Pydantic model for the entire state structure."""

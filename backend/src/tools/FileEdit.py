@@ -1,15 +1,22 @@
 import os
+import sys
 from typing import Annotated, List
+from pathlib import Path
 from pydantic import BaseModel, Field
 
 from langchain_core.tools import tool
 import pandas as pd
 
-from ..logger import setup_logger
-from ..config import WORKING_DIRECTORY
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from src.logger import setup_logger
+from config.settings import WORKING_DIRECTORY
 
 # Set up logger
-logger = setup_logger()
+logger = setup_logger() if callable(setup_logger) else None
 
 # Ensure the working directory exists
 if not os.path.exists(WORKING_DIRECTORY):

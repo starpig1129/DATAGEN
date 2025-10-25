@@ -1,3 +1,5 @@
+import sys
+from pathlib import Path
 from langchain_core.tools import tool
 from langchain_community.document_loaders import WebBaseLoader, FireCrawlLoader
 from selenium import webdriver
@@ -6,10 +8,16 @@ from selenium.webdriver.chrome.service import Service
 from typing import Annotated, List
 from bs4 import BeautifulSoup
 
-from ..logger import setup_logger
-from ..config import FIRECRAWL_API_KEY,CHROMEDRIVER_PATH
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from src.logger import setup_logger
+from config.settings import FIRECRAWL_API_KEY, CHROMEDRIVER_PATH
+
 # Set up logger
-logger = setup_logger()
+logger = setup_logger() if callable(setup_logger) else None
 
 @tool
 def google_search(query: Annotated[str, "The search query to use"]) -> Annotated[str, "The top 5 Google search results."]:

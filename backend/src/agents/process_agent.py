@@ -1,9 +1,16 @@
+import sys
+from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import Literal ,List
+from typing import Literal, List
 
-from ..core.language_models import LanguageModelManager
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from src.core.language_models import LanguageModelManager
 from .base import BaseAgent
-from ..config import WORKING_DIRECTORY
+from config.settings import WORKING_DIRECTORY
 
 class ProcessRouteSchema(BaseModel):
     """Select the next role and assign a task."""

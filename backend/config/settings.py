@@ -1,11 +1,15 @@
 """應用程式設定和組態管理。"""
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 import yaml
 
 # 載入環境變數
 load_dotenv()
+
+# 指向 backend/config/ 目錄
+BASE_DIR = Path(__file__).resolve().parent
 
 # 應用程式設定
 APP_TITLE = "多代理數據分析系統 API"
@@ -30,7 +34,7 @@ CHROMEDRIVER_PATH = os.getenv('CHROMEDRIVER_PATH', './chromedriver/chromedriver'
 class AgentModelsConfig:
     """從 YAML 檔案載入代理模型組態的類別。"""
 
-    def __init__(self, config_path: str = 'config/agent_models.yaml'):
+    def __init__(self, config_path: Path = BASE_DIR / 'agent_models.yaml'):
         """初始化組態，載入 YAML 檔案。
 
         Args:

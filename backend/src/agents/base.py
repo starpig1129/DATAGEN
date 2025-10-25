@@ -1,14 +1,22 @@
 import os
+import sys
 from abc import ABC, abstractmethod
 from typing import List, Any
+from pathlib import Path
 
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 
-from ..logger import setup_logger
-from ..core.language_models import LanguageModelManager
-from ..config import WORKING_DIRECTORY
-logger = setup_logger()
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from src.logger import setup_logger
+from src.core.language_models import LanguageModelManager
+from config.settings import WORKING_DIRECTORY
+
+logger = setup_logger() if callable(setup_logger) else None
 
 class BaseAgent(ABC):
     """An abstract base class for all agents."""

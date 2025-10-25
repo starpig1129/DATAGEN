@@ -2,10 +2,17 @@ from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
 import logging
 import json
+import sys
 from pathlib import Path
 
 from .state import State
-from ..config import WORKING_DIRECTORY
+
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from config.settings import WORKING_DIRECTORY
 
 # Set up logger
 logger = logging.getLogger(__name__)

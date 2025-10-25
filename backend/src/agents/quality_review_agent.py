@@ -1,11 +1,18 @@
+import sys
+from pathlib import Path
 from typing import Literal, List
 from pydantic import BaseModel, Field
 
-from ..tools.basetool import list_directory
-from ..tools.FileEdit import create_document, read_document, edit_document
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from src.tools.basetool import list_directory
+from src.tools.FileEdit import create_document, read_document, edit_document
 from .base import BaseAgent
-from ..config import WORKING_DIRECTORY
-from ..core.language_models import LanguageModelManager
+from config.settings import WORKING_DIRECTORY
+from src.core.language_models import LanguageModelManager
 
 class QualityOutput(BaseModel):
     """Pydantic model for quality review output."""

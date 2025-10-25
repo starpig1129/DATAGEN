@@ -1,3 +1,5 @@
+import sys
+from pathlib import Path
 from .visualization_agent import VisualizationAgent
 from .code_agent import CodeAgent
 from .search_agent import SearchAgent
@@ -7,7 +9,13 @@ from .refiner_agent import RefinerAgent
 from .hypothesis_agent import HypothesisAgent
 from .process_agent import ProcessAgent
 from .note_agent import NoteAgent
-from ..config import WORKING_DIRECTORY
+
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from config.settings import WORKING_DIRECTORY
 
 class AgentFactory:
     """A factory class for creating agents."""

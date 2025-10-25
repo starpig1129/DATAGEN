@@ -1,15 +1,22 @@
+import sys
+from pathlib import Path
 from typing import List
 
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_community.agent_toolkits.load_tools import load_tools
 
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
 from .base import BaseAgent
-from ..tools.basetool import list_directory
-from ..tools.FileEdit import collect_data
-from ..tools.internet import google_search, scrape_webpages
-from ..config import WORKING_DIRECTORY
-from ..core.language_models import LanguageModelManager
+from src.tools.basetool import list_directory
+from src.tools.FileEdit import collect_data
+from src.tools.internet import google_search, scrape_webpages
+from config.settings import WORKING_DIRECTORY
+from src.core.language_models import LanguageModelManager
 
 class HypothesisAgent(BaseAgent):
     """Agent responsible for generating research hypotheses."""

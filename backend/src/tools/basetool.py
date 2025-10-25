@@ -1,11 +1,18 @@
 import os
+import sys
 import platform
 from typing import Annotated
 import subprocess
+from pathlib import Path
 from langchain_core.tools import tool
 
-from ..logger import setup_logger
-from ..config import WORKING_DIRECTORY,CONDA_ENV
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from src.logger import setup_logger
+from config.settings import WORKING_DIRECTORY, CONDA_ENV
 
 # Initialize logger
 logger = setup_logger()

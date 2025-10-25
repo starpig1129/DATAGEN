@@ -1,11 +1,19 @@
-from ..logger import setup_logger
-from ..llm.factory import ProviderFactory
-from ..config import AGENT_MODELS
+import sys
+from pathlib import Path
+
+# 調整路徑以支援模組導入
+backend_path = str(Path(__file__).resolve().parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from src.logger import setup_logger
+from src.llm.factory import ProviderFactory
+from config.settings import AGENT_MODELS
 
 class LanguageModelManager:
     def __init__(self):
         """Initialize the language model manager"""
-        self.logger = setup_logger()
+        self.logger = setup_logger() if callable(setup_logger) else None
         self.provider_factory = ProviderFactory()
 
     def get_provider(self, agent_name: str):
