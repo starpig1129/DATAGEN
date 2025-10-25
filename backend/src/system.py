@@ -4,7 +4,7 @@ from . import config, logger
 from langchain_core.messages import HumanMessage
 
 from .core import WorkflowManager, LanguageModelManager
-from ..websocket_server import broadcast_agent_update
+from websocket_server import broadcast_agent_update
 
 class MultiAgentSystem:
     def __init__(self):
