@@ -29,7 +29,7 @@ class DevServerManager:
             # 切換到 backend 目錄
             backend_dir = os.path.join(os.path.dirname(__file__), "backend")
             process = subprocess.Popen(
-                [sys.executable, "main.py", "websocket"],
+                [sys.executable, "app/main.py"],
                 cwd=backend_dir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
