@@ -3,6 +3,9 @@
 import os
 import json
 import asyncio
+import logging
+import time
+import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
 from pathlib import Path
@@ -18,10 +21,23 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from app.factory import create_app
 from src.system import MultiAgentSystem
-from websocket_server import ws_manager, handle_fastapi_websocket
+from websocket.manager import ws_manager, WebSocketMessage
+from websocket.handlers.client import handle_client_message_fastapi
+from core.services.file_service import FileService
+from core.services.system_service import SystemService
+from core.services.analysis_service import AnalysisService
 
 # 建立應用程式實例
 app = create_app()
+
+# 初始化服務層
+file_service = FileService()
+system_service = SystemService(ws_manager)
+analysis_service = AnalysisService(ws_manager)
+
+# 配置日誌
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 請求/響應模型
 class SystemStatusResponse(BaseModel):
@@ -60,94 +76,80 @@ class SettingsRequest(BaseModel):
 @app.websocket("/stream")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket 端點"""
-    await handle_fastapi_websocket(websocket)
+    try:
+        # 等待客戶端初始化消息
+        init_message = await asyncio.wait_for(websocket.receive_text(), timeout=10.0)
+
+        try:
+            init_data = json.loads(init_message)
+            logger.info(f"收到初始化消息: {init_data}")
+        except json.JSONDecodeError:
+            init_data = {"type": "init", "clientId": "unknown"}
+
+        # 註冊客戶端
+        await ws_manager.register(websocket, init_data)
+
+        # 發送歡迎消息
+        welcome_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="connection_established",
+            data={
+                "message": "WebSocket 連接已建立",
+                "server_time": datetime.now().isoformat(),
+                "client_id": init_data.get("clientId", "unknown")
+            },
+            timestamp=int(time.time() * 1000)
+        )
+        await ws_manager.send_to_client(websocket, welcome_msg)
+
+        # 發送系統狀態
+        await ws_manager.send_system_status(websocket)
+
+        # 處理客戶端消息
+        while True:
+            try:
+                message = await websocket.receive_text()
+                data = json.loads(message)
+                await handle_client_message_fastapi(websocket, data)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON 解析錯誤: {e}")
+                error_msg = WebSocketMessage(
+                    id=str(uuid.uuid4()),
+                    type="error",
+                    data={"message": "無效的 JSON 格式"},
+                    timestamp=int(time.time() * 1000)
+                )
+                await ws_manager.send_to_client(websocket, error_msg)
+            except Exception as e:
+                logger.error(f"處理客戶端消息失敗: {e}")
+
+    except asyncio.TimeoutError:
+        logger.warning(f"客戶端初始化超時: {getattr(websocket, 'client', 'unknown')}")
+    except Exception as e:
+        logger.error(f"FastAPI WebSocket 處理錯誤: {e}")
+    finally:
+        await ws_manager.unregister(websocket)
 
 @app.get("/api/system/status", response_model=SystemStatusResponse)
 async def get_system_status():
     """獲取系統狀態"""
     try:
-        return SystemStatusResponse(
-            status="healthy",
-            timestamp=datetime.now().isoformat(),
-            version="1.0.0",
-            websocket_connections=len(ws_manager.connections),
-            system_info={
-                "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-                "working_directory": os.getcwd(),
-                "available_agents": [
-                    "hypothesis_agent",
-                    "process_agent",
-                    "search_agent",
-                    "code_agent",
-                    "visualization_agent",
-                    "report_agent",
-                    "quality_review_agent",
-                    "note_agent",
-                    "refiner_agent"
-                ]
-            }
-        )
+        system_status = system_service.get_system_status()
+        return SystemStatusResponse(**system_status)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"獲取系統狀態失敗: {str(e)}")
 
 @app.get("/api/state")
 async def get_state():
     """獲取應用程式狀態"""
-    return {
-        "status": "ready",
-        "agent_models": [],
-        "version": "1.0.0"
-    }
+    return system_service.get_state()
 
 @app.get("/api/files/content/{file_path:path}", response_model=FileContentResponse)
 async def get_file_content(file_path: str):
     """獲取文件內容"""
     try:
-        # 安全檢查：防止路徑遍歷攻擊
-        if ".." in file_path or file_path.startswith("/"):
-            raise HTTPException(status_code=400, detail="無效的文件路徑")
-
-        # 構造完整路徑
-        base_path = Path.cwd()
-        full_path = (base_path / file_path).resolve()
-
-        # 確保文件在專案目錄內
-        if not str(full_path).startswith(str(base_path)):
-            raise HTTPException(status_code=403, detail="禁止訪問")
-
-        # 檢查文件是否存在
-        if not full_path.exists():
-            raise HTTPException(status_code=404, detail="文件不存在")
-
-        # 檢查是否為文件
-        if not full_path.is_file():
-            raise HTTPException(status_code=400, detail="路徑不是文件")
-
-        # 讀取文件內容
-        try:
-            with open(full_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-        except UnicodeDecodeError:
-            # 如果 UTF-8 失敗，嘗試其他編碼
-            try:
-                with open(full_path, 'r', encoding='latin-1') as f:
-                    content = f.read()
-                encoding = 'latin-1'
-            except Exception:
-                raise HTTPException(status_code=500, detail="無法讀取文件內容")
-        else:
-            encoding = 'utf-8'
-
-        # 獲取文件信息
-        stat = full_path.stat()
-
-        return FileContentResponse(
-            content=content,
-            encoding=encoding,
-            size=stat.st_size,
-            last_modified=datetime.fromtimestamp(stat.st_mtime).isoformat()
-        )
-
+        file_data = file_service.get_file_content(file_path)
+        return FileContentResponse(**file_data)
     except HTTPException:
         raise
     except Exception as e:
@@ -157,53 +159,7 @@ async def get_file_content(file_path: str):
 async def list_files(directory: str = ""):
     """列出目錄中的文件"""
     try:
-        # 安全檢查
-        if ".." in directory or (directory and directory.startswith("/")):
-            raise HTTPException(status_code=400, detail="無效的目錄路徑")
-
-        # 構造完整路徑
-        base_path = Path.cwd()
-        if directory:
-            full_path = (base_path / directory).resolve()
-        else:
-            full_path = base_path
-
-        # 確保目錄在專案目錄內
-        if not str(full_path).startswith(str(base_path)):
-            raise HTTPException(status_code=403, detail="禁止訪問")
-
-        # 檢查是否為目錄
-        if not full_path.exists():
-            raise HTTPException(status_code=404, detail="目錄不存在")
-
-        if not full_path.is_dir():
-            raise HTTPException(status_code=400, detail="路徑不是目錄")
-
-        # 獲取文件列表
-        files = []
-        for item in full_path.iterdir():
-            if item.is_file():
-                stat = item.stat()
-                files.append({
-                    "name": item.name,
-                    "path": str(item.relative_to(base_path)),
-                    "size": stat.st_size,
-                    "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    "is_file": True
-                })
-            elif item.is_dir():
-                files.append({
-                    "name": item.name,
-                    "path": str(item.relative_to(base_path)),
-                    "is_file": False
-                })
-
-        return {
-            "directory": str(full_path.relative_to(base_path)) if full_path != base_path else "",
-            "files": files,
-            "total_count": len(files)
-        }
-
+        return file_service.list_files(directory)
     except HTTPException:
         raise
     except Exception as e:
@@ -213,46 +169,7 @@ async def list_files(directory: str = ""):
 async def get_files():
     """獲取可用檔案清單"""
     try:
-        # 構造完整路徑
-        base_path = Path.cwd()
-        full_path = base_path
-
-        # 確保目錄在專案目錄內
-        if not str(full_path).startswith(str(base_path)):
-            raise HTTPException(status_code=403, detail="禁止訪問")
-
-        # 檢查是否為目錄
-        if not full_path.exists():
-            raise HTTPException(status_code=404, detail="目錄不存在")
-
-        if not full_path.is_dir():
-            raise HTTPException(status_code=400, detail="路徑不是目錄")
-
-        # 獲取文件列表
-        files = []
-        for item in full_path.iterdir():
-            if item.is_file():
-                stat = item.stat()
-                files.append({
-                    "name": item.name,
-                    "path": str(item.relative_to(base_path)),
-                    "size": stat.st_size,
-                    "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    "is_file": True
-                })
-            elif item.is_dir():
-                files.append({
-                    "name": item.name,
-                    "path": str(item.relative_to(base_path)),
-                    "is_file": False
-                })
-
-        return {
-            "directory": "",
-            "files": files,
-            "total_count": len(files)
-        }
-
+        return file_service.get_files()
     except HTTPException:
         raise
     except Exception as e:
@@ -262,54 +179,21 @@ async def get_files():
 async def start_analysis(request: AnalysisRequest):
     """開始分析任務"""
     try:
-        analysis_id = f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
-        # 在後台啟動分析任務
-        asyncio.create_task(run_analysis_async(analysis_id, request.user_input, request.options))
-
-        return AnalysisResponse(
-            analysis_id=analysis_id,
-            status="started",
-            message="分析任務已開始",
-            timestamp=datetime.now().isoformat()
-        )
-
+        result = analysis_service.start_analysis(request.user_input, request.options)
+        return AnalysisResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"開始分析失敗: {str(e)}")
 
 @app.get("/api/analysis/{analysis_id}/status")
 async def get_analysis_status(analysis_id: str):
     """獲取分析狀態"""
-    # TODO: 實現分析狀態追蹤
-    return {
-        "analysis_id": analysis_id,
-        "status": "running",
-        "progress": 0,
-        "message": "分析進行中",
-        "timestamp": datetime.now().isoformat()
-    }
+    return analysis_service.get_analysis_status(analysis_id)
 
 @app.get("/api/agents/status")
 async def get_agents_status():
     """獲取代理狀態"""
     try:
-        # 從 WebSocket 管理器獲取連接信息
-        return {
-            "websocket_connections": len(ws_manager.connections),
-            "active_agents": [
-                "hypothesis_agent",
-                "process_agent",
-                "search_agent",
-                "code_agent",
-                "visualization_agent",
-                "report_agent",
-                "quality_review_agent",
-                "note_agent",
-                "refiner_agent"
-            ],
-            "system_status": "healthy",
-            "timestamp": datetime.now().isoformat()
-        }
+        return system_service.get_agents_status()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"獲取代理狀態失敗: {str(e)}")
 
@@ -337,46 +221,7 @@ async def root():
         "docs": "/docs"
     }
 
-# 異步分析任務
-async def run_analysis_async(analysis_id: str, user_input: str, options: Optional[Dict[str, Any]] = None):
-    """異步運行分析任務"""
-    try:
-        # 建立 MultiAgentSystem 實例
-        system = MultiAgentSystem()
 
-        # 定義 WebSocket 回調函數
-        def websocket_callback(agent_id: str, status: str, progress: int, task: str):
-            """WebSocket 回調函數，用於廣播代理狀態更新"""
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(ws_manager.send_agent_status(agent_id, status, progress, task))
-            except RuntimeError:
-                # 沒有運行的事件循環，創建新的
-                asyncio.run(ws_manager.send_agent_status(agent_id, status, progress, task))
-
-        # 運行分析
-        system.run(user_input, websocket_callback=websocket_callback)
-
-        print(f"分析完成: {analysis_id}")
-
-    except Exception as e:
-        print(f"分析失敗 {analysis_id}: {e}")
-        # 發送錯誤消息到 WebSocket
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(ws_manager.send_agent_status(
-                "system",
-                "error",
-                0,
-                f"分析失敗: {str(e)}"
-            ))
-        except RuntimeError:
-            asyncio.run(ws_manager.send_agent_status(
-                "system",
-                "error",
-                0,
-                f"分析失敗: {str(e)}"
-            ))
 
 # 啟動服務器
 if __name__ == "__main__":
