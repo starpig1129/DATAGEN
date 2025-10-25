@@ -9,7 +9,7 @@ from core.services.analysis_service import AnalysisService
 from api.models.analysis import AnalysisRequest, AnalysisResponse
 
 # 導入 WebSocket 相關
-from websocket.manager import ws_manager
+from websocket_server.manager import ws_manager
 
 # 建立路由器
 router = APIRouter()

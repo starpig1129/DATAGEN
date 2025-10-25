@@ -10,8 +10,8 @@ from datetime import datetime
 from fastapi import APIRouter, WebSocket
 
 # 導入 WebSocket 相關
-from websocket.manager import ws_manager, WebSocketMessage
-from websocket.handlers.client import handle_client_message_fastapi
+from websocket_server.manager import ws_manager, WebSocketMessage
+from websocket_server.handlers.client import handle_client_message_fastapi
 
 # 建立路由器
 router = APIRouter()
