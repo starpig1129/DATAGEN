@@ -1,9 +1,27 @@
-"""
-FastAPI 後端服務器
-提供 HTTP API 服務給前端應用程式
-"""
+"""應用程式主入口。"""
 
-from app.main import app
+import os
+import json
+import asyncio
+from datetime import datetime
+from typing import Dict, Any, Optional
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request, WebSocket
+from fastapi.responses import JSONResponse, FileResponse
+from pydantic import BaseModel
+
+# 導入系統組件
+import sys
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from app.factory import create_app
+from src.system import MultiAgentSystem
+from websocket_server import ws_manager, handle_fastapi_websocket
+
+# 建立應用程式實例
+app = create_app()
 
 # 請求/響應模型
 class SystemStatusResponse(BaseModel):
@@ -364,7 +382,7 @@ async def run_analysis_async(analysis_id: str, user_input: str, options: Optiona
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "app:app",
+        "app.main:app",
         host="0.0.0.0",
         port=5001,
         reload=True,

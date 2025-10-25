@@ -1,6 +1,12 @@
 import os
 from typing import Dict, Any
-from . import config, logger
+from ..config.settings import (
+    OPENAI_API_KEY,
+    LANGCHAIN_API_KEY,
+    WORKING_DIRECTORY,
+    AGENT_MODELS
+)
+from . import logger
 from langchain_core.messages import HumanMessage
 
 from .core import WorkflowManager, LanguageModelManager
@@ -13,19 +19,23 @@ class MultiAgentSystem:
         self.lm_manager = LanguageModelManager()
         self.workflow_manager = WorkflowManager(
             lm_manager=self.lm_manager,
-            working_directory=config.WORKING_DIRECTORY
+            working_directory=WORKING_DIRECTORY
         )
+
+    def get_agent_models(self):
+        """取得代理模型組態。"""
+        return AGENT_MODELS
 
     def setup_environment(self):
         """Initialize environment variables"""
-        os.environ["OPENAI_API_KEY"] = config.OPENAI_API_KEY
-        os.environ["LANGCHAIN_API_KEY"] = config.LANGCHAIN_API_KEY
+        os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+        os.environ["LANGCHAIN_API_KEY"] = LANGCHAIN_API_KEY
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         os.environ["LANGCHAIN_PROJECT"] = "Multi-Agent Data Analysis System"
 
-        if not os.path.exists(config.WORKING_DIRECTORY):
-            os.makedirs(config.WORKING_DIRECTORY)
-            self.logger.info(f"Created working directory: {config.WORKING_DIRECTORY}")
+        if not os.path.exists(WORKING_DIRECTORY):
+            os.makedirs(WORKING_DIRECTORY)
+            self.logger.info(f"Created working directory: {WORKING_DIRECTORY}")
 
     def run(self, user_input: str, websocket_callback=None) -> None:
         """Run the multi-agent system with user input
