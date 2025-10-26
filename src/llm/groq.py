@@ -5,8 +5,8 @@ from langchain_groq import ChatGroq
 from .base import BaseProvider
 
 
-class ChatGrokProvider(BaseProvider):
-    """Provider for ChatGrok models."""
+class ChatGroqProvider(BaseProvider):
+    """Provider for ChatGroq models."""
 
     def get_model_class(self) -> Type:
         """Returns the ChatGroq class."""
