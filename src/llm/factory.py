@@ -3,7 +3,7 @@ from .anthropic import AnthropicProvider
 from .google import GoogleProvider
 from .ollama import OllamaProvider
 from .azure import AzureChatOpenAIProvider
-from .grok import ChatGrokProvider
+from .groq import ChatGroqProvider
 
 
 class ProviderFactory:
@@ -33,7 +33,7 @@ class ProviderFactory:
             return OllamaProvider()
         elif provider_name == "azure":
             return AzureChatOpenAIProvider()
-        elif provider_name == "grok":
-            return ChatGrokProvider()
+        elif provider_name == "groq":
+            return ChatGroqProvider()
         else:
             raise NotImplementedError(f"Provider creation for '{provider_name}' is not implemented.")
