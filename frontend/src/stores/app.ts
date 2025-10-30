@@ -47,8 +47,7 @@ export const useAppStore = defineStore('app', {
   state: (): AppState => ({
     config: {
       apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001',
-      graphqlUrl: import.meta.env.VITE_GRAPHQL_HTTP_URL || 'http://localhost:8000/graphql',
-      wsUrl: import.meta.env.VITE_GRAPHQL_WS_URL || 'ws://localhost:8000/graphql/ws',
+      wsUrl: import.meta.env.VITE_WS_URL || 'ws://localhost:5001/stream',
       enableDevtools: import.meta.env.VITE_ENABLE_DEVTOOLS === 'true',
       theme: 'light',
       language: 'zh-TW'

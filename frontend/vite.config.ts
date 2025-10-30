@@ -1,5 +1,5 @@
 import { webcrypto } from 'crypto'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
@@ -20,7 +20,11 @@ if (typeof globalThis.crypto === 'undefined') {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // 載入環境變數
+  const env = loadEnv(mode, process.cwd() + '/frontend', '')
+
+  return {
   plugins: [
     vue({
       script: {
@@ -32,17 +36,7 @@ export default defineConfig({
       imports: [
         'vue',
         'vue-router',
-        'pinia',
-        {
-          '@vue/apollo-composable': [
-            'useQuery',
-            'useMutation',
-            'useSubscription',
-            'useApolloClient',
-            'useResult',
-            'useLoading'
-          ]
-        }
+        'pinia'
       ],
       // 移除 ElementPlusResolver 避免自動導入衝突
       dts: true,
@@ -65,7 +59,6 @@ export default defineConfig({
       '@stores': resolve(__dirname, 'src/stores'),
       '@types': resolve(__dirname, 'src/types'),
       '@utils': resolve(__dirname, 'src/utils'),
-      '@graphql': resolve(__dirname, 'src/graphql'),
       '@composables': resolve(__dirname, 'src/composables'),
       '@assets': resolve(__dirname, 'src/assets'),
       // 添加 buffer polyfill alias
@@ -78,18 +71,14 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    open: false,
     proxy: {
-      '/graphql': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        ws: true
-      },
       '/api': {
-        target: 'http://localhost:5001',
+        target: env.VITE_API_BASE_URL || 'http://localhost:5001',
         changeOrigin: true
       },
       '/stream': {
-        target: 'http://localhost:5001',
+        target: env.VITE_SSE_URL || 'http://localhost:5001',
         changeOrigin: true
       }
     }
@@ -102,7 +91,6 @@ export default defineConfig({
         manualChunks: {
           vendor: ['vue', 'vue-router'],
           pinia: ['pinia'],
-          apollo: ['@apollo/client', '@vue/apollo-composable', 'graphql'],
           ui: ['element-plus', '@element-plus/icons-vue'],
           visualization: ['plotly.js', 'd3'],
           utils: ['marked', 'dompurify', 'dayjs', 'lodash-es']
@@ -125,4 +113,5 @@ export default defineConfig({
       }
     }
   }
+ }
 })

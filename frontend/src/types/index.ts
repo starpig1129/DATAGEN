@@ -21,7 +21,6 @@ export interface SystemState {
 // 應用程式配置
 export interface AppConfig {
   apiBaseUrl: string
-  graphqlUrl: string
   wsUrl: string
   enableDevtools: boolean
   theme: 'light' | 'dark'
