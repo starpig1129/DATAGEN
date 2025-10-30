@@ -2,7 +2,7 @@
 WORKING_DIRECTORY =./data/
 
 # Conda environment name(required)
-CONDA_ENV = data_assistant
+CONDA_ENV = datagen
 
 # ChromeDriver executable path(required)
 CHROMEDRIVER_PATH =./chromedriver-linux64/chromedriver
