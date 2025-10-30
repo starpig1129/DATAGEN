@@ -88,7 +88,7 @@ pip install -r requirements.txt
 DATA_STORAGE_PATH =./data/
 
 # Conda environment name(required)
-CONDA_ENV = envname
+CONDA_ENV = datagen
 
 # ChromeDriver executable path(required)
 CHROMEDRIVER_PATH =./chromedriver-linux64/chromedriver
@@ -110,37 +110,23 @@ LANGCHAIN_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 ## Usage
 
-### Using Jupyter Notebook
-
-1. Start Jupyter Notebook:
-
-2. Set YourDataName.csv in data_storage
-
-3. Open the `main.ipynb` file.
-
-4. Run all cells to initialize the system and create the workflow.
-
-5. In the last cell, you can customize the research task by modifying the `userInput` variable.
-
-6. Run the final few cells to execute the research process and view the results.
-
 ### Using Python Script
 
 You can also run the system directly using main.py:
 
-1. Place your data file (e.g., YourDataName.csv) in the data_storage directory
+1. Place your data file (e.g., YourDataName.csv) in the data directory
 
-2. Run the script:
-```bash
-python main.py
-```
-
-3. By default, it will process 'OnlineSalesData.csv'. To analyze a different dataset, modify the user_input variable in the main() function of main.py:
+2. Modify the user_input variable in the main() function of main.py:
 ```python
 user_input = '''
 datapath:YourDataName.csv
 Use machine learning to perform data analysis and write complete graphical reports
 '''
+```
+
+3. Run the script:
+```bash
+python main.py
 ```
 
 ## Main Components
@@ -163,10 +149,6 @@ The system uses LangGraph to create a state graph that manages the entire resear
 3. Processing (including data analysis, visualization, search, and report writing)
 4. Quality review
 5. Revision as needed
-
-## Customization
-
-You can customize the system behavior by modifying the agent creation and workflow definition in `main.ipynb`.
 
 ### Agent Model Configuration
 
@@ -193,51 +175,24 @@ agents:
       temperature: 1.0
 ```
 
-- **provider**: Specifies the language model provider to use (e.g., openai, google, anthropic)
+- **provider**: Specifies the language model provider to use (e.g., openai, google, anthropic, ollama, groq)
 - **model_config**: Contains model-specific configuration parameters
   - `model`: The specific model name to use
   - `temperature`: Controls the randomness of model output (range: 0.0-2.0)
-  - `model_kwargs`: (Optional) Additional model-specific parameters, such as `response_format` for specifying response format
 
 ## Notes
 
-- Ensure you have sufficient OpenAI API credits, as the system will make multiple API calls.
+- Ensure you have sufficient API credits, as the system will make multiple API calls.
 - The system may take some time to complete the entire research process, depending on the complexity of the task.
 - **WARNING**: The agent system may modify the data being analyzed. It is highly recommended to backup your data before using this system.
+
 ## Current Issues and Solutions
-1. OpenAI Internal Server Error (Error code: 500)
-2. NoteTaker Efficiency Improvement
-3. Overall Runtime Optimization
-4. Refiner needs to be better
+1. NoteTaker Efficiency Improvement
+2. Overall Runtime Optimization
+3. Refiner needs to be better
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-## Strategic Partnership
-[![CTL GROUP](https://img.shields.io/badge/DATAGEN-Strategic_Partner-blue)](https://datagen.digital/)
-
-We are excited to announce our upcoming strategic partnership with CTL GROUP, an innovative AI-Powered Crypto Intelligence Platform currently in development. This collaboration will bring together advanced AI research capabilities with crypto market intelligence:
-
-### Upcoming Partnership Features
-- **AI Crypto Research Integration**
-  - Automated market research and analysis system
-  - Advanced whale tracking capabilities
-  - Real-time sentiment analysis tools
-  - Comprehensive trading insights and strategies
-
-- **Platform Features** (Coming Soon)
-  - State-of-the-art AI-powered crypto insights
-  - Smart trading strategy development
-  - Advanced whale & on-chain activity monitoring
-  - Interactive community engagement tools
-
-- **Token Integration Benefits** (Coming Soon)
-  - Dynamic staking rewards system
-  - Premium tools and features access
-  - Innovative passive income opportunities
-  - Exclusive platform privileges
-
-The platform is currently under development. Follow our progress on [GitHub](https://github.com/ctlgroupdev).
 
 ## License
 
