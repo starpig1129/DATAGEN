@@ -64,7 +64,6 @@ DATAGEN revolutionizes data analysis through its innovative multi-agent architec
 ## System Requirements
 
 - Python 3.10 or higher
-- Jupyter Notebook environment
 
 ## Installation
 
@@ -112,7 +111,7 @@ LANGCHAIN_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ### Using Python Script
 
-You can also run the system directly using main.py:
+You can run the system  using main.py:
 
 1. Place your data file (e.g., YourDataName.csv) in the data directory
 
@@ -124,7 +123,7 @@ Use machine learning to perform data analysis and write complete graphical repor
 '''
 ```
 
-3. Run the script:
+ˇ. Run the script:
 ```bash
 python main.py
 ```
