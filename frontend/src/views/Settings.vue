@@ -631,8 +631,8 @@ import {
   DataBoard as Database
 } from '@element-plus/icons-vue'
 import { useSettingsStore } from '@/stores/settings'
-import { setLocale, getCurrentLocale } from '@/i18n'
-import type { Settings, LanguageCode, NotificationType } from '@/types/settings'
+import { setLocale } from '@/i18n'
+import type { Settings, LanguageCode } from '@/types/settings'
 
 // 組件
 import SettingsSection from '@/components/settings/SettingsSection.vue'
@@ -748,7 +748,7 @@ const notificationTypeLabels = computed(() => ({
 const formRules = computed<FormRules>(() => ({
   'api.openaiApiKey': [
     {
-      validator: (rule: any, value: string, callback: any) => {
+      validator: (_rule: any, value: string, callback: any) => {
         // 如果值為空且是初始狀態，不觸發驗證錯誤
         if (!value || value.trim() === '') {
           if (!settingsStore.isDirty) {
@@ -769,7 +769,7 @@ const formRules = computed<FormRules>(() => ({
   ],
   'api.firecrawlApiKey': [
     {
-      validator: (rule: any, value: string, callback: any) => {
+      validator: (_rule: any, value: string, callback: any) => {
         if (!value || value.trim() === '') {
           callback() // 空值時不驗證
         } else if (!/^fc-[a-zA-Z0-9_-]+$/.test(value)) {
@@ -783,7 +783,7 @@ const formRules = computed<FormRules>(() => ({
   ],
   'api.langchainApiKey': [
     {
-      validator: (rule: any, value: string, callback: any) => {
+      validator: (_rule: any, value: string, callback: any) => {
         if (!value || value.trim() === '') {
           callback() // 空值時不驗證
         } else if (!/^lsv2_pt_[a-zA-Z0-9_]+$/.test(value)) {
@@ -797,7 +797,7 @@ const formRules = computed<FormRules>(() => ({
   ],
   'api.baseUrl': [
     {
-      validator: (rule: any, value: string, callback: any) => {
+      validator: (_rule: any, value: string, callback: any) => {
         if (!value || value.trim() === '') {
           callback() // 空值時不驗證，使用預設值
         } else {

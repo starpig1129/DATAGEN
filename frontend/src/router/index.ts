@@ -8,7 +8,7 @@ const AgentMonitor = () => import('@/views/AgentMonitor.vue')
 const DataVisualization = () => import('@/views/DataVisualization.vue')
 const ReportGenerator = () => import('@/views/ReportGenerator.vue')
 const FileManager = () => import('@/views/FileManager.vue')
-const Settings = () => import('@/views/SettingsSimple.vue')
+const Settings = () => import('@/views/Settings.vue')
 
 // 路由配置
 const routes: RouteRecordRaw[] = [
