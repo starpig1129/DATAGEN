@@ -6,8 +6,10 @@ import logging
 import time
 import uuid
 from datetime import datetime
+from typing import Optional
 
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, HTTPException
+from pydantic import BaseModel
 
 # 導入 WebSocket 相關
 from websocket_server.manager import ws_manager, WebSocketMessage
@@ -18,6 +20,12 @@ router = APIRouter()
 
 # 配置日誌
 logger = logging.getLogger(__name__)
+
+
+class SendMessageRequest(BaseModel):
+    """Request model for sending a message."""
+    message: str
+    decision: Optional[str] = None
 
 
 @router.websocket("/stream")
@@ -92,3 +100,89 @@ async def root():
         "version": "1.0.0",
         "docs": "/docs"
     }
+
+
+@router.post("/api/send_message")
+async def send_message(request: SendMessageRequest):
+    """HTTP endpoint to send a chat message.
+
+    This provides an HTTP fallback when WebSocket is unavailable.
+    The message is processed asynchronously and results are sent
+    back via the WebSocket connection if available.
+
+    Args:
+        request: Message request containing the user message.
+
+    Returns:
+        Dict with message receipt confirmation.
+    """
+    try:
+        message_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
+
+        logger.info(f"Received HTTP message: {request.message[:100]}...")
+
+        # Check if this is a decision response
+        if request.decision:
+            logger.info(f"Processing decision: {request.decision}")
+            # Broadcast decision to all connected clients
+            decision_msg = WebSocketMessage(
+                id=message_id,
+                type="decision_received",
+                data={
+                    "decision": request.decision,
+                    "timestamp": timestamp
+                },
+                timestamp=int(time.time() * 1000)
+            )
+            await ws_manager.broadcast(decision_msg)
+            return {
+                "status": "decision_received",
+                "message_id": message_id,
+                "decision": request.decision,
+                "timestamp": timestamp
+            }
+
+        # For regular messages, trigger analysis via WebSocket broadcast
+        # This allows connected clients to receive updates
+        user_msg = WebSocketMessage(
+            id=message_id,
+            type="user_message_received",
+            data={
+                "message": request.message,
+                "timestamp": timestamp,
+                "source": "http_api"
+            },
+            timestamp=int(time.time() * 1000)
+        )
+        await ws_manager.broadcast(user_msg)
+
+        # Also trigger the analysis workflow
+        analysis_data = {
+            "type": "start_analysis",
+            "userInput": request.message
+        }
+
+        # Start analysis in background (broadcast to first connected client)
+        clients = list(ws_manager.connections)
+        if clients:
+            # We need to ensure we're passing a valid websocket object
+            # capable of sending responses if handle_client_message_fastapi expects one
+            await handle_client_message_fastapi(clients[0], analysis_data)
+        else:
+            logger.warning("No active WebSocket connections to process message")
+
+        return {
+            "status": "message_received",
+            "message_id": message_id,
+            "message": request.message,
+            "timestamp": timestamp,
+            "note": "Processing will be delivered via WebSocket"
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to process message: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process message: {str(e)}"
+        )

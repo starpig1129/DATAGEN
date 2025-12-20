@@ -5,6 +5,7 @@ from .system import router as system_router
 from .files import router as files_router
 from .analysis import router as analysis_router
 from .settings import router as settings_router
+from .auth import router as auth_router
 
 __all__ = [
     "root_router",
@@ -12,4 +13,5 @@ __all__ = [
     "files_router",
     "analysis_router",
     "settings_router",
+    "auth_router",
 ]
