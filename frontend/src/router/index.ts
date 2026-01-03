@@ -5,6 +5,7 @@ import type { RouteRecordRaw } from 'vue-router'
 const Dashboard = () => import('@/views/Dashboard.vue')
 const ChatInterface = () => import('@/views/ChatInterface.vue')
 const AgentMonitor = () => import('@/views/AgentMonitor.vue')
+const WorkflowView = () => import('@/views/WorkflowView.vue')
 const DataVisualization = () => import('@/views/DataVisualization.vue')
 const ReportGenerator = () => import('@/views/ReportGenerator.vue')
 const FileManager = () => import('@/views/FileManager.vue')
@@ -39,6 +40,16 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false
     }
   },
+  {
+    path: '/agents/workflow',
+    name: 'WorkflowView',
+    component: WorkflowView,
+    meta: {
+      title: '工作流視覺化',
+      requiresAuth: false
+    }
+  },
+
   {
     path: '/visualization',
     name: 'DataVisualization',

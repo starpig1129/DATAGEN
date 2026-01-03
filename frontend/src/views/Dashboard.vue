@@ -26,7 +26,7 @@
                 type="primary"
                 :icon="Refresh"
                 :loading="isRefreshing"
-                @click="refreshDashboardData"
+                @click="() => refreshDashboardData()"
                 circle
                 :disabled="isRefreshing"
               />
@@ -619,33 +619,46 @@ const handleQuickAction = (actionKey: string) => {
 }
 
 // 增強的數據刷新機制
-const refreshDashboardData = async () => {
+const refreshDashboardData = async (silent = false) => {
   if (isRefreshing.value) return
   
   isRefreshing.value = true
   try {
     // 並行載入不同數據源
-    await Promise.allSettled([
+    const refreshTasks = [
       loadAgentStatus(),
       loadRecentActivities(),
-      loadPerformanceData(),
-      // 刷新各個 store 的數據
-      chatStore.isConnected ? Promise.resolve() : chatStore.initializeChat(),
-      fileStore.fetchFiles()
-    ])
+      loadPerformanceData()
+    ]
     
-    ElMessage.success('儀表板數據已更新')
+    // Only refresh external stores on manual refresh to avoid visual flicker
+    if (!silent) {
+      refreshTasks.push(
+        chatStore.isConnected ? Promise.resolve() : chatStore.initializeChat(),
+        fileStore.fetchFiles()
+      )
+    }
+    
+    await Promise.allSettled(refreshTasks)
+    
+    // Only show message for manual refresh
+    if (!silent) {
+      ElMessage.success('儀表板數據已更新')
+    }
   } catch (error) {
     console.error('刷新儀表板數據失敗:', error)
-    appStore.addNotification({
-      type: 'error',
-      title: '刷新失敗',
-      message: '儀表板數據刷新失敗，請檢查網路連接'
-    })
+    if (!silent) {
+      appStore.addNotification({
+        type: 'error',
+        title: '刷新失敗',
+        message: '儀表板數據刷新失敗，請檢查網路連接'
+      })
+    }
   } finally {
     isRefreshing.value = false
   }
 }
+
 
 // 分段載入方法
 const loadAgentStatus = async () => {
@@ -744,10 +757,10 @@ const handleCommand = (command: any) => {
 let autoRefreshTimer: number | null = null
 
 const startAutoRefresh = () => {
-  // 每30秒自動刷新一次
+  // 每30秒自動刷新一次 (silent mode - no notifications)
   autoRefreshTimer = setInterval(() => {
     if (!document.hidden) { // 只在頁面可見時刷新
-      refreshDashboardData()
+      refreshDashboardData(true) // Pass true for silent refresh
     }
   }, 30000)
 }

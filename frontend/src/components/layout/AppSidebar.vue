@@ -44,11 +44,6 @@
           <el-icon><Connection /></el-icon>
           <span>{{ $t('navigation.agents.workflow') }}</span>
         </el-menu-item>
-        
-        <el-menu-item index="/agents/performance">
-          <el-icon><TrendCharts /></el-icon>
-          <span>{{ $t('navigation.agents.performance') }}</span>
-        </el-menu-item>
       </el-sub-menu>
 
       <!-- 數據中心 -->
@@ -121,7 +116,6 @@ import {
   Monitor,
   View,
   Connection,
-  TrendCharts,
   PieChart,
   DataAnalysis,
   Document,

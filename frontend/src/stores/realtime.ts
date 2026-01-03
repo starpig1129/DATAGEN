@@ -106,15 +106,33 @@ export const useRealTimeStore = defineStore('realtime', () => {
   )
   
   // WebSocket 連接管理
+  let isConnecting = false // Lock to prevent duplicate connections
+  
   const connectWebSocket = (): Promise<void> => {
     return new Promise((resolve, reject) => {
       try {
+        // If already connecting, don't start another connection
+        if (isConnecting) {
+          console.log('🔄 WebSocket 連接中，跳過')
+          resolve()
+          return
+        }
+
         // 檢查是否已有連接
         if (wsConnection.value && wsConnection.value.readyState === WebSocket.OPEN) {
           console.log('🔄 WebSocket 已經連接')
           resolve()
           return
         }
+
+        // 檢查是否正在連接中
+        if (wsConnection.value && wsConnection.value.readyState === WebSocket.CONNECTING) {
+          console.log('🔄 WebSocket 正在連接中')
+          resolve()
+          return
+        }
+
+        isConnecting = true
 
         // 獲取 WebSocket URL
         const wsUrl = import.meta.env.VITE_WS_URL
@@ -130,6 +148,7 @@ export const useRealTimeStore = defineStore('realtime', () => {
 
         // 連接成功
         wsConnection.value.onopen = () => {
+          isConnecting = false
           console.log('✅ WebSocket 連接成功')
           state.value.isConnected = true
           state.value.connectionStatus = 'connected'
@@ -148,6 +167,7 @@ export const useRealTimeStore = defineStore('realtime', () => {
 
         // 連接錯誤
         wsConnection.value.onerror = (error) => {
+          isConnecting = false
           console.error('❌ WebSocket 連接錯誤:', error)
           state.value.connectionStatus = 'error'
           state.value.connectionError = 'WebSocket 連接失敗'
@@ -394,7 +414,17 @@ export const useRealTimeStore = defineStore('realtime', () => {
       ...agentData,
       lastActivity: new Date().toISOString()
     })
+
+    // Notify all registered listeners
+    agentStatusListeners.value.forEach(listener => {
+      try {
+        listener(agentData)
+      } catch (error) {
+        console.error('Agent status listener error:', error)
+      }
+    })
   }
+
   
   const notifyDataUpdate = (data: any): void => {
     // 通知其他 stores 數據已更新
@@ -538,11 +568,27 @@ export const useRealTimeStore = defineStore('realtime', () => {
     }
   }
   
+  // Agent status event listeners
+  const agentStatusListeners = ref<Set<(data: any) => void>>(new Set())
+
+  const onAgentStatus = (callback: (data: any) => void): void => {
+    agentStatusListeners.value.add(callback)
+  }
+
+  const offAgentStatus = (callback: (data: any) => void): void => {
+    agentStatusListeners.value.delete(callback)
+  }
+
+  const requestAgentStatus = (): void => {
+    sendMessage({ type: 'request_agent_status' })
+  }
+
   return {
     // 狀態
     state: readonly(state),
 
-    // 計算屬性
+    // Computed - expose isConnected directly for convenience
+    isConnected: computed(() => state.value.isConnected),
     isHealthy,
     activeAgents,
     latestData,
@@ -551,10 +597,16 @@ export const useRealTimeStore = defineStore('realtime', () => {
     // 方法
     initialize,
     destroy,
+    connect: connectWebSocket,
     connectWebSocket,
     disconnectWebSocket,
     sendMessage,
     refreshData,
+
+    // Agent status subscription API
+    onAgentStatus,
+    offAgentStatus,
+    requestAgentStatus,
 
     // 數據訪問
     getSystemMetrics: () => state.value.systemMetrics,
