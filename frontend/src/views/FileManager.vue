@@ -261,6 +261,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useFileStore } from '@/stores/file'
 import { useAppStore } from '@/stores/app'
+import type { FileInfo } from '@/types/file'
 
 const fileStore = useFileStore()
 const appStore = useAppStore()
@@ -486,7 +487,8 @@ onMounted(async () => {
 
 <style scoped>
 .file-manager {
-  @apply flex flex-col h-full bg-gray-50 p-6;
+  @apply flex flex-col h-full p-6;
+  background-color: var(--bg-primary);
 }
 
 .page-header {
@@ -498,7 +500,7 @@ onMounted(async () => {
 }
 
 .page-description {
-  @apply text-gray-600;
+  color: var(--text-secondary);
 }
 
 .upload-section {
@@ -506,7 +508,13 @@ onMounted(async () => {
 }
 
 .upload-zone {
-  @apply border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-all duration-200 hover:border-blue-500 hover:bg-blue-50;
+  @apply border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200;
+  border-color: var(--border-color-light);
+}
+
+.upload-zone:hover {
+  border-color: var(--el-color-primary);
+  background-color: var(--el-color-primary-light-9);
 }
 
 .upload-input {
@@ -518,19 +526,23 @@ onMounted(async () => {
 }
 
 .upload-icon {
-  @apply w-16 h-16 text-gray-400;
+  color: var(--text-placeholder);
 }
 
 .upload-title {
-  @apply text-lg font-medium text-gray-900;
+  @apply text-lg font-medium;
+  color: var(--text-primary);
 }
 
 .upload-description {
-  @apply text-sm text-gray-600;
+  @apply text-sm;
+  color: var(--text-secondary);
 }
 
 .file-actions {
-  @apply flex flex-wrap items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg mb-4;
+  @apply flex flex-wrap items-center gap-4 p-4 border rounded-lg mb-4;
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color-light);
 }
 
 .primary-actions {
@@ -550,15 +562,23 @@ onMounted(async () => {
 }
 
 .view-toggle {
-  @apply flex items-center space-x-1 bg-gray-100 rounded-lg p-1;
+  @apply flex items-center space-x-1 rounded-lg p-1;
+  background-color: var(--bg-tertiary);
 }
 
 .toggle-btn {
-  @apply px-3 py-1 rounded text-sm text-gray-600 hover:text-gray-800 transition-colors;
+  @apply px-3 py-1 rounded text-sm transition-colors;
+  color: var(--text-secondary);
+}
+
+.toggle-btn:hover {
+  color: var(--text-primary);
 }
 
 .toggle-btn--active {
-  @apply bg-white text-blue-600 shadow-sm;
+  @apply shadow-sm;
+  background-color: var(--bg-primary);
+  color: var(--el-color-primary);
 }
 
 .search-section {
@@ -566,15 +586,23 @@ onMounted(async () => {
 }
 
 .search-input {
-  @apply flex-1 max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500;
+  @apply flex-1 max-w-sm px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-color-light);
 }
 
 .sort-select {
-  @apply px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500;
+  @apply px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-color-light);
 }
 
 .file-list-container {
-  @apply flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden;
+  @apply flex-1 rounded-lg shadow-sm border overflow-hidden;
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color-light);
 }
 
 .loading-state, .error-state, .empty-state {
@@ -594,7 +622,9 @@ onMounted(async () => {
 }
 
 .file-item {
-  @apply relative bg-white border border-gray-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-blue-300;
+  @apply relative border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md;
+  background-color: var(--bg-primary);
+  border-color: var(--border-color-light);
 }
 
 .file-item--selected {
@@ -602,7 +632,12 @@ onMounted(async () => {
 }
 
 .file-icon {
-  @apply w-12 h-12 text-gray-400 group-hover:text-blue-500 transition-colors mx-auto mb-3;
+  @apply w-12 h-12 transition-colors mx-auto mb-3;
+  color: var(--text-placeholder);
+}
+
+.file-item:hover .file-icon {
+  color: var(--el-color-primary);
 }
 
 .file-info {
@@ -610,11 +645,13 @@ onMounted(async () => {
 }
 
 .file-name {
-  @apply block text-sm font-medium text-gray-900 truncate;
+  @apply block text-sm font-medium truncate;
+  color: var(--text-primary);
 }
 
 .file-size {
-  @apply block text-xs text-gray-500;
+  @apply block text-xs;
+  color: var(--text-secondary);
 }
 
 .file-actions-overlay {
@@ -622,7 +659,8 @@ onMounted(async () => {
 }
 
 .file-action-btn {
-  @apply w-6 h-6 flex items-center justify-center rounded-full bg-white shadow-sm text-gray-400 hover:text-gray-600 transition-colors;
+  @apply w-6 h-6 flex items-center justify-center rounded-full shadow-sm text-gray-400 hover:text-gray-600 transition-colors;
+  background-color: var(--bg-secondary);
 }
 
 .file-list-view {
@@ -630,7 +668,10 @@ onMounted(async () => {
 }
 
 .list-header {
-  @apply flex items-center bg-gray-50 border-b border-gray-200 px-4 py-3 text-sm font-medium text-gray-700;
+  @apply flex items-center border-b px-4 py-3 text-sm font-medium;
+  background-color: var(--bg-secondary);
+  color: var(--text-regular);
+  border-color: var(--border-color-light);
 }
 
 .header-cell--name {
@@ -654,7 +695,12 @@ onMounted(async () => {
 }
 
 .list-item {
-  @apply flex items-center px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer;
+  @apply flex items-center px-4 py-3 border-b cursor-pointer;
+  border-color: var(--border-color-extra-light);
+}
+
+.list-item:hover {
+  background-color: var(--bg-secondary);
 }
 
 .list-item--selected {
@@ -670,11 +716,13 @@ onMounted(async () => {
 }
 
 .list-cell--size {
-  @apply w-24 text-sm text-gray-600;
+  @apply w-24 text-sm;
+  color: var(--text-secondary);
 }
 
 .list-cell--date {
-  @apply w-32 text-sm text-gray-600;
+  @apply w-32 text-sm;
+  color: var(--text-secondary);
 }
 
 .list-cell--actions {
@@ -686,7 +734,10 @@ onMounted(async () => {
 }
 
 .file-stats {
-  @apply mt-4 flex items-center justify-between text-sm text-gray-600 bg-white p-4 rounded-lg border border-gray-200;
+  @apply mt-4 flex items-center justify-between text-sm p-4 rounded-lg border;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color-light);
 }
 
 /* 文件預覽對話框樣式 */
@@ -696,18 +747,26 @@ onMounted(async () => {
 
 .file-preview-container {
   @apply bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden;
+  background-color: var(--bg-primary);
 }
 
 .preview-header {
-  @apply flex items-center justify-between p-4 border-b border-gray-200;
+  @apply flex items-center justify-between p-4 border-b;
+  border-color: var(--border-color-light);
 }
 
 .preview-title {
-  @apply text-lg font-medium text-gray-900 truncate;
+  @apply text-lg font-medium truncate;
+  color: var(--text-primary);
 }
 
 .preview-close-btn {
-  @apply w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors;
+  @apply w-8 h-8 flex items-center justify-center transition-colors;
+  color: var(--text-secondary);
+}
+
+.preview-close-btn:hover {
+  color: var(--text-primary);
 }
 
 .preview-content {
@@ -719,7 +778,8 @@ onMounted(async () => {
 }
 
 .preview-text {
-  @apply w-full h-full overflow-auto bg-gray-50 p-4 rounded;
+  @apply w-full h-full overflow-auto p-4 rounded;
+  background-color: var(--bg-tertiary);
 }
 
 .preview-text pre {

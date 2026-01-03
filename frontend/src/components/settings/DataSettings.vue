@@ -367,7 +367,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { DataSettings } from '@/types/settings'
@@ -545,8 +545,9 @@ const cleanupAll = async () => {
 }
 
 .group-title {
-  @apply text-lg font-semibold text-gray-900 dark:text-white mb-4;
-  @apply pb-2 border-b border-gray-200 dark:border-gray-700;
+  @apply text-lg font-semibold mb-4 pb-2 border-b;
+  color: var(--text-primary);
+  border-color: var(--border-color-light);
 }
 
 .form-help {
@@ -555,7 +556,8 @@ const cleanupAll = async () => {
 
 .cache-stats,
 .manual-cleanup {
-  @apply mt-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg;
+  @apply mt-6 p-4 rounded-lg;
+  background-color: var(--bg-tertiary);
 }
 
 .stats-header,
@@ -573,7 +575,8 @@ const cleanupAll = async () => {
 }
 
 .stat-item {
-  @apply flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded;
+  @apply flex items-center justify-between p-3 rounded;
+  background-color: var(--bg-secondary);
 }
 
 .stat-label {

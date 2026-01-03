@@ -5,99 +5,88 @@
 
 /* CSS 變數定義 */
 :root {
-  /* 主色調 */
+  /* Brand Colors */
   --primary-color: #409eff;
   --primary-light: #79bbff;
   --primary-dark: #337ecc;
-  
-  /* 成功色 */
+
+  /* Status Colors */
   --success-color: #67c23a;
-  --success-light: #95d475;
-  --success-dark: #529b2e;
-  
-  /* 警告色 */
   --warning-color: #e6a23c;
-  --warning-light: #ebb563;
-  --warning-dark: #b88230;
-  
-  /* 危險色 */
   --danger-color: #f56c6c;
-  --danger-light: #f78989;
-  --danger-dark: #c45656;
-  
-  /* 信息色 */
   --info-color: #909399;
-  --info-light: #a6a9ad;
-  --info-dark: #73767a;
-  
-  /* 文字顏色 */
+
+  /* Neutral Colors - Light Mode */
   --text-primary: #303133;
   --text-regular: #606266;
   --text-secondary: #909399;
   --text-placeholder: #c0c4cc;
-  
-  /* 背景顏色 */
+
   --bg-primary: #ffffff;
   --bg-secondary: #f5f7fa;
   --bg-tertiary: #ebeef5;
-  
-  /* 邊框顏色 */
-  --border-light: #dcdfe6;
-  --border-base: #e4e7ed;
-  --border-dark: #c0c4cc;
-  
-  /* 陰影 */
-  --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
-  --shadow-base: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --shadow-dark: 0 4px 12px rgba(0, 0, 0, 0.15);
-  
-  /* 圓角 */
-  --radius-sm: 4px;
-  --radius-base: 6px;
+
+  --border-color-base: #dcdfe6;
+  --border-color-light: #e4e7ed;
+  --border-color-extra-light: #f2f6fc;
+
+  /* Box Shadows */
+  --el-box-shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  --el-box-shadow-base: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
+
+  /* Layout Constants */
+  --header-height: 64px;
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
+
+  /* Spacing & Borders */
+  --radius-base: 4px;
   --radius-lg: 8px;
-  --radius-xl: 12px;
-  
-  /* 間距 */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
   --spacing-base: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  
-  /* 字體大小 */
-  --font-xs: 12px;
-  --font-sm: 13px;
-  --font-base: 14px;
-  --font-lg: 16px;
-  --font-xl: 18px;
-  --font-2xl: 20px;
-  --font-3xl: 24px;
-  
-  /* 行高 */
-  --line-height-tight: 1.25;
-  --line-height-base: 1.5;
-  --line-height-loose: 1.75;
-  
-  /* 過渡動畫 */
-  --transition-fast: 0.15s;
-  --transition-base: 0.3s;
-  --transition-slow: 0.5s;
+
+  /* Animation */
+  --transition-base: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
-/* 深色主題變數 */
-.dark {
+/* Dark Theme Overrides */
+html.dark {
+  color-scheme: dark;
+
+  /* Neutral Colors - Dark Mode */
   --text-primary: #e5eaf3;
   --text-regular: #cfd3dc;
   --text-secondary: #a3a6ad;
   --text-placeholder: #8d9095;
-  
-  --bg-primary: #1d1e1f;
-  --bg-secondary: #25262b;
-  --bg-tertiary: #2c2e33;
-  
-  --border-light: #373739;
-  --border-base: #414243;
-  --border-dark: #4c4d4f;
+
+  --bg-primary: #141414;
+  --bg-secondary: #1d1e1f;
+  --bg-tertiary: #25262b;
+
+  --border-color-base: #4c4d4f;
+  --border-color-light: #363637;
+  --border-color-extra-light: #2c2c2c;
+
+  /* Element Plus Dark Theme Mapping */
+  --el-bg-color: var(--bg-primary);
+  --el-bg-color-overlay: var(--bg-secondary);
+  --el-bg-color-page: var(--bg-primary);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-regular);
+  --el-text-color-secondary: var(--text-secondary);
+  --el-text-color-placeholder: var(--text-placeholder);
+  --el-border-color: var(--border-color-base);
+  --el-border-color-light: var(--border-color-light);
+  --el-border-color-lighter: var(--border-color-extra-light);
+  --el-fill-color-blank: var(--bg-primary);
+  --el-fill-color-light: var(--bg-secondary);
+  --el-fill-color-lighter: var(--bg-tertiary);
+  --el-fill-color-extra-light: var(--bg-tertiary);
+
+  /* Component specific dark mode adjustments */
+  --bg-overlay: rgba(255, 255, 255, 0.05);
+  --bg-input: var(--bg-primary);
+  --bg-card: var(--bg-secondary);
+  --bg-page: var(--bg-primary);
 }
 
 /* 重置樣式 */
@@ -115,13 +104,25 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
-               'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 
-               'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 
-               'Noto Color Emoji';
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    'Noto Sans',
+    sans-serif,
+    'Apple Color Emoji',
+    'Segoe UI Emoji',
+    'Segoe UI Symbol',
+    'Noto Color Emoji';
   color: var(--text-primary);
   background-color: var(--bg-primary);
-  transition: background-color var(--transition-base), color var(--transition-base);
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base);
 }
 
 /* 滾動條樣式 */
@@ -136,7 +137,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-dark);
+  background: var(--border-color-base);
   border-radius: var(--radius-base);
   transition: background-color var(--transition-base);
 }
@@ -155,7 +156,7 @@ body {
 a {
   color: var(--primary-color);
   text-decoration: none;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-base);
 }
 
 a:hover {
@@ -164,25 +165,25 @@ a:hover {
 
 /* 按鈕基礎樣式增強 */
 .el-button {
-  transition: all var(--transition-fast);
+  transition: var(--transition-base);
   border-radius: var(--radius-base);
 }
 
 /* 卡片樣式增強 */
 .el-card {
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
-  transition: all var(--transition-base);
+  border: 1px solid var(--border-color-light);
+  transition: var(--transition-base);
 }
 
 .el-card:hover {
-  box-shadow: var(--shadow-base);
+  box-shadow: var(--el-box-shadow-base);
 }
 
 /* 輸入框樣式增強 */
 .el-input__wrapper {
   border-radius: var(--radius-base);
-  transition: all var(--transition-fast);
+  transition: var(--transition-base);
 }
 
 /* 菜單樣式增強 */
@@ -194,7 +195,7 @@ a:hover {
 .el-sub-menu__title {
   border-radius: var(--radius-base);
   margin: 2px 8px;
-  transition: all var(--transition-fast);
+  transition: var(--transition-base);
 }
 
 .el-menu-item:hover,
@@ -203,7 +204,7 @@ a:hover {
 }
 
 .el-menu-item.is-active {
-  background-color: var(--primary-light) !important;
+  background-color: var(--primary-color) !important;
   color: white !important;
 }
 
@@ -274,11 +275,11 @@ a:hover {
   .mobile-only {
     display: block;
   }
-  
+
   .desktop-only {
     display: none;
   }
-  
+
   html {
     font-size: 13px;
   }
@@ -289,7 +290,7 @@ a:hover {
   .no-print {
     display: none !important;
   }
-  
+
   body {
     background: white !important;
     color: black !important;
@@ -325,7 +326,8 @@ a:hover {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -334,10 +336,15 @@ a:hover {
 }
 
 @keyframes bounce {
-  0%, 20%, 53%, 80%, 100% {
+  0%,
+  20%,
+  53%,
+  80%,
+  100% {
     transform: translate3d(0, 0, 0);
   }
-  40%, 43% {
+  40%,
+  43% {
     transform: translate3d(0, -30px, 0);
   }
   70% {
@@ -360,168 +367,67 @@ a:hover {
   animation: bounce 1s infinite;
 }
 
-/* Element Plus 深色模式樣式修復 - 使用更強制性的選擇器 */
-html.dark .el-form-item__label,
-html[data-theme="dark"] .el-form-item__label,
-.dark .el-form-item__label {
-  color: #f1f5f9 !important;
+/* Element Plus 深色模式樣式優化 - 使用變數而非硬編碼顏色 */
+html.dark .el-form-item__label {
+  color: var(--text-primary) !important;
 }
 
-html.dark .el-input__wrapper,
-html[data-theme="dark"] .el-input__wrapper,
-.dark .el-input__wrapper {
-  background-color: #374151 !important;
-  border-color: #4b5563 !important;
-  box-shadow: 0 0 0 1px #4b5563 inset !important;
+html.dark .el-input__wrapper {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color-base) !important;
+  box-shadow: 0 0 0 1px var(--border-color-base) inset !important;
 }
 
-html.dark .el-input__inner,
-html[data-theme="dark"] .el-input__inner,
-.dark .el-input__inner {
+html.dark .el-input__inner {
   background-color: transparent !important;
-  color: #f9fafb !important;
+  color: var(--text-primary) !important;
 }
 
-html.dark .el-input__inner::placeholder,
-html[data-theme="dark"] .el-input__inner::placeholder,
-.dark .el-input__inner::placeholder {
-  color: #9ca3af !important;
+html.dark .el-input__inner::placeholder {
+  color: var(--text-placeholder) !important;
 }
 
-html.dark .el-select .el-input__wrapper,
-html[data-theme="dark"] .el-select .el-input__wrapper,
-.dark .el-select .el-input__wrapper {
-  background-color: #374151 !important;
-  border-color: #4b5563 !important;
+html.dark .el-select .el-input__wrapper {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color-base) !important;
 }
 
-html.dark .el-select .el-input__inner,
-html[data-theme="dark"] .el-select .el-input__inner,
-.dark .el-select .el-input__inner {
-  color: #f9fafb !important;
+html.dark .el-select .el-input__inner {
+  color: var(--text-primary) !important;
 }
 
-html.dark .el-select .el-input__suffix,
-html[data-theme="dark"] .el-select .el-input__suffix,
-.dark .el-select .el-input__suffix {
-  color: #9ca3af !important;
+html.dark .el-select-dropdown {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color-base) !important;
 }
 
-html.dark .el-select-dropdown,
-html[data-theme="dark"] .el-select-dropdown,
-.dark .el-select-dropdown {
-  background-color: #374151 !important;
-  border-color: #4b5563 !important;
+html.dark .el-select-dropdown__item {
+  color: var(--text-primary) !important;
 }
 
-html.dark .el-select-dropdown__item,
-html[data-theme="dark"] .el-select-dropdown__item,
-.dark .el-select-dropdown__item {
-  color: #f9fafb !important;
-}
-
-html.dark .el-select-dropdown__item:hover,
-html[data-theme="dark"] .el-select-dropdown__item:hover,
-.dark .el-select-dropdown__item:hover {
-  background-color: #4b5563 !important;
-}
-
-html.dark .el-select-dropdown__item.selected,
-html[data-theme="dark"] .el-select-dropdown__item.selected,
-.dark .el-select-dropdown__item.selected {
-  background-color: rgba(59, 130, 246, 0.2) !important;
-  color: #60a5fa !important;
+html.dark .el-select-dropdown__item:hover {
+  background-color: var(--bg-tertiary) !important;
 }
 
 html.dark .el-checkbox__label,
-html[data-theme="dark"] .el-checkbox__label,
-.dark .el-checkbox__label {
-  color: #f1f5f9 !important;
-}
-
 html.dark .el-radio__label,
-html[data-theme="dark"] .el-radio__label,
-.dark .el-radio__label {
-  color: #f1f5f9 !important;
+html.dark .el-switch__label {
+  color: var(--text-primary) !important;
 }
 
-html.dark .el-switch__label,
-html[data-theme="dark"] .el-switch__label,
-.dark .el-switch__label {
-  color: #f1f5f9 !important;
+html.dark .el-card {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color-extra-light) !important;
 }
 
-html.dark .el-text,
-html[data-theme="dark"] .el-text,
-.dark .el-text {
-  color: #94a3b8 !important;
+html.dark .el-button--default {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color-base) !important;
 }
 
-html.dark .el-text--info,
-html[data-theme="dark"] .el-text--info,
-.dark .el-text--info {
-  color: #94a3b8 !important;
-}
-
-html.dark .el-text--success,
-html[data-theme="dark"] .el-text--success,
-.dark .el-text--success {
-  color: #34d399 !important;
-}
-
-html.dark .el-text--danger,
-html[data-theme="dark"] .el-text--danger,
-.dark .el-text--danger {
-  color: #f87171 !important;
-}
-
-html.dark .el-input-number .el-input__wrapper,
-html[data-theme="dark"] .el-input-number .el-input__wrapper,
-.dark .el-input-number .el-input__wrapper {
-  background-color: #374151 !important;
-  border-color: #4b5563 !important;
-}
-
-html.dark .el-time-picker .el-input__wrapper,
-html[data-theme="dark"] .el-time-picker .el-input__wrapper,
-.dark .el-time-picker .el-input__wrapper {
-  background-color: #374151 !important;
-  border-color: #4b5563 !important;
-}
-
-html.dark .el-button,
-html[data-theme="dark"] .el-button,
-.dark .el-button {
-  border-color: #4b5563 !important;
-}
-
-html.dark .el-button--default,
-html[data-theme="dark"] .el-button--default,
-.dark .el-button--default {
-  background-color: #374151 !important;
-  color: #f9fafb !important;
-}
-
-html.dark .el-button--primary,
-html[data-theme="dark"] .el-button--primary,
-.dark .el-button--primary {
-  background-color: #3b82f6 !important;
-  border-color: #3b82f6 !important;
-}
-
-/* 強制覆蓋所有可能的Element Plus樣式 */
-[data-theme="dark"] * {
+[data-theme='dark'] * {
   color-scheme: dark;
-}
-
-[data-theme="dark"] .el-form-item__label {
-  color: #f1f5f9 !important;
-}
-
-[data-theme="dark"] .el-input__inner {
-  background-color: #374151 !important;
-  border-color: #4b5563 !important;
-  color: #f9fafb !important;
 }
 
 /* 界面設定 - 全域樣式 */
@@ -641,11 +547,11 @@ html[data-theme="dark"] .el-button--primary,
     --density-padding: 1.25;
     --density-margin: 1.1;
   }
-  
+
   .compact-mode {
     --compact-scale: 0.95;
   }
-  
+
   .font-size-large {
     --font-scale: 1.1;
   }
@@ -653,8 +559,9 @@ html[data-theme="dark"] .el-button--primary,
 
 /* 確保設定變更的即時應用 */
 html[data-interface-settings] {
-  transition: font-size var(--transition-base),
-              line-height var(--transition-base);
+  transition:
+    font-size var(--transition-base),
+    line-height var(--transition-base);
 }
 
 /* 界面設定組合效果 */
@@ -672,4 +579,36 @@ html[data-interface-settings] {
 
 .font-size-small.density-compact {
   line-height: var(--line-height-tight) !important;
+}
+
+/* Global Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color-base);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-placeholder);
+}
+
+/* Dark Mode Scrollbar Adjustments */
+html.dark ::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: var(--border-color-light);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-color-base);
 }

@@ -10,7 +10,6 @@ import { i18n } from './i18n'
 // 樣式導入
 import 'element-plus/dist/index.css'
 import './assets/styles/main.css'
-import './assets/styles/dark-mode-fix.css'
 
 // 創建應用實例
 const app = createApp(App)
@@ -36,13 +35,13 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 // GraphQL 客戶端已移除
 
 // 全域配置
-app.config.errorHandler = (err, vm, info) => {
+app.config.errorHandler = (err, _vm, info) => {
   console.error('應用錯誤:', err)
   console.error('組件信息:', info)
   // 這裡可以集成錯誤追蹤服務如 Sentry
 }
 
-app.config.warnHandler = (msg, vm, trace) => {
+app.config.warnHandler = (msg, _vm, trace) => {
   console.warn('應用警告:', msg)
   if (import.meta.env.DEV) {
     console.warn('組件追蹤:', trace)
@@ -57,7 +56,7 @@ if (import.meta.env.DEV) {
 // 初始化設定store
 async function initializeApp() {
   const { useSettingsStore } = await import('./stores/settings')
-  const { setLocale, getCurrentLocale } = await import('./i18n')
+  const { setLocale } = await import('./i18n')
   const settingsStore = useSettingsStore()
   
   try {

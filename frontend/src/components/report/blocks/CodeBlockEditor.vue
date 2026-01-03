@@ -197,7 +197,7 @@ watch(
 .code-container {
   position: relative;
   display: flex;
-  background-color: #f8f9fa;
+  background-color: var(--bg-tertiary);
   border-radius: 0 0 6px 6px;
   overflow: hidden;
 }
@@ -205,8 +205,8 @@ watch(
 .line-numbers {
   margin: 0;
   padding: 12px 8px;
-  background-color: #e9ecef;
-  border-right: 1px solid var(--el-border-color-lighter);
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color-light);
   color: #6c757d;
   font-size: 14px;
   line-height: 1.5;
@@ -256,12 +256,12 @@ watch(
 }
 
 .dark .code-container {
-  background-color: #1e1e1e;
+  background-color: var(--bg-primary);
 }
 
 .dark .line-numbers {
-  background-color: #2d2d2d;
-  color: #858585;
+  background-color: var(--bg-tertiary);
+  color: var(--text-placeholder);
 }
 
 .dark .code-editor {

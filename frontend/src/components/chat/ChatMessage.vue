@@ -29,13 +29,13 @@
     <div class="message-content flex-1 min-w-0">
       <!-- 消息頭部信息 -->
       <div class="message-header flex items-center gap-2 mb-1">
-        <span class="sender-name text-sm font-medium text-gray-900 dark:text-white">
+        <span class="sender-name text-sm font-medium">
           {{ translatedSender }}
         </span>
-        <span class="timestamp text-xs text-gray-500 dark:text-gray-400">
+        <span class="timestamp text-xs">
           {{ formattedTime }}
         </span>
-        <span v-if="message.type === MessageType.SYSTEM" class="system-badge text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
+        <span v-if="message.type === MessageType.SYSTEM" class="system-badge text-xs px-2 py-0.5 rounded">
           系統
         </span>
       </div>
@@ -61,7 +61,7 @@
           <div 
             v-if="renderedContent"
             v-html="renderedContent"
-            class="prose prose-sm max-w-none dark:prose-invert prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-pre:bg-gray-800 prose-pre:text-gray-100 prose-code:bg-gray-100 dark:prose-code:bg-gray-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm"
+            class="prose prose-sm max-w-none dark:prose-invert prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2"
           ></div>
           
           <!-- 純文本後備 -->
@@ -71,8 +71,8 @@
         </div>
 
         <!-- 消息元數據 -->
-        <div v-if="message.metadata && hasMetadata" class="message-metadata mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-          <div class="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+        <div v-if="message.metadata && hasMetadata" class="message-metadata mt-3 pt-3 border-t">
+          <div class="flex flex-wrap gap-4 text-xs">
             <span v-if="message.metadata.agentType" class="flex items-center gap-1">
               <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" />
@@ -95,7 +95,7 @@
           
           <!-- 來源鏈接 -->
           <div v-if="message.metadata.sources && message.metadata.sources.length > 0" class="sources mt-2">
-            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">參考來源:</div>
+            <div class="text-xs mb-1">參考來源:</div>
             <div class="flex flex-wrap gap-1">
               <a
                 v-for="(source, index) in message.metadata.sources"
@@ -103,7 +103,7 @@
                 :href="source"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="source-link text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                class="source-link text-xs px-2 py-1 rounded transition-colors"
               >
                 來源 {{ index + 1 }}
               </a>
@@ -117,7 +117,7 @@
     <div class="message-actions opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0 flex items-start gap-1 mt-8">
       <button
         @click="copyMessage"
-        class="action-button p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+        class="action-button p-1.5 rounded transition-colors"
         title="複製消息"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -231,10 +231,10 @@ const bubbleClass = computed(() => {
   }
   
   if (props.message.type === MessageType.SYSTEM) {
-    return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600'
+    return 'system-bubble'
   }
   
-  return 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 shadow-sm'
+  return 'standard-bubble'
 })
 
 const renderedContent = computed(() => {
@@ -327,6 +327,55 @@ const copyMessage = async () => {
   overflow-wrap: break-word;
 }
 
+.sender-name {
+  color: var(--text-primary);
+}
+
+.timestamp {
+  color: var(--text-placeholder);
+}
+
+.system-badge {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.system-bubble {
+  background-color: var(--bg-tertiary);
+  color: var(--text-regular);
+  border: 1px solid var(--border-color-light);
+}
+
+.standard-bubble {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color-light);
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+.message-metadata {
+  border-top-color: var(--border-color-light);
+  color: var(--text-secondary);
+}
+
+.source-link {
+  background-color: var(--bg-tertiary);
+  color: var(--el-color-primary);
+}
+
+.source-link:hover {
+  background-color: var(--el-color-primary-light-9);
+}
+
+.action-button {
+  background-color: var(--bg-tertiary);
+  color: var(--text-placeholder);
+}
+
+.action-button:hover {
+  color: var(--text-primary);
+}
+
 .action-button {
   transition: all 0.2s ease;
 }
@@ -337,8 +386,8 @@ const copyMessage = async () => {
 
 /* Markdown 內容樣式優化 */
 .message-text :deep(pre) {
-  background: rgb(30, 41, 59) !important;
-  color: rgb(226, 232, 240) !important;
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
@@ -347,7 +396,10 @@ const copyMessage = async () => {
 }
 
 .message-text :deep(code) {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: inherit;
+  background-color: var(--bg-tertiary) !important;
+  padding: 0.2rem 0.4rem !important;
+  border-radius: 0.25rem !important;
 }
 
 .message-text :deep(pre code) {

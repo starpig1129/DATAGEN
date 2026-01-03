@@ -194,8 +194,6 @@ export const useSettingsStore = defineStore('settings', {
           throw new Error(errorMessage)
         }
 
-        const responseData = await response.json()
-
         this.syncStatus.lastSync = new Date().toISOString()
         localStorage.setItem(STORAGE_KEYS.LAST_SYNC, this.syncStatus.lastSync)
       } catch (error) {
@@ -460,27 +458,22 @@ export const useSettingsStore = defineStore('settings', {
       const theme = this.currentTheme
       const html = document.documentElement
       
-      // 移除舊的主題類
-      html.classList.remove('light', 'dark')
-      
-      // 設定新的主題
+      // 更新 HTML 屬性與類名
       html.setAttribute('data-theme', theme)
-      html.classList.add(theme)
       
-      // 強制觸發樣式重新計算
-      html.style.colorScheme = theme
-      
-      // 強制注入深色模式樣式
-      try {
-        if (theme === 'dark') {
-          injectDarkModeStyles()
-        } else {
-          removeDarkModeStyles()
-        }
-      } catch (error) {
-        console.error('❌ 樣式注入失敗:', error)
+      if (theme === 'dark') {
+        html.classList.add('dark')
+        html.classList.remove('light')
+        html.style.colorScheme = 'dark'
+        injectDarkModeStyles()
+      } else {
+        html.classList.add('light')
+        html.classList.remove('dark')
+        html.style.colorScheme = 'light'
+        removeDarkModeStyles()
       }
       
+      console.log(`🎨 主題已切換為: ${theme}`)
     },
 
     // 設置系統主題監聽器

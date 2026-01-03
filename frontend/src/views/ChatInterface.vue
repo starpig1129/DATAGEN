@@ -7,10 +7,10 @@
     </div>
 
     <!-- 聊天容器 -->
-    <div class="chat-container flex-1 flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="chat-container flex-1 flex flex-col rounded-lg shadow-sm border overflow-hidden">
       
       <!-- 連接狀態指示器 -->
-      <div v-if="!chatStore.isConnected" class="connection-status bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-700 dark:text-red-400 flex items-center justify-between">
+      <div v-if="!chatStore.isConnected" class="connection-status border-b px-4 py-2 text-sm flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
           <span v-if="chatStore.reconnectAttempts < 5">
@@ -40,7 +40,7 @@
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">歡迎使用多代理數據分析系統</h3>
           <p class="text-gray-600 dark:text-gray-400 mb-6">8個專業代理準備為您提供深度數據分析服務</p>
           <div class="flex flex-wrap justify-center gap-2">
-            <span v-for="agent in agentTypes" :key="agent" class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm rounded-full">
+            <span v-for="agent in agentTypes" :key="agent" class="agent-badge px-3 py-1 text-sm rounded-full">
               {{ agent }}
             </span>
           </div>
@@ -64,7 +64,7 @@
       </div>
 
       <!-- 決策按鈕區域 -->
-      <div v-if="chatStore.needsDecision" class="decision-buttons-container bg-yellow-50 dark:bg-yellow-900/20 border-t border-yellow-200 dark:border-yellow-800 p-4">
+      <div v-if="chatStore.needsDecision" class="decision-buttons-container border-t p-4">
         <div class="text-sm text-yellow-700 dark:text-yellow-300 mb-3 flex items-center gap-2">
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
@@ -96,7 +96,7 @@
       </div>
 
       <!-- 消息輸入區域 -->
-      <div class="input-container bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-4">
+      <div class="input-container border-t p-4">
         <div class="flex gap-3 items-end">
           <div class="flex-1">
             <textarea
@@ -106,7 +106,7 @@
               @input="handleInput"
               :disabled="!canSendMessage"
               :placeholder="inputPlaceholder"
-              class="message-input w-full resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors duration-200"
+              class="message-input w-full resize-none rounded-lg border px-3 py-2 placeholder-gray-500 transition-colors duration-200"
               rows="1"
               :maxlength="maxMessageLength"
             ></textarea>
@@ -295,8 +295,53 @@ onUnmounted(() => {
   max-height: 100vh;
 }
 
+.chat-container {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color-light);
+}
+
 .messages-container {
   scroll-behavior: smooth;
+  background-color: var(--bg-primary);
+}
+
+.agent-badge {
+  background-color: var(--bg-tertiary);
+  color: var(--el-color-primary);
+  border: 1px solid var(--border-color-light);
+}
+
+.connection-status {
+  background-color: rgba(245, 108, 108, 0.1);
+  border-color: rgba(245, 108, 108, 0.2);
+  color: #f56c6c;
+}
+
+.decision-buttons-container {
+  background-color: rgba(230, 162, 60, 0.05);
+  border-color: var(--border-color-light);
+}
+
+.input-container {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color-light);
+}
+
+.message-input {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-color-light);
+}
+
+.message-input:focus {
+  outline: none;
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.message-input:disabled {
+  background-color: var(--bg-tertiary);
+  cursor: not-allowed;
 }
 
 .messages-container::-webkit-scrollbar {

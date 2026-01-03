@@ -308,7 +308,7 @@ watch(
 }
 
 .blank-template {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--border-color-light) 100%);
 }
 
 .template-image {

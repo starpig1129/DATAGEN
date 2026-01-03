@@ -5,9 +5,7 @@ import type {
   FileUploadInput,
   FileUploadProgress,
   FileSearchParams,
-  FileOperation,
-  FileOperationResult,
-  DirectoryTree
+  FileOperationResult
 } from '@/types/file'
 import { useAppStore } from './app'
 
@@ -356,41 +354,17 @@ export const useFileStore = defineStore('file', () => {
   }
 
   // 工具函數
-  const getFileType = (fileName: string): string => {
-    const ext = getFileExtension(fileName).toLowerCase()
-    
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return 'image'
-    if (['pdf'].includes(ext)) return 'document'
-    if (['txt', 'md', 'json', 'csv'].includes(ext)) return 'text'
-    if (['mp4', 'avi', 'mov', 'webm'].includes(ext)) return 'video'
-    if (['mp3', 'wav', 'ogg'].includes(ext)) return 'audio'
-    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'archive'
-    
-    return 'other'
-  }
+  // 工具函數已簡化
 
-  const getFileExtension = (fileName: string): string => {
-    const lastDot = fileName.lastIndexOf('.')
-    return lastDot !== -1 ? fileName.substring(lastDot + 1) : ''
-  }
 
-  const getMimeType = (fileName: string): string => {
-    const ext = getFileExtension(fileName).toLowerCase()
-    const mimeTypes: Record<string, string> = {
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'gif': 'image/gif',
-      'pdf': 'application/pdf',
-      'txt': 'text/plain',
-      'json': 'application/json',
-      'csv': 'text/csv'
-    }
-    return mimeTypes[ext] || 'application/octet-stream'
-  }
+  // 工具函數已簡化
+
+
+  // MimeType 獲取函數已簡化
+
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B'
+    if (!bytes || isNaN(bytes) || bytes === 0) return '0 B'
     
     const k = 1024
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -428,7 +402,7 @@ export const useFileStore = defineStore('file', () => {
   const batchFileOperation = async (
     fileIds: string[],
     operation: 'delete' | 'download',
-    options?: any
+    _options?: any
   ): Promise<void> => {
     const appStore = useAppStore()
     

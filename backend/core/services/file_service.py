@@ -108,21 +108,21 @@ class FileService:
         # 獲取文件列表
         files = []
         for item in full_path.iterdir():
-            if item.is_file():
+            try:
                 stat = item.stat()
-                files.append({
+                file_info = {
+                    "id": str(hash(str(item.absolute()))),
                     "name": item.name,
                     "path": str(item.relative_to(self.base_path)),
                     "size": stat.st_size,
+                    "updatedAt": datetime.fromtimestamp(stat.st_mtime).isoformat(),
                     "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    "is_file": True
-                })
-            elif item.is_dir():
-                files.append({
-                    "name": item.name,
-                    "path": str(item.relative_to(self.base_path)),
-                    "is_file": False
-                })
+                    "is_file": item.is_file(),
+                    "type": "directory" if item.is_dir() else self._get_file_type(item.name)
+                }
+                files.append(file_info)
+            except Exception as e:
+                print(f"警告：讀取項目 {item} 資訊失敗: {e}")
 
         return {
             "directory": str(full_path.relative_to(self.base_path)) if full_path != self.base_path else "",
@@ -424,11 +424,14 @@ class FileService:
                                 pass
 
                         results.append({
+                            "id": str(hash(str(item.absolute()))),
                             "name": item.name,
                             "path": str(item.relative_to(self.base_path)),
                             "size": stat.st_size,
+                            "updatedAt": mod_time.isoformat(),
                             "last_modified": mod_time.isoformat(),
-                            "is_file": True
+                            "is_file": True,
+                            "type": self._get_file_type(item.name)
                         })
 
                     elif item.is_dir() and not item.name.startswith('.'):

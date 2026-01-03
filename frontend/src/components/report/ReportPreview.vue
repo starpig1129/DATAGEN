@@ -179,7 +179,6 @@ const props = defineProps<Props>();
 // 響應式狀態
 const previewMode = ref<'desktop' | 'tablet' | 'mobile'>('desktop');
 const fullscreenVisible = ref(false);
-const previewContentRef = ref<HTMLElement>();
 
 // 計算屬性
 const sortedBlocks = computed(() => {
@@ -255,7 +254,7 @@ const toggleFullscreen = () => {
 .preview-container {
   flex: 1;
   overflow-y: auto;
-  background: #f5f5f5;
+  background: var(--bg-tertiary);
   padding: 20px;
   transition: all 0.3s ease;
 }
@@ -275,7 +274,7 @@ const toggleFullscreen = () => {
 .preview-content {
   max-width: 800px;
   margin: 0 auto;
-  background: white;
+  background: var(--bg-primary);
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   overflow: hidden;
@@ -389,7 +388,7 @@ const toggleFullscreen = () => {
 .fullscreen-preview {
   height: 100%;
   overflow-y: auto;
-  background: #f5f5f5;
+  background: var(--bg-tertiary);
   padding: 40px;
 }
 

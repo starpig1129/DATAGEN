@@ -35,15 +35,19 @@ defineProps<Props>()
 
 <style scoped>
 .settings-section {
-  @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden;
+  @apply rounded-lg border overflow-hidden;
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color-light);
 }
 
 .section-header {
-  @apply flex items-start gap-4 p-6 border-b border-gray-200 dark:border-gray-700;
+  @apply flex items-start gap-4 p-6 border-b;
+  border-color: var(--border-color-light);
 }
 
 .section-icon {
-  @apply flex-shrink-0 w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center;
+  @apply flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center;
+  background-color: var(--bg-tertiary);
 }
 
 .section-icon .el-icon {

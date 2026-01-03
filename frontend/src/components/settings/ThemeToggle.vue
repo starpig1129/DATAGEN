@@ -188,12 +188,14 @@ const handleChange = (value: string | number | boolean | undefined) => {
 }
 
 .theme-option-content {
-  @apply flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700;
-  @apply hover:border-blue-300 dark:hover:border-blue-600 transition-colors cursor-pointer w-full;
+  @apply flex items-start gap-3 p-3 rounded-lg border transition-colors cursor-pointer w-full;
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color-light);
 }
 
 .theme-option :deep(.el-radio.is-checked) .theme-option-content {
-  @apply border-blue-500 bg-blue-50 dark:bg-blue-900/20;
+  border-color: var(--el-color-primary);
+  background-color: var(--el-color-primary-light-9);
 }
 
 .theme-icon {
@@ -221,7 +223,8 @@ const handleChange = (value: string | number | boolean | undefined) => {
 }
 
 .theme-preview {
-  @apply mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg;
+  @apply mt-4 p-4 rounded-lg;
+  background-color: var(--bg-tertiary);
 }
 
 .preview-label {
@@ -345,35 +348,17 @@ const handleChange = (value: string | number | boolean | undefined) => {
   @apply text-gray-300 bg-gray-800;
 }
 
-/* 深色模式下的樣式修復 */
-.dark .theme-name {
-  color: #f1f5f9 !important;
-}
-
-.dark .theme-desc {
-  color: #94a3b8 !important;
-}
-
-.dark .theme-icon {
-  color: #94a3b8 !important;
-}
-
-.dark .theme-option :deep(.el-radio.is-checked) .theme-icon {
-  color: #60a5fa !important;
-}
-
-.dark .theme-option :deep(.el-radio__label) {
-  color: #f1f5f9 !important;
-}
-
+/* 深色主題增強 */
 .dark .theme-option-content {
-  border-color: #4b5563 !important;
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color-light) !important;
 }
 
 .dark .theme-option :deep(.el-radio.is-checked) .theme-option-content {
-  border-color: #3b82f6 !important;
-  background-color: rgba(59, 130, 246, 0.1) !important;
+  border-color: var(--el-color-primary) !important;
+  background-color: rgba(64, 158, 255, 0.1) !important;
 }
+
 
 /* 響應式設計 */
 @media (max-width: 768px) {
