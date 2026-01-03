@@ -41,14 +41,13 @@
       "workflow": "工作流",
       "performance": "性能分析"
     },
-    "visualization": {
-      "title": "數據視覺化",
-      "charts": "圖表分析",
-      "dashboard": "儀表板",
-      "reports": "報告生成"
+    "dataCenter": {
+      "title": "數據中心",
+      "files": "檔案管理",
+      "visualization": "數據探勘"
     },
     "reports": {
-      "title": "報告生成",
+      "title": "報告中心",
       "new": "新建報告",
       "save": "保存報告",
       "export": "導出報告",

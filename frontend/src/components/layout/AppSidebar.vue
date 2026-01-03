@@ -11,7 +11,7 @@
       active-text-color="var(--el-color-primary)"
     >
       <!-- 儀表板 -->
-      <el-menu-item index="/dashboard" route="/">
+      <el-menu-item index="/" route="/">
         <el-icon><DataBoard /></el-icon>
         <span>{{ $t('navigation.dashboard') }}</span>
       </el-menu-item>
@@ -51,34 +51,30 @@
         </el-menu-item>
       </el-sub-menu>
 
-      <!-- 數據視覺化 -->
-      <el-sub-menu index="visualization">
+      <!-- 數據中心 -->
+      <el-sub-menu index="data">
         <template #title>
-          <el-icon><PieChart /></el-icon>
-          <span>{{ $t('navigation.visualization.title') }}</span>
+          <el-icon><Folder /></el-icon>
+          <span>{{ $t('navigation.dataCenter.title') }}</span>
         </template>
         
-        <el-menu-item index="/visualization" route="/visualization">
-          <el-icon><DataAnalysis /></el-icon>
-          <span>{{ $t('navigation.visualization.charts') }}</span>
-        </el-menu-item>
-        
-        <el-menu-item index="/visualization/dashboard">
-          <el-icon><Grid /></el-icon>
-          <span>{{ $t('navigation.visualization.dashboard') }}</span>
-        </el-menu-item>
-        
-        <el-menu-item index="/reports" route="/reports">
+        <el-menu-item index="/files" route="/files">
           <el-icon><Document /></el-icon>
-          <span>{{ $t('navigation.visualization.reports') }}</span>
+          <span>{{ $t('navigation.dataCenter.files') }}</span>
+        </el-menu-item>
+        
+        <el-menu-item index="/visualization" route="/visualization">
+          <el-icon><PieChart /></el-icon>
+          <span>{{ $t('navigation.dataCenter.visualization') }}</span>
         </el-menu-item>
       </el-sub-menu>
 
-      <!-- 文件管理 -->
-      <el-menu-item index="/files" route="/files">
-        <el-icon><Folder /></el-icon>
-        <span>{{ $t('navigation.files') }}</span>
+      <!-- 報告生成 -->
+      <el-menu-item index="/reports" route="/reports">
+        <el-icon><DataAnalysis /></el-icon>
+        <span>{{ $t('navigation.reports.title') }}</span>
       </el-menu-item>
+
 
       <!-- 系統設置 -->
       <el-menu-item index="/settings" route="/settings">
@@ -116,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import {
@@ -128,7 +124,6 @@ import {
   TrendCharts,
   PieChart,
   DataAnalysis,
-  Grid,
   Document,
   Folder,
   Setting,
