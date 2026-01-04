@@ -1,10 +1,17 @@
 <template>
-  <aside class="app-sidebar">
+  <aside class="app-sidebar" :class="{ 'collapsed': isCollapsed }">
+    <!-- 折疊控制按鈕 - 頂部全寬度 -->
+    <div class="collapse-toggle" @click="toggleCollapse" :title="isCollapsed ? '展開側邊欄' : '收起側邊欄'">
+      <el-icon :size="18"><component :is="isCollapsed ? Expand : Fold" /></el-icon>
+      <span v-if="!isCollapsed" class="collapse-text">{{ isCollapsed ? '展開' : '收起' }}</span>
+    </div>
+
     <!-- 導航菜單 -->
     <el-menu
       :default-active="activeMenuKey"
       :collapse="isCollapsed"
       :router="true"
+      :collapse-transition="false"
       class="sidebar-menu"
       background-color="var(--el-bg-color)"
       text-color="var(--el-text-color-primary)"
@@ -29,7 +36,7 @@
       </el-menu-item>
 
       <!-- 代理監控 -->
-      <el-sub-menu index="agents">
+      <el-sub-menu index="agents" popper-class="sidebar-popper">
         <template #title>
           <el-icon><Monitor /></el-icon>
           <span>{{ $t('navigation.agents.title') }}</span>
@@ -47,7 +54,7 @@
       </el-sub-menu>
 
       <!-- 數據中心 -->
-      <el-sub-menu index="data">
+      <el-sub-menu index="data" popper-class="sidebar-popper">
         <template #title>
           <el-icon><Folder /></el-icon>
           <span>{{ $t('navigation.dataCenter.title') }}</span>
@@ -77,17 +84,6 @@
         <span>{{ $t('navigation.settings') }}</span>
       </el-menu-item>
     </el-menu>
-
-    <!-- 摺疊控制按鈕 -->
-    <div class="sidebar-footer">
-      <el-button
-        :icon="isCollapsed ? Expand : Fold"
-        circle
-        size="small"
-        @click="toggleCollapse"
-        class="collapse-btn"
-      />
-    </div>
 
     <!-- 代理狀態指示器 -->
     <div v-if="!isCollapsed" class="agent-status-panel">
@@ -180,29 +176,12 @@ const toggleCollapse = () => {
   border-right: 1px solid var(--el-border-color-light);
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease;
+  transition: width 0.3s ease, background-color 0.3s ease;
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* 改為 visible 確保彈出選單不被裁剪，雖然 popper 通常 append to body */
 }
 
 /* 摺疊狀態的側邊欄 */
-.app-sidebar:has(.sidebar-menu.el-menu--collapse),
-.sidebar-collapsed .app-sidebar {
-  width: 64px;
-}
-
-.app-sidebar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(180deg, transparent 0%, rgba(64, 158, 255, 0.05) 100%);
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
 .app-sidebar.collapsed {
   width: 64px;
 }
@@ -211,18 +190,27 @@ const toggleCollapse = () => {
   flex: 1;
   border-right: none;
   background: transparent !important;
+  width: 100%;
 }
 
-.sidebar-menu .el-menu-item {
-  position: relative;
+.sidebar-menu .el-menu-item,
+.sidebar-menu :deep(.el-sub-menu__title) {
   margin: 4px 8px;
   border-radius: 8px;
   transition: all 0.3s ease;
 }
 
-.sidebar-menu .el-menu-item:hover {
+/* 摺疊狀態時，取消左右 margin 讓項目撐滿 64px，以便 popper 定位準確 */
+.app-sidebar.collapsed .sidebar-menu .el-menu-item,
+.app-sidebar.collapsed .sidebar-menu :deep(.el-sub-menu__title) {
+  margin: 4px 0 !important;
+  width: 100% !important;
+  border-radius: 0;
+}
+
+.sidebar-menu .el-menu-item:hover,
+.sidebar-menu :deep(.el-sub-menu__title:hover) {
   background: linear-gradient(135deg, rgba(64, 158, 255, 0.1), rgba(103, 194, 58, 0.1)) !important;
-  transform: translateX(4px);
 }
 
 .sidebar-menu .el-menu-item.is-active {
@@ -230,15 +218,16 @@ const toggleCollapse = () => {
   border-left: 3px solid var(--el-color-primary);
 }
 
-.sidebar-menu .el-sub-menu .el-sub-menu__title {
-  margin: 4px 8px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+/* 確保摺疊時圖標居中 */
+.sidebar-menu.el-menu--collapse {
+  width: 64px;
 }
 
-.sidebar-menu .el-sub-menu .el-sub-menu__title:hover {
-  background: linear-gradient(135deg, rgba(64, 158, 255, 0.1), rgba(103, 194, 58, 0.1)) !important;
-  transform: translateX(4px);
+.sidebar-menu.el-menu--collapse :deep(.el-tooltip__trigger) {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;
 }
 
 .menu-badge {
@@ -260,22 +249,35 @@ const toggleCollapse = () => {
   }
 }
 
-.sidebar-footer {
-  padding: 16px;
-  text-align: center;
+/* 摺疊控制按鈕 - 底部全寬度 */
+.collapse-toggle {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.1), rgba(103, 194, 58, 0.1));
   border-top: 1px solid var(--el-border-color-lighter);
-  background: rgba(64, 158, 255, 0.05);
-}
-
-.collapse-btn {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--el-text-color-primary);
   transition: all 0.3s ease;
-  background: linear-gradient(135deg, #409eff, #67c23a);
-  border: none;
-  color: white;
+  font-size: 14px;
 }
 
-.collapse-btn:hover {
-  transform: scale(1.1) rotate(180deg);
+.collapse-toggle:hover {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.2), rgba(103, 194, 58, 0.2));
+}
+
+.collapse-toggle:active {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.3), rgba(103, 194, 58, 0.3));
+}
+
+.collapse-text {
+  font-weight: 500;
+}
+
+.app-sidebar.collapsed .collapse-toggle {
+  padding: 14px 8px;
 }
 
 .agent-status-panel {

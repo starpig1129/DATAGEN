@@ -612,3 +612,43 @@ html.dark ::-webkit-scrollbar-thumb {
 html.dark ::-webkit-scrollbar-thumb:hover {
   background: var(--border-color-base);
 }
+
+/* Element Plus Collapsed Menu Popup Fix */
+/* When sidebar is collapsed, adjust the popup menu position */
+.el-menu--popup {
+  min-width: 180px;
+}
+
+/* Ensure collapsed menu popups appear correctly */
+.el-menu--vertical:not(.el-menu--collapse)
+  .el-sub-menu.is-opened
+  > .el-sub-menu__title
+  .el-sub-menu__icon-arrow {
+  transform: rotateZ(180deg);
+}
+
+/* Fix popup menu positioning for collapsed sidebar */
+/* This ensures the popper is right next to the 64px sidebar */
+.el-popper.el-menu--popup {
+}
+
+/* Custom class for sidebar popper to ensure consistent positioning */
+.sidebar-popper {
+  z-index: 3000 !important;
+}
+
+.sidebar-popper .el-menu--popup {
+  padding: 8px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Improve collapsed sidebar submenu popup styling */
+.el-menu--popup-container {
+  --el-menu-bg-color: var(--bg-primary);
+}
+
+html.dark .el-menu--popup-container .el-menu--popup {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color-light);
+}
