@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { LANGUAGES, setLocale } from '@/i18n'
 import type { LanguageCode } from '@/types/settings'
@@ -65,7 +65,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-const { t } = useI18n()
+const { locale: _locale } = useI18n()  // Locale is used internally by vue-i18n
 
 // 本地狀態
 const localValue = ref<LanguageCode>(props.modelValue)
@@ -90,10 +90,10 @@ const handleChange = async (value: LanguageCode) => {
   }
 }
 
-// 計算當前語言的顯示信息
-const currentLanguageInfo = computed(() => {
-  return LANGUAGES[localValue.value]
-})
+// Computed: current language display info (reserved for display enhancements)
+// const _currentLanguageInfo = computed(() => {
+//   return LANGUAGES[localValue.value]
+// })
 </script>
 
 <style scoped>

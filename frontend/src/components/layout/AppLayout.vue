@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'

@@ -98,8 +98,8 @@ export const useChatStore = defineStore('chat', () => {
         reconnectDelay.value = 1000
       }
 
-      // 監聽連接建立事件
-      eventSource.addEventListener('connection_established', (event) => {
+      // Listen for connection establishment event
+      eventSource.addEventListener('connection_established', (_event) => {
         console.log('收到SSE連接確認事件')
         console.log('設置isConnected為true (connection_established)')
         isConnected.value = true

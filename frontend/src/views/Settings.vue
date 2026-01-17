@@ -678,8 +678,8 @@ const ensureDefaultValues = () => {
 // 初始化時確保預設值
 ensureDefaultValues()
 
-// 監聽表單變化標記為髒數據（防抖處理）
-let markDirtyTimeout: number | null = null
+// Watch form changes with debounce
+let markDirtyTimeout: ReturnType<typeof setTimeout> | null = null
 watch(formData, () => {
   if (markDirtyTimeout) {
     clearTimeout(markDirtyTimeout)
@@ -865,8 +865,9 @@ const handleValidation = (prop: FormItemProp, isValid: boolean, message: string)
   }
 }
 
-// 驗證整個表單
-const validateForm = async (): Promise<boolean> => {
+// Validate functions (reserved for future form validation)
+/*
+const _validateForm = async (): Promise<boolean> => {
   if (!formRef.value) return false
   
   try {
@@ -878,8 +879,7 @@ const validateForm = async (): Promise<boolean> => {
   }
 }
 
-// 驗證特定字段
-const validateField = async (prop: string): Promise<boolean> => {
+const _validateField = async (prop: string): Promise<boolean> => {
   if (!formRef.value) return false
   
   try {
@@ -889,6 +889,7 @@ const validateField = async (prop: string): Promise<boolean> => {
     return false
   }
 }
+*/
 
 // 清除驗證錯誤
 const clearValidation = () => {

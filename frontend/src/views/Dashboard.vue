@@ -9,7 +9,7 @@
     show-skip-link
     auto-focus
   >
-    <template #header="{ isMobile }">
+    <template #header="{ isMobile: _isMobile }">
       <div class="dashboard-header">
         <div class="header-content">
           <div class="title-section">
@@ -444,7 +444,7 @@ const recentActivities = computed(() => {
 
   // 從聊天消息中提取活動
   const recentMessages = chatStore.messages.slice(-3).reverse()
-  recentMessages.forEach((message, index) => {
+  recentMessages.forEach((message, _index) => {
     if (message.type === MessageType.AGENT) {
       activities.push({
         id: `msg_${message.id}`,
@@ -744,17 +744,17 @@ const initializeDashboard = async () => {
   }
 }
 
-// 快捷鍵和命令處理
-const handleShortcut = (keys: string, event: KeyboardEvent) => {
-  console.log('快捷鍵觸發:', keys)
+// Shortcut and command handling
+const handleShortcut = (keys: string, _event: KeyboardEvent) => {
+  console.log('Shortcut triggered:', keys)
 }
 
 const handleCommand = (command: any) => {
   console.log('命令執行:', command.title)
 }
 
-// 自動刷新定時器
-let autoRefreshTimer: number | null = null
+// Auto refresh timer
+let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 const startAutoRefresh = () => {
   // 每30秒自動刷新一次 (silent mode - no notifications)

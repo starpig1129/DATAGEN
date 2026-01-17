@@ -37,7 +37,7 @@ export const useIntegrationStore = defineStore('integration', () => {
   })
   
   const events = ref<SystemEvent[]>([])
-  const healthCheckInterval = ref<number | null>(null)
+  const healthCheckInterval = ref<ReturnType<typeof setInterval> | null>(null)
   
   // Store 實例引用
   const stores = {
@@ -167,35 +167,34 @@ export const useIntegrationStore = defineStore('integration', () => {
     }
   }
   
-  // 設置數據流
+  // Setup data flows
   const setupDataFlows = (): void => {
     if (!stores.realtime || !stores.chat || !stores.file || !stores.data) {
       return
     }
     
-    // 設置實時數據到聊天的流
+    // Data flow handlers (reserved for WebSocket event subscription)
+    /*
     const handleRealtimeToChat = (data: any) => {
       if (data.type === 'chat_state' && stores.chat) {
         stores.chat.syncWithRealtime(data)
       }
     }
     
-    // 設置實時數據到文件的流
     const handleRealtimeToFile = (data: any) => {
       if (data.type === 'file_status' && stores.file) {
         stores.file.syncFileStatus(data)
       }
     }
     
-    // 設置實時數據到數據管理的流
     const handleRealtimeToData = (data: any) => {
       if (data.type === 'data_update' && stores.data) {
-        // 觸發數據同步
         stores.data.syncAllData()
       }
     }
+    */
     
-    console.log('數據流設置完成')
+    console.log('Data flow setup complete')
   }
   
   // 設置事件監聽器

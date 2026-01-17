@@ -78,7 +78,7 @@ const headers = ref([...props.block.headers]);
 
 // 計算屬性
 const tableData = computed(() => {
-  return props.block.rows.map((row, rowIndex) => {
+  return props.block.rows.map((row, _rowIndex) => {
     const rowData: Record<string, string> = {};
     row.forEach((cell, colIndex) => {
       rowData[`col${colIndex}`] = cell;

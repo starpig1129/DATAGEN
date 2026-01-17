@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, readonly } from 'vue'
 import { useAppStore } from './app'
-import { useChatStore } from './chat'
+// import { useChatStore } from './chat'  // Reserved for future cross-store integration
 
 // 實時數據類型定義
 export interface RealTimeData {
@@ -78,10 +78,10 @@ export const useRealTimeStore = defineStore('realtime', () => {
     dataRetentionLimit: 100
   })
   
-  // WebSocket 連接
+  // WebSocket connection
   const wsConnection = ref<WebSocket | null>(null)
-  const reconnectTimer = ref<number | null>(null)
-  const heartbeatTimer = ref<number | null>(null)
+  const reconnectTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+  const heartbeatTimer = ref<ReturnType<typeof setInterval> | null>(null)
   
   // 計算屬性
   const isHealthy = computed(() => 
@@ -306,7 +306,8 @@ export const useRealTimeStore = defineStore('realtime', () => {
     }
   }
   
-  // 事件處理函數
+  // Event handlers (reserved for future event bus integration)
+  /*
   const handleChatStoreUpdate = (event: Event): void => {
     try {
       const customEvent = event as CustomEvent
@@ -336,6 +337,7 @@ export const useRealTimeStore = defineStore('realtime', () => {
       console.error('處理系統指標更新失敗:', error)
     }
   }
+  */
 
   // 消息處理 - 現在主要處理來自 Chat Store 轉發的消息
   const handleRealtimeMessage = (message: any): void => {
@@ -490,10 +492,11 @@ export const useRealTimeStore = defineStore('realtime', () => {
     }
   }
   
-  // 工具函數
-  const generateClientId = (): string => {
-    return `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  }
+  // Utility functions
+  // Reserved for future use
+  // const generateClientId = (): string => {
+  //   return `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  // }
   
   const generateDataId = (): string => {
     return `data_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`

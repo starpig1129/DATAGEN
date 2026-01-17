@@ -16,7 +16,7 @@
       <VueFlow
         v-model:nodes="nodes"
         v-model:edges="edges"
-        :node-types="nodeTypes"
+        :node-types="(nodeTypes as any)"
         :default-viewport="{ x: 100, y: 50, zoom: 0.8 }"
         :min-zoom="0.3"
         :max-zoom="2"
@@ -65,6 +65,7 @@ import '@vue-flow/minimap/dist/style.css'
 import AgentNode from '@/components/workflow/AgentNode.vue'
 
 // Custom node types
+// @ts-ignore - Vue Flow type compatibility workaround
 const nodeTypes = {
   agent: markRaw(AgentNode)
 }

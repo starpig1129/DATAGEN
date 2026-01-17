@@ -217,20 +217,20 @@ import {
 import { useAppStore } from '@/stores/app'
 import { useChatStore } from '@/stores/chat'
 import { useRealTimeStore } from '@/stores/realtime'
-import { useIntegrationStore } from '@/stores/integration'
-import type { RealTimeData, SystemMetrics, AgentStatus } from '@/stores/realtime'
+// import { useIntegrationStore } from '@/stores/integration'  // Reserved for future integration
+import type { RealTimeData } from '@/stores/realtime'
 
 // Stores
 const appStore = useAppStore()
 const chatStore = useChatStore()
 const realtimeStore = useRealTimeStore()
-const integrationStore = useIntegrationStore()
+// const integrationStore = useIntegrationStore()  // Reserved for future use
 
 // 響應式數據
 const isRefreshing = ref(false)
 const showEventDetails = ref(false)
 const selectedEvent = ref<RealTimeData | null>(null)
-const refreshTimer = ref<number | null>(null)
+const refreshTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
 // 計算屬性
 const isHealthy = computed(() => 
@@ -340,10 +340,11 @@ const formatTime = (timestamp: number | string): string => {
   })
 }
 
-const showEventDetail = (event: RealTimeData) => {
-  selectedEvent.value = event
-  showEventDetails.value = true
-}
+// Reserved for event detail display
+// const showEventDetail = (event: RealTimeData) => {
+//   selectedEvent.value = event
+//   showEventDetails.value = true
+// }
 
 const startAutoRefresh = () => {
   refreshTimer.value = setInterval(async () => {

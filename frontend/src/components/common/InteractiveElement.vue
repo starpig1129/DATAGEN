@@ -163,7 +163,7 @@ const ripples = ref<Ripple[]>([])
 const particles = ref<Particle[]>([])
 const nextRippleId = ref(0)
 const nextParticleId = ref(0)
-const hoverTimer = ref<number>()
+const hoverTimer = ref<ReturnType<typeof setTimeout>>()
 const animationElement = ref<HTMLElement>()
 
 // 計算屬性
@@ -205,8 +205,8 @@ const glowStyle = computed(() => ({
   opacity: isGlowing.value ? '0.6' : '0'
 }))
 
-// 方法
-const handleMouseEnter = (event: MouseEvent) => {
+// Methods
+const handleMouseEnter = (_event: MouseEvent) => {
   if (props.disabled) return
   
   clearTimeout(hoverTimer.value)

@@ -104,13 +104,13 @@ import {
   Loading,
   Clock,
   TrendCharts,
-  Connection,
-  Failed
+  // Connection,  // Reserved - icons used as strings in template
+  // Failed       // Reserved - icons used as strings in template
 } from '@element-plus/icons-vue'
 import { formatDistanceToNow } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
 
-// 響應式數據
+// Reactive data
 const isOnline = ref(navigator.onLine)
 const activeAgentCount = ref(3)
 const totalAgentCount = ref(8)
@@ -121,7 +121,7 @@ const cpuUsage = ref(45)
 const memoryUsage = ref(68)
 const networkLatency = ref(12)
 
-// 計算屬性
+// Computed properties
 const systemStatus = computed(() => {
   if (processingTaskCount.value > 0) {
     return {
@@ -151,7 +151,7 @@ const lastUpdateTime = computed(() => {
   })
 })
 
-// 方法
+// Methods
 const getPerformanceColor = (percentage: number) => {
   if (percentage < 50) return '#67c23a'
   if (percentage < 80) return '#e6a23c'
@@ -159,7 +159,7 @@ const getPerformanceColor = (percentage: number) => {
 }
 
 const updatePerformanceMetrics = () => {
-  // 模擬性能數據更新
+  // Simulate performance data updates
   cpuUsage.value = Math.floor(Math.random() * 30) + 30
   memoryUsage.value = Math.floor(Math.random() * 40) + 40
   networkLatency.value = Math.floor(Math.random() * 20) + 5
@@ -170,8 +170,8 @@ const handleOnlineStatusChange = () => {
   isOnline.value = navigator.onLine
 }
 
-// 生命週期
-let performanceTimer: NodeJS.Timeout
+// Lifecycle
+let performanceTimer: ReturnType<typeof setInterval>
 
 onMounted(() => {
   // 監聽網路狀態變化

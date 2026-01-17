@@ -372,8 +372,8 @@ const updateChartSize = () => {
   }
 }
 
-// 定時刷新
-let refreshTimer: number | null = null
+// Auto refresh timer
+let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 const startAutoRefresh = () => {
   refreshTimer = setInterval(() => {

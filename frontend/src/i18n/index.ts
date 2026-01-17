@@ -1,10 +1,10 @@
 import { createI18n } from 'vue-i18n'
 import type { LanguageCode } from '@/types/settings'
 
-// 語言包
-const zhTW = () => import('./locales/zh-TW.json')
-const zhCN = () => import('./locales/zh-CN.json')
-const enUS = () => import('./locales/en-US.json')
+// Async language loaders (kept for future lazy loading support)
+// const zhTW = () => import('./locales/zh-TW.json')
+// const zhCN = () => import('./locales/zh-CN.json')
+// const enUS = () => import('./locales/en-US.json')
 
 // 同步載入語言包
 import zhTWMessages from './locales/zh-TW.json'

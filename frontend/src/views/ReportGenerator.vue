@@ -233,12 +233,11 @@
                 </div>
               </div>
 
-              <!-- 塊內容編輯器 -->
+              <!-- Block content editor -->
               <div class="block-content">
                 <component
                   :is="getBlockComponent(block.type)"
-                  :block="block"
-                  :is-selected="selectedBlockId === block.id"
+                  v-bind="{ block, isSelected: selectedBlockId === block.id } as any"
                   @update="updateBlockContent"
                 />
               </div>
@@ -375,7 +374,7 @@ const tagInputRef = ref<HTMLInputElement>();
 const currentReport = computed(() => reportStore.currentReport);
 const reportList = computed(() => reportStore.reportList);
 const templates = computed(() => reportStore.templates);
-const isLoading = computed(() => reportStore.isLoading);
+// const _isLoading = computed(() => reportStore.isLoading);  // Reserved for loading indicator
 const isSaving = computed(() => reportStore.isSaving);
 const isExporting = computed(() => reportStore.isExporting);
 const error = computed(() => reportStore.error);
@@ -547,15 +546,15 @@ const updateReportMetadata = () => {
   if (currentReport.value) {
     // 直接調用 store 方法來更新報告元數據
     // 這裡需要添加一個專門更新報告元數據的方法
-    const updatedReport = {
-      ...currentReport.value,
-      metadata: {
-        ...reportMetadata.value,
-        updatedAt: new Date().toISOString(),
-      },
-    };
-    // 由於我們使用的是 readonly computed，我們需要通過 store 方法來更新
-    // 暫時跳過這個更新，在後續實現中完善
+    // Build updated report object for future store update implementation
+    // const _updatedReport = {
+    //   ...currentReport.value,
+    //   metadata: {
+    //     ...reportMetadata.value,
+    //     updatedAt: new Date().toISOString(),
+    //   },
+    // };
+    // TODO: Implement update report metadata in store
   }
 };
 

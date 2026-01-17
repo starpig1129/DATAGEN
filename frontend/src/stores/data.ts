@@ -80,9 +80,9 @@ export const useDataStore = defineStore('data', () => {
     syncInterval: 30000 // 30秒
   })
   
-  // 定時器
-  const syncTimer = ref<number | null>(null)
-  const updateTimer = ref<number | null>(null)
+  // Timers
+  const syncTimer = ref<ReturnType<typeof setInterval> | null>(null)
+  const updateTimer = ref<ReturnType<typeof setInterval> | null>(null)
   
   // 計算屬性
   const activeSources = computed(() => 

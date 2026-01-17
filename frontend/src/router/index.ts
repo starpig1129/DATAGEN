@@ -96,11 +96,11 @@ const routes: RouteRecordRaw[] = [
   }
 ]
 
-// 創建路由實例
+// Create router instance
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  scrollBehavior(to, from, savedPosition) {
+  scrollBehavior(_to, _from, savedPosition) {
     if (savedPosition) {
       return savedPosition
     } else {
@@ -109,9 +109,9 @@ const router = createRouter({
   }
 })
 
-// 路由守衛
-router.beforeEach((to, from, next) => {
-  // 設置頁面標題
+// Route guard
+router.beforeEach((to, _from, next) => {
+  // Set page title
   const title = to.meta?.title as string
   if (title) {
     document.title = `${title} - 多代理數據分析系統`

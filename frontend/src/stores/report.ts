@@ -4,7 +4,7 @@
  */
 
 import { defineStore } from 'pinia';
-import { ref, computed, readonly } from 'vue';
+import { ref, computed } from 'vue';
 import type {
   Report,
   ReportBlock,
@@ -13,7 +13,6 @@ import type {
   ExportOptions,
   ReportStyle,
   ReportMetadata,
-  ReportApiResponse,
 } from '@/types/report';
 
 /** Store 狀態介面 */
@@ -562,16 +561,16 @@ export const useReportStore = defineStore('report', () => {
 
   // ===== 返回公共 API =====
   return {
-    // 唯讀狀態
-    currentReport: readonly(computed(() => state.value.currentReport)),
-    reportList: readonly(computed(() => state.value.reportList)),
-    templates: readonly(computed(() => state.value.templates)),
-    isLoading: readonly(computed(() => state.value.isLoading)),
-    isSaving: readonly(computed(() => state.value.isSaving)),
-    isExporting: readonly(computed(() => state.value.isExporting)),
-    error: readonly(computed(() => state.value.error)),
-    lastSaved: readonly(computed(() => state.value.lastSaved)),
-    autoSaveEnabled: readonly(computed(() => state.value.autoSaveEnabled)),
+    // State accessors (removed readonly wrapper to fix type conflicts with components)
+    currentReport: computed(() => state.value.currentReport),
+    reportList: computed(() => state.value.reportList),
+    templates: computed(() => state.value.templates),
+    isLoading: computed(() => state.value.isLoading),
+    isSaving: computed(() => state.value.isSaving),
+    isExporting: computed(() => state.value.isExporting),
+    error: computed(() => state.value.error),
+    lastSaved: computed(() => state.value.lastSaved),
+    autoSaveEnabled: computed(() => state.value.autoSaveEnabled),
     
     // 計算屬性
     hasUnsavedChanges,

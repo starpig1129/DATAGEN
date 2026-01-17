@@ -463,16 +463,18 @@ const checkConnection = async () => {
   }
 }
 
-// 自動重試邏輯
-const autoRetryTimer = ref<number>()
+// Auto retry logic (reserved for future auto-retry feature)
+/*
+const autoRetryTimer = ref<ReturnType<typeof setTimeout>>()
 
-const setupAutoRetry = () => {
+const _setupAutoRetry = () => {
   if (!props.autoRetry || retryCount.value >= props.maxRetries) return
   
   autoRetryTimer.value = setTimeout(() => {
     handleRetry()
-  }, props.retryDelay * Math.pow(2, retryCount.value)) // 指數退避
+  }, props.retryDelay * Math.pow(2, retryCount.value)) // Exponential backoff
 }
+*/
 
 // 監聽錯誤屬性變化
 const watchError = () => {

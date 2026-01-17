@@ -234,7 +234,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+// import { useRouter } from 'vue-router'  // Reserved for future navigation
 import { useAppStore } from '@/stores/app'
 import { ElMessageBox } from 'element-plus'
 import {

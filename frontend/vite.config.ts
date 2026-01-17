@@ -7,16 +7,15 @@ import Components from 'unplugin-vue-components/vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 // 同步應用 crypto polyfill - 必須在 Vite 配置解析之前完成
-if (typeof globalThis.crypto === 'undefined') {
+// 強制應用 crypto polyfill for Node 16
+if (!globalThis.crypto) {
   // @ts-ignore
   globalThis.crypto = webcrypto
-  console.log('Vite config: Applied crypto polyfill (full webcrypto object)')
-} else if (typeof globalThis.crypto.getRandomValues !== 'function') {
+}
+
+if (!globalThis.crypto.getRandomValues) {
   // @ts-ignore
-  globalThis.crypto.getRandomValues = webcrypto.getRandomValues.bind(webcrypto)
-  console.log('Vite config: Applied crypto.getRandomValues polyfill')
-} else {
-  console.log('Vite config: crypto.getRandomValues already available')
+  globalThis.crypto.getRandomValues = (array) => webcrypto.getRandomValues(array)
 }
 
 // https://vitejs.dev/config/
@@ -112,6 +111,11 @@ export default defineConfig(({ mode }) => {
         additionalData: `@use "@/assets/styles/variables.scss" as *;`
       }
     }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
   }
  }
 })
