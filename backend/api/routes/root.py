@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, WebSocket, HTTPException
+from fastapi import APIRouter, WebSocket, HTTPException, WebSocketDisconnect
 from pydantic import BaseModel
 
 # 導入 WebSocket 相關
@@ -31,6 +31,7 @@ class SendMessageRequest(BaseModel):
 @router.websocket("/stream")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket 端點"""
+    await websocket.accept()
     try:
         # 等待客戶端初始化消息
         init_message = await asyncio.wait_for(websocket.receive_text(), timeout=10.0)
@@ -75,7 +76,14 @@ async def websocket_endpoint(websocket: WebSocket):
                     timestamp=int(time.time() * 1000)
                 )
                 await ws_manager.send_to_client(websocket, error_msg)
+            except WebSocketDisconnect:
+                logger.info(f"客戶端主動斷開連接: {getattr(websocket, 'client', 'unknown')}")
+                break
             except Exception as e:
+                # 若發生 Starlette 斷線相關錯誤，也應跳出迴圈
+                if "disconnect message has been received" in str(e):
+                    logger.info("檢測到斷開連接信號，停止接收消息")
+                    break
                 logger.error(f"處理客戶端消息失敗: {e}")
 
     except asyncio.TimeoutError:

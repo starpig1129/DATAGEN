@@ -41,7 +41,7 @@ export const useChatStore = defineStore('chat', () => {
   const needsDecision = ref(false)
   const currentTypingAgent = ref<string | undefined>()
   const lastMessageId = ref<string | undefined>()
-  const sseConnection = ref<EventSource | null>(null)
+  const socket = ref<WebSocket | null>(null)
   const isConnected = ref(false)
   const reconnectAttempts = ref(0)
   const maxReconnectAttempts = 5
@@ -82,190 +82,110 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // SSE連接管理
-  const connectSSE = () => {
-    if (sseConnection.value) {
-      disconnectSSE()
+  // WebSocket 連接管理
+  const connectWebSocket = () => {
+    if (socket.value) {
+      disconnectWebSocket()
     }
 
-    const sseUrl = `${getApiBaseUrl()}/stream`
-    console.log('連接SSE:', sseUrl)
+    const baseUrl = getApiBaseUrl()
+    // 簡單替換 http->ws, https->wss
+    const wsUrl = baseUrl.replace(/^http/, 'ws') + '/stream'
+    console.log('連接 WebSocket:', wsUrl)
     
     try {
-      const eventSource = new EventSource(sseUrl)
-      sseConnection.value = eventSource
+      const ws = new WebSocket(wsUrl)
+      socket.value = ws
       
-      eventSource.onopen = () => {
-        console.log('SSE連接已成功建立')
-        console.log('設置isConnected為true (onopen)')
+      ws.onopen = () => {
+        console.log('WebSocket 連接已成功建立')
+        // 發送初始化消息
+        const initData = {
+          type: 'init',
+          clientId: `client-${Date.now()}`
+        }
+        ws.send(JSON.stringify(initData))
+        
         isConnected.value = true
-        console.log('onopen後isConnected狀態:', isConnected.value)
-        console.log('onopen後canSendMessage狀態:', canSendMessage.value)
         reconnectAttempts.value = 0
         reconnectDelay.value = 1000
       }
 
-      // Listen for connection establishment event
-      eventSource.addEventListener('connection_established', (_event) => {
-        console.log('收到SSE連接確認事件')
-        console.log('設置isConnected為true (connection_established)')
-        isConnected.value = true
-        console.log('connection_established後isConnected狀態:', isConnected.value)
-        console.log('connection_established後canSendMessage狀態:', canSendMessage.value)
-        reconnectAttempts.value = 0
-        reconnectDelay.value = 1000
-      })
-
-      eventSource.addEventListener('state_update', (event) => {
+      ws.onmessage = (event) => {
         try {
-          console.log('🔥 收到關鍵的 state_update SSE事件:', event.type)
-          // 確保連接狀態為true
-          if (!isConnected.value) {
-            console.log('通過state_update事件確認SSE連接已建立')
-            isConnected.value = true
-            reconnectAttempts.value = 0
-            reconnectDelay.value = 1000
-          }
-          
-          const backendState: BackendState = JSON.parse(event.data)
-          console.log('=== 🚨 重要 SSE state_update 調試 ===')
-          console.log('原始事件數據:', event.data)
-          console.log('解析後的數據:', backendState)
-          console.log('sender:', backendState.sender)
-          console.log('needs_decision:', backendState.needs_decision)
-          console.log('解析SSE數據成功，代理狀態:', backendState.sender)
-          console.log('======================================')
-          
-          // 更新本地狀態
-          updateFromBackendState(backendState)
-          
-          // 通知 Realtime Store 狀態更新
-          notifyRealtimeStore(backendState)
+          const data = JSON.parse(event.data)
+          handleWebSocketMessage(data)
         } catch (error) {
-          console.error('🚨 解析SSE數據失敗:', error)
+          console.error('解析 WebSocket 消息失敗:', error)
+          // 嘗試直接處理可能非JSON的消息（雖然這不應該發生在定義良好的API中）
         }
-      })
-
-      eventSource.onerror = (error) => {
-        console.error('SSE連接錯誤 - 增強錯誤處理:', {
-          error,
-          readyState: eventSource.readyState,
-          url: sseUrl,
-          currentState: {
-            isConnected: isConnected.value,
-            isProcessingDecision: isProcessingDecision.value,
-            needsDecision: needsDecision.value,
-            stateVersion: stateVersion.value
-          }
-        })
-        
-        // 立即設置斷線狀態
-        isConnected.value = false
-        
-        // 保存當前關鍵狀態，用於重連後恢復
-        const criticalState = {
-          isProcessingDecision: isProcessingDecision.value,
-          needsDecision: needsDecision.value,
-          messagesCount: messages.value.length,
-          stateVersion: stateVersion.value
-        }
-        
-        // 延遲重連，避免立即重試，但考慮決策狀態
-        const reconnectDelay = isProcessingDecision.value ? 500 : 1000
-        setTimeout(() => {
-          if (eventSource.readyState === EventSource.CLOSED ||
-              eventSource.readyState === EventSource.CONNECTING) {
-            console.log('啟動SSE重連，保留關鍵狀態:', criticalState)
-            handleSSEReconnect()
-          }
-        }, reconnectDelay)
       }
+
+      ws.onerror = (error) => {
+        console.error('WebSocket 連接錯誤:', error)
+        isConnected.value = false
+      }
+
+      ws.onclose = () => {
+        console.log('WebSocket 連接已關閉')
+        isConnected.value = false
+        socket.value = null
+        handleWebSocketReconnect()
+      }
+
     } catch (error) {
-      console.error('創建SSE連接失敗:', error)
-      isConnected.value = false
-      handleSSEReconnect()
+      console.error('建立 WebSocket 連接失敗:', error)
+      handleWebSocketReconnect()
     }
   }
 
-  const disconnectSSE = () => {
-    if (sseConnection.value) {
-      sseConnection.value.close()
-      sseConnection.value = null
+  const disconnectWebSocket = () => {
+    if (socket.value) {
+      socket.value.close()
+      socket.value = null
       isConnected.value = false
     }
   }
 
-  const handleSSEReconnect = () => {
+  const handleWebSocketReconnect = () => {
     if (reconnectAttempts.value < maxReconnectAttempts) {
       reconnectAttempts.value++
-      console.log(`嘗試重新連接SSE (${reconnectAttempts.value}/${maxReconnectAttempts})`, {
-        currentDelay: reconnectDelay.value,
-        stateVersion: stateVersion.value,
-        lastUpdateTime: lastStateUpdateTime.value,
-        isProcessingDecision: isProcessingDecision.value
-      })
-      
-      // 在重連前檢查決策狀態，防止重連時丟失決策鎖定
-      const preserveDecisionState = isProcessingDecision.value
-      const preserveNeedsDecision = needsDecision.value
-      
-      setTimeout(() => {
-        console.log('執行SSE重連，保持決策狀態', {
-          preserveDecisionState,
-          preserveNeedsDecision,
-          attempt: reconnectAttempts.value
-        })
-        
-        // 重連前保存狀態
-        const preReconnectState = {
-          isProcessingDecision: preserveDecisionState,
-          needsDecision: preserveNeedsDecision,
-          stateVersion: stateVersion.value
-        }
-        
-        connectSSE()
-        
-        // 重連後恢復關鍵決策狀態（如果需要）
-        if (preserveDecisionState) {
-          isProcessingDecision.value = true
-          console.log('SSE重連後恢復決策處理狀態')
-        }
-        if (preserveNeedsDecision && !isProcessingDecision.value) {
-          needsDecision.value = true
-          console.log('SSE重連後恢復決策需求狀態')
-        }
-        
-        console.log('SSE重連完成，狀態恢復檢查', {
-          preReconnectState,
-          currentState: {
-            isProcessingDecision: isProcessingDecision.value,
-            needsDecision: needsDecision.value,
-            isConnected: isConnected.value
-          }
-        })
-      }, reconnectDelay.value)
-      
-      // 指數退避，但針對決策處理中的情況加快重連
-      if (preserveDecisionState) {
-        // 決策處理中時使用較短的重連間隔
-        reconnectDelay.value = Math.min(reconnectDelay.value * 1.5, 10000)
-      } else {
-        // 正常情況下的指數退避
-        reconnectDelay.value = Math.min(reconnectDelay.value * 2, 30000)
-      }
+      const delay = reconnectDelay.value * Math.pow(1.5, reconnectAttempts.value - 1)
+      console.log(`將在 ${delay}ms 後嘗試重新連接 WebSocket (${reconnectAttempts.value}/${maxReconnectAttempts})`)
+      setTimeout(connectWebSocket, delay)
     } else {
-      console.error('SSE重連次數已達上限，進入離線模式', {
-        finalAttempts: reconnectAttempts.value,
-        maxAttempts: maxReconnectAttempts,
-        isProcessingDecision: isProcessingDecision.value,
-        stateVersion: stateVersion.value
-      })
-      
-      // 重連失敗時的狀態處理
-      if (isProcessingDecision.value) {
-        console.warn('SSE重連失敗時仍在處理決策，保持決策狀態等待手動重連')
-        // 保持決策狀態，等待用戶手動刷新或重連
-      }
+      console.log('WebSocket 重連次數已達上限，進入離線模式')
+      isConnected.value = false
+    }
+  }
+
+  const handleWebSocketMessage = (data: any) => {
+    console.log('收到 WebSocket 消息:', data.type) // 減少日誌量，僅印出類型
+    
+    switch (data.type) {
+      case 'connection_established':
+        console.log('收到 WebSocket 連接確認')
+        isConnected.value = true
+        // 可以在這裡處理 client_id 等初始化數據
+        break
+        
+      case 'state_update':
+        if (data.data) {
+           // 兼容後端格式
+           const state = typeof data.data === 'string' ? JSON.parse(data.data) : data.data
+           updateFromBackendState(state)
+           notifyRealtimeStore(state)
+        }
+        break
+    
+      case 'user_message_received':
+      case 'decision_received':
+        // 確認消息已達後端
+        console.log('收到消息確認 (Ack)')
+        break
+        
+      default:
+        console.log('收到未知類型的消息:', data.type)
     }
   }
 
@@ -731,7 +651,9 @@ export const useChatStore = defineStore('chat', () => {
     
     // 首先嘗試獲取初始狀態來測試後端連接
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/state`, {
+      const baseUrl = getApiBaseUrl()
+      console.log('正在連接後端 API:', baseUrl)
+      const response = await fetch(`${baseUrl}/api/state`, {
         timeout: 5000
       } as RequestInit)
       
@@ -749,8 +671,8 @@ export const useChatStore = defineStore('chat', () => {
           可發送消息: canSendMessage.value
         })
         
-        // 後端可用，建立SSE連接
-        connectSSE()
+        // 後端可用，建立 WebSocket 連接
+        connectWebSocket()
       } else {
         console.warn('後端API不可用，狀態碼:', response.status)
         handleOfflineMode()
@@ -780,7 +702,7 @@ export const useChatStore = defineStore('chat', () => {
 
   const destroyChat = (): void => {
     console.log('銷毀聊天界面...')
-    disconnectSSE()
+    disconnectWebSocket()
     clearMessages()
     isProcessing.value = false
     needsDecision.value = false
@@ -815,8 +737,8 @@ export const useChatStore = defineStore('chat', () => {
           
           // 檢查連接狀態
           if (!isConnected.value) {
-            console.log('嘗試重新建立 SSE 連接...')
-            connectSSE()
+            console.log('嘗試重新建立 WebSocket 連接...')
+            connectWebSocket()
             await new Promise(resolve => setTimeout(resolve, 2000)) // 等待連接建立
           }
         }
@@ -846,9 +768,9 @@ export const useChatStore = defineStore('chat', () => {
   const startConnectionMonitoring = (): void => {
     // 監聽網路狀態變化
     const handleOnline = () => {
-      console.log('網路已恢復，重新建立 SSE 連接')
+      console.log('網路已恢復，重新建立 WebSocket 連接')
       if (!isConnected.value) {
-        connectSSE()
+        connectWebSocket()
       }
     }
 
@@ -862,9 +784,9 @@ export const useChatStore = defineStore('chat', () => {
 
     // 監聽自定義重連事件
     const handleNetworkReconnect = () => {
-      console.log('收到網路重連事件，檢查 SSE 連接狀態')
+      console.log('收到網路重連事件，檢查 WebSocket 連接狀態')
       if (!isConnected.value) {
-        connectSSE()
+        connectWebSocket()
       }
     }
 
@@ -967,8 +889,8 @@ export const useChatStore = defineStore('chat', () => {
     clearMessages,
     initializeChat,
     destroyChat,
-    connectSSE,
-    disconnectSSE,
+    connectWebSocket,
+    disconnectWebSocket,
     
     // 增強方法
     updateFromBackendState,

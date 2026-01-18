@@ -41,7 +41,8 @@ class WebSocketManager:
         self.connections.add(websocket)
         self.client_info[websocket] = client_data or {}
 
-        logger.info(f"新客戶端連接: {websocket.remote_address}, 總連接數: {len(self.connections)}")
+        client_addr = getattr(websocket, 'remote_address', getattr(websocket, 'client', 'unknown'))
+        logger.info(f"新客戶端連接: {client_addr}, 總連接數: {len(self.connections)}")
 
         # 發送歡迎消息
         welcome_msg = WebSocketMessage(
@@ -66,7 +67,8 @@ class WebSocketManager:
         if websocket in self.client_info:
             del self.client_info[websocket]
 
-        logger.info(f"客戶端斷開連接: {websocket.remote_address}, 剩餘連接數: {len(self.connections)}")
+        client_addr = getattr(websocket, 'remote_address', getattr(websocket, 'client', 'unknown'))
+        logger.info(f"客戶端斷開連接: {client_addr}, 剩餘連接數: {len(self.connections)}")
 
     async def send_to_client(self, websocket: Union[WebSocketServerProtocol, Any], message: WebSocketMessage):
         """向特定客戶端發送消息。"""

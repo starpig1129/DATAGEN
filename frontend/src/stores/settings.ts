@@ -176,7 +176,7 @@ export const useSettingsStore = defineStore('settings', {
         console.log('📤 發送設定到伺服器...')
         const response = await this.makeApiRequest('/api/settings', {
           method: 'POST',
-          body: JSON.stringify(this.settings)
+          body: JSON.stringify({ settings: this.settings })
         })
 
         console.log('📨 伺服器響應狀態:', response.status, response.statusText)
@@ -230,11 +230,14 @@ export const useSettingsStore = defineStore('settings', {
           throw new Error(errorMessage)
         }
 
-        const serverSettings = await response.json() as Settings
-        this.settings = this.mergeWithDefaults(serverSettings)
-        
-        await this.saveSettings()
-        console.log('Settings loaded from server successfully')
+        const responseData = await response.json()
+        if (responseData && responseData.settings) {
+          this.settings = this.mergeWithDefaults(responseData.settings)
+          await this.saveSettings()
+          console.log('Settings loaded from server successfully')
+        } else {
+          console.warn('Server response missing settings field', responseData)
+        }
       } catch (error) {
         console.error('Failed to load settings from server:', error)
         throw error

@@ -30,11 +30,11 @@ class DevServerManager:
             process = subprocess.Popen(
                 [sys.executable, "app/main.py"],
                 cwd=backend_dir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                universal_newlines=True
+                # stdout=subprocess.PIPE,  # 註解掉以顯示後端日誌
+                # stderr=subprocess.PIPE,
+                # text=True,
+                # bufsize=1,
+                # universal_newlines=True
             )
             print(f"✅ 後端服務已啟動 (PID: {process.pid})")
             return process
@@ -67,8 +67,8 @@ class DevServerManager:
         """打開瀏覽器"""
         def _open_browser():
             time.sleep(delay)  # 等待服務器啟動
-            print(f"🌐 自動打開瀏覽器: http://localhost:5173")
-            webbrowser.open("http://localhost:5173")
+            print(f"🌐 自動打開瀏覽器: http://localhost:3000")
+            webbrowser.open("http://localhost:3000")
 
         import threading
         browser_thread = threading.Thread(target=_open_browser, daemon=True)
@@ -103,7 +103,7 @@ class DevServerManager:
             print("=" * 50)
             print("🎉 所有服務已啟動！")
             print("📊 後端服務: http://localhost:5001")
-            print("🌐 前端開發伺服器: http://localhost:5173")
+            print("🌐 前端開發伺服器: http://localhost:3000")
             print("=" * 50)
 
             # 打開瀏覽器
