@@ -5,47 +5,53 @@
 
 /* CSS 變數定義 */
 :root {
-  /* Brand Colors */
-  --primary-color: #409eff;
-  --primary-light: #79bbff;
-  --primary-dark: #337ecc;
+  /* ========================================
+   * Refined Minimalist Design System
+   * Neutral + Indigo color palette
+   * ======================================== */
 
-  /* Status Colors */
-  --success-color: #67c23a;
-  --warning-color: #e6a23c;
-  --danger-color: #f56c6c;
-  --info-color: #909399;
+  /* Brand Colors - Indigo Primary */
+  --primary-color: #6366f1;
+  --primary-light: #818cf8;
+  --primary-dark: #4f46e5;
+  --accent-color: #a5b4fc;
+
+  /* Status Colors - Muted, refined */
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --info-color: #737373;
 
   /* Neutral Colors - Light Mode */
-  --text-primary: #303133;
-  --text-regular: #606266;
-  --text-secondary: #909399;
-  --text-placeholder: #c0c4cc;
+  --text-primary: #171717;
+  --text-regular: #404040;
+  --text-secondary: #737373;
+  --text-placeholder: #a3a3a3;
 
   --bg-primary: #ffffff;
-  --bg-secondary: #f5f7fa;
-  --bg-tertiary: #ebeef5;
+  --bg-secondary: #fafafa;
+  --bg-tertiary: #f5f5f5;
 
-  --border-color-base: #dcdfe6;
-  --border-color-light: #e4e7ed;
-  --border-color-extra-light: #f2f6fc;
+  --border-color-base: #e5e5e5;
+  --border-color-light: #f0f0f0;
+  --border-color-extra-light: #fafafa;
 
-  /* Box Shadows */
-  --el-box-shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  --el-box-shadow-base: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
+  /* Refined Shadows - Subtle and elegant */
+  --el-box-shadow-light: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  --el-box-shadow-base: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
 
   /* Layout Constants */
   --header-height: 64px;
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 64px;
 
-  /* Spacing & Borders */
-  --radius-base: 4px;
-  --radius-lg: 8px;
+  /* Spacing & Borders - More generous */
+  --radius-base: 6px;
+  --radius-lg: 12px;
   --spacing-base: 16px;
 
-  /* Animation */
-  --transition-base: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  /* Animation - Smooth and refined */
+  --transition-base: all 0.2s ease-out;
 }
 
 /* Dark Theme Overrides */
@@ -105,46 +111,20 @@ html {
 
 body {
   font-family:
-    'Inter',
+    'Plus Jakarta Sans',
+    'Noto Sans TC',
     -apple-system,
     BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
-    'Noto Sans',
-    sans-serif,
-    'Apple Color Emoji',
-    'Segoe UI Emoji',
-    'Segoe UI Symbol',
-    'Noto Color Emoji';
+    sans-serif;
   color: var(--text-primary);
   background-color: var(--bg-primary);
+  letter-spacing: -0.01em;
   transition:
     background-color var(--transition-base),
     color var(--transition-base);
 }
 
-/* 滾動條樣式 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-base);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-color-base);
-  border-radius: var(--radius-base);
-  transition: background-color var(--transition-base);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
+/* Scrollbar styles now defined at L584+ to avoid duplication */
 
 /* 選擇文字樣式 */
 ::selection {
