@@ -3,6 +3,7 @@ import { ref, computed, readonly } from 'vue'
 import type { Message, ChatState, DecisionType } from '@/types/chat'
 import { MessageType } from '@/types/chat'
 import { useAppStore } from '@/stores/app'
+import { useSettingsStore } from '@/stores/settings'
 
 interface BackendMessage {
   content: string
@@ -27,6 +28,12 @@ interface BackendState {
 
 export const useChatStore = defineStore('chat', () => {
   const appStore = useAppStore()
+  const settingsStore = useSettingsStore()
+
+  // 獲取 API Base URL (優先使用 settings 中的配置)
+  const getApiBaseUrl = () => {
+    return settingsStore.settings.api.baseUrl || appStore.config.apiBaseUrl
+  }
   
   // 響應式狀態
   const messages = ref<Message[]>([])
@@ -81,7 +88,7 @@ export const useChatStore = defineStore('chat', () => {
       disconnectSSE()
     }
 
-    const sseUrl = `${appStore.config.apiBaseUrl}/stream`
+    const sseUrl = `${getApiBaseUrl()}/stream`
     console.log('連接SSE:', sseUrl)
     
     try {
@@ -553,7 +560,7 @@ export const useChatStore = defineStore('chat', () => {
     lastMessageId.value = userMessage.id
 
     try {
-      const apiUrl = `${appStore.config.apiBaseUrl}/api/send_message`
+      const apiUrl = `${getApiBaseUrl()}/api/send_message`
       const requestBody = {
         message: content.trim(),
         process_decision: ''
@@ -649,7 +656,7 @@ export const useChatStore = defineStore('chat', () => {
     lastMessageId.value = decisionMessage.id
 
     try {
-      const response = await fetch(`${appStore.config.apiBaseUrl}/api/send_message`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/send_message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -724,7 +731,7 @@ export const useChatStore = defineStore('chat', () => {
     
     // 首先嘗試獲取初始狀態來測試後端連接
     try {
-      const response = await fetch(`${appStore.config.apiBaseUrl}/api/state`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/state`, {
         timeout: 5000
       } as RequestInit)
       

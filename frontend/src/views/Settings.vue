@@ -345,235 +345,12 @@
             </el-form-item>
           </div>
           
-          <!-- 通知設定 -->
-          <div class="mt-8">
-            <h4 class="section-subtitle">{{ $t('settings.user.notifications.title') }}</h4>
-            
-            <div class="notification-settings">
-              <el-form-item prop="user.notifications.enabled">
-                <el-switch
-                  v-model="formData.user.notifications.enabled"
-                  :active-text="$t('settings.user.notifications.enabled')"
-                  :inactive-text="$t('common.no')"
-                  inline-prompt
-                />
-              </el-form-item>
-              
-              <div v-if="formData.user.notifications.enabled" class="notification-types">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <el-form-item
-                    v-for="(label, type) in notificationTypeLabels"
-                    :key="type"
-                    :prop="`user.notifications.types.${type}`"
-                  >
-                    <el-checkbox
-                      v-model="formData.user.notifications.types[type]"
-                      :label="label"
-                    />
-                  </el-form-item>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-                  <el-form-item prop="user.notifications.sound">
-                    <el-checkbox
-                      v-model="formData.user.notifications.sound"
-                      :label="$t('settings.user.notifications.sound')"
-                    />
-                  </el-form-item>
-                  
-                  <el-form-item prop="user.notifications.vibration">
-                    <el-checkbox
-                      v-model="formData.user.notifications.vibration"
-                      :label="$t('settings.user.notifications.vibration')"
-                    />
-                  </el-form-item>
-                  
-                  <el-form-item prop="user.notifications.desktop">
-                    <el-checkbox
-                      v-model="formData.user.notifications.desktop"
-                      :label="$t('settings.user.notifications.desktop')"
-                    />
-                  </el-form-item>
-                </div>
-                
-                <!-- 靜音時段 -->
-                <div class="quiet-hours mt-6">
-                  <el-form-item prop="user.notifications.quietHours.enabled">
-                    <el-checkbox
-                      v-model="formData.user.notifications.quietHours.enabled"
-                      :label="$t('settings.user.notifications.quietHours.title')"
-                    />
-                  </el-form-item>
-                  
-                  <div v-if="formData.user.notifications.quietHours.enabled" class="grid grid-cols-2 gap-4 mt-4">
-                    <el-form-item
-                      :label="$t('settings.user.notifications.quietHours.startTime')"
-                      prop="user.notifications.quietHours.startTime"
-                    >
-                      <el-time-select
-                        v-model="formData.user.notifications.quietHours.startTime"
-                        start="00:00"
-                        step="00:30"
-                        end="23:30"
-                        :placeholder="$t('settings.user.notifications.quietHours.startTime')"
-                        class="w-full"
-                      />
-                    </el-form-item>
-                    
-                    <el-form-item
-                      :label="$t('settings.user.notifications.quietHours.endTime')"
-                      prop="user.notifications.quietHours.endTime"
-                    >
-                      <el-time-select
-                        v-model="formData.user.notifications.quietHours.endTime"
-                        start="00:00"
-                        step="00:30"
-                        end="23:30"
-                        :placeholder="$t('settings.user.notifications.quietHours.endTime')"
-                        class="w-full"
-                      />
-                    </el-form-item>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+
           
-          <!-- 界面設定 -->
-          <div class="mt-8">
-            <h4 class="section-subtitle">{{ $t('settings.user.interface.title') }}</h4>
-            
-            <div class="interface-settings">
-              <!-- 開關選項 -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <el-form-item
-                  :label="$t('settings.user.interface.sidebarCollapsed')"
-                  prop="user.interface.sidebarCollapsed"
-                >
-                  <el-switch
-                    v-model="formData.user.interface.sidebarCollapsed"
-                    :active-text="$t('common.yes')"
-                    :inactive-text="$t('common.no')"
-                    inline-prompt
-                  />
-                </el-form-item>
-                
-                <el-form-item
-                  :label="$t('settings.user.interface.compactMode')"
-                  prop="user.interface.compactMode"
-                >
-                  <el-switch
-                    v-model="formData.user.interface.compactMode"
-                    :active-text="$t('common.yes')"
-                    :inactive-text="$t('common.no')"
-                    inline-prompt
-                  />
-                </el-form-item>
-                
-                <el-form-item
-                  :label="$t('settings.user.interface.showToolbar')"
-                  prop="user.interface.showToolbar"
-                >
-                  <el-switch
-                    v-model="formData.user.interface.showToolbar"
-                    :active-text="$t('common.yes')"
-                    :inactive-text="$t('common.no')"
-                    inline-prompt
-                  />
-                </el-form-item>
-                
-                <el-form-item
-                  :label="$t('settings.user.interface.animationsEnabled')"
-                  prop="user.interface.animationsEnabled"
-                >
-                  <el-switch
-                    v-model="formData.user.interface.animationsEnabled"
-                    :active-text="$t('common.yes')"
-                    :inactive-text="$t('common.no')"
-                    inline-prompt
-                  />
-                </el-form-item>
-              </div>
-              
-              <!-- 下拉選項 -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <el-form-item
-                  :label="$t('settings.user.interface.fontSize.label')"
-                  prop="user.interface.fontSize"
-                >
-                  <el-select
-                    v-model="formData.user.interface.fontSize"
-                    :placeholder="$t('settings.user.interface.fontSize.label')"
-                    class="w-full"
-                  >
-                    <el-option
-                      value="small"
-                      :label="$t('settings.user.interface.fontSize.small')"
-                    />
-                    <el-option
-                      value="medium"
-                      :label="$t('settings.user.interface.fontSize.medium')"
-                    />
-                    <el-option
-                      value="large"
-                      :label="$t('settings.user.interface.fontSize.large')"
-                    />
-                  </el-select>
-                </el-form-item>
-                
-                <el-form-item
-                  :label="$t('settings.user.interface.density.label')"
-                  prop="user.interface.density"
-                >
-                  <el-select
-                    v-model="formData.user.interface.density"
-                    :placeholder="$t('settings.user.interface.density.label')"
-                    class="w-full"
-                  >
-                    <el-option
-                      value="comfortable"
-                      :label="$t('settings.user.interface.density.comfortable')"
-                    />
-                    <el-option
-                      value="compact"
-                      :label="$t('settings.user.interface.density.compact')"
-                    />
-                    <el-option
-                      value="spacious"
-                      :label="$t('settings.user.interface.density.spacious')"
-                    />
-                  </el-select>
-                </el-form-item>
-              </div>
-            </div>
-          </div>
+
         </SettingsSection>
         
-        <!-- 代理設定區域 -->
-        <SettingsSection
-          :title="$t('settings.sections.agent')"
-          :description="$t('settings.agent.description')"
-          :icon="Robot"
-          class="mb-6"
-        >
-          <AgentSettings
-            v-model="formData.agent"
-            @change="handleAgentSettingsChange"
-          />
-        </SettingsSection>
-        
-        <!-- 數據設定區域 -->
-        <SettingsSection
-          :title="$t('settings.sections.data')"
-          :description="$t('settings.data.description')"
-          :icon="Database"
-          class="mb-6"
-        >
-          <DataSettings
-            v-model="formData.data"
-            @change="handleDataSettingsChange"
-          />
-        </SettingsSection>
+
       </el-form>
     </div>
     
@@ -627,8 +404,6 @@ import {
   User,
   InfoFilled,
   Setting,
-  Tools as Robot,
-  DataBoard as Database
 } from '@element-plus/icons-vue'
 import { useSettingsStore } from '@/stores/settings'
 import { setLocale } from '@/i18n'
@@ -639,8 +414,6 @@ import SettingsSection from '@/components/settings/SettingsSection.vue'
 import LanguageSelector from '@/components/settings/LanguageSelector.vue'
 import ThemeToggle from '@/components/settings/ThemeToggle.vue'
 import ConnectionTest from '@/components/settings/ConnectionTest.vue'
-import AgentSettings from '@/components/settings/AgentSettings.vue'
-import DataSettings from '@/components/settings/DataSettings.vue'
 
 const { t } = useI18n()
 const settingsStore = useSettingsStore()
@@ -700,10 +473,7 @@ watch(() => formData.user.theme, (newTheme) => {
 })
 
 // 監聽界面設定變更，即時應用
-watch(() => formData.user.interface, (newInterface) => {
-  settingsStore.updateInterfaceSettings(newInterface)
-  console.log('界面設定已更新:', newInterface)
-}, { deep: true })
+
 
 // 可用時區
 const availableTimezones = computed(() => {
@@ -735,14 +505,7 @@ const availableDateFormats = [
   { value: 'DD-MM-YYYY', label: '15-01-2024 (DD-MM-YYYY)' }
 ]
 
-// 通知類型標籤
-const notificationTypeLabels = computed(() => ({
-  email: t('settings.user.notifications.types.email'),
-  browser: t('settings.user.notifications.types.browser'),
-  system: t('settings.user.notifications.types.system'),
-  chat: t('settings.user.notifications.types.chat'),
-  agent: t('settings.user.notifications.types.agent')
-}))
+
 
 // 表單驗證規則
 const formRules = computed<FormRules>(() => ({
@@ -933,8 +696,7 @@ const saveSettings = async () => {
     // 更新設定store
     settingsStore.updateApiConfig(formData.api)
     settingsStore.updateUserPreferences(formData.user)
-    settingsStore.updateAgentSettings(formData.agent)
-    settingsStore.updateDataSettings(formData.data)
+
     
     // 應用語言變更
     if (formData.user.language !== settingsStore.currentLanguage) {
@@ -1161,18 +923,7 @@ const handleThemeChange = (theme: string) => {
 }
 
 // 處理代理設定變更
-const handleAgentSettingsChange = (agentSettings: typeof formData.agent) => {
-  formData.agent = { ...agentSettings }
-  settingsStore.markDirty()
-  console.log('Agent settings changed:', agentSettings)
-}
 
-// 處理數據設定變更
-const handleDataSettingsChange = (dataSettings: typeof formData.data) => {
-  formData.data = { ...dataSettings }
-  settingsStore.markDirty()
-  console.log('Data settings changed:', dataSettings)
-}
 
 // 頁面離開前提醒
 const handleBeforeUnload = (e: BeforeUnloadEvent) => {
