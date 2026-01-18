@@ -45,5 +45,6 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=5001,
         reload=True,
+        reload_excludes=["src/*", "data/*", "*.log", "*.pyc", "__pycache__/*"],
         log_level="info"
     )

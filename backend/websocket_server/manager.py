@@ -178,6 +178,73 @@ class WebSocketManager:
 
         await self.broadcast(file_msg)
 
+    async def send_agent_message(
+        self,
+        agent_name: str,
+        content: str,
+        message_type: str = "text",
+        websocket=None
+    ):
+        """發送 AI 代理訊息至前端。
+
+        Args:
+            agent_name: 代理名稱 (例如 "hypothesis_agent")
+            content: 訊息文本內容
+            message_type: 訊息類型 ("text", "hypothesis", "report" 等)
+            websocket: 可選，指定發送到特定客戶端，否則廣播
+        """
+        agent_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="agent_message",
+            data={
+                "agentName": agent_name,
+                "content": content,
+                "messageType": message_type,
+                "timestamp": datetime.now().isoformat()
+            },
+            timestamp=int(time.time() * 1000)
+        )
+
+        if websocket:
+            await self.send_to_client(websocket, agent_msg)
+        else:
+            await self.broadcast(agent_msg)
+
+    async def send_decision_required(
+        self,
+        prompt: str,
+        options: list,
+        decision_id: str = None,
+        websocket=None
+    ):
+        """發送需要用戶決策的選項至前端。
+
+        Args:
+            prompt: 決策提示文字
+            options: 選項列表 (例如 [{"id": "1", "label": "重新生成"}, ...])
+            decision_id: 決策識別碼，用於追蹤回應
+            websocket: 可選，指定發送到特定客戶端，否則廣播
+        """
+        if decision_id is None:
+            decision_id = str(uuid.uuid4())
+
+        decision_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="decision_required",
+            data={
+                "decisionId": decision_id,
+                "prompt": prompt,
+                "options": options,
+                "timestamp": datetime.now().isoformat()
+            },
+            timestamp=int(time.time() * 1000)
+        )
+
+        if websocket:
+            await self.send_to_client(websocket, decision_msg)
+        else:
+            await self.broadcast(decision_msg)
+
     async def send_chart_data(self, chart_id: str, chart_data: Dict[str, Any]):
         """發送圖表數據更新。"""
         chart_msg = WebSocketMessage(

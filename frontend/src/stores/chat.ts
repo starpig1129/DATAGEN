@@ -26,6 +26,23 @@ interface BackendState {
   needs_revision: boolean
 }
 
+// 內部使用的聊天訊息介面
+interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  timestamp: string
+  agentId?: string
+  metadata?: Record<string, any>
+}
+
+// 決策選項介面
+interface DecisionOption {
+  id: string
+  label: string
+  value: string
+}
+
 export const useChatStore = defineStore('chat', () => {
   const appStore = useAppStore()
   const settingsStore = useSettingsStore()
@@ -53,6 +70,10 @@ export const useChatStore = defineStore('chat', () => {
   // 添加狀態版本號，防止舊狀態覆蓋新狀態
   const stateVersion = ref(0)
   const lastStateUpdateTime = ref(0)
+  
+  // 決策選項與 ID
+  const decisionOptions = ref<DecisionOption[]>([])
+  const currentDecisionId = ref<string | null>(null)
 
   // 計算屬性
   const chatState = computed<ChatState>(() => ({
@@ -182,6 +203,80 @@ export const useChatStore = defineStore('chat', () => {
       case 'decision_received':
         // 確認消息已達後端
         console.log('收到消息確認 (Ack)')
+        break
+        
+      case 'agent_message':
+        // 處理 AI 代理訊息
+        if (data.data) {
+          const { agentName, content, messageType } = data.data
+          console.log(`收到 AI 訊息 (${agentName}):`, content.substring(0, 100) + '...')
+          
+          // 新增 AI 訊息到訊息列表 (使用 Message 類型)
+          const aiMessage: Message = {
+            id: data.id || `msg-${Date.now()}`,
+            content: content,
+            sender: agentName || 'assistant',
+            timestamp: new Date().toISOString(),
+            type: MessageType.AGENT,
+            metadata: {
+              agentType: messageType
+            }
+          }
+          messages.value.push(aiMessage)
+          isProcessing.value = false
+        }
+        break
+        
+      case 'decision_required':
+        // 處理需要用戶決策的選項
+        if (data.data) {
+          const { decisionId, options } = data.data
+          console.log('收到決策請求:', decisionId, options)
+          
+          needsDecision.value = true
+          decisionOptions.value = options.map((opt: any) => ({
+            id: opt.id,
+            label: opt.label,
+            value: opt.value || opt.id
+          }))
+          // 儲存決策 ID 以便回應時使用
+          currentDecisionId.value = decisionId
+          isProcessing.value = false
+        }
+        break
+        
+      case 'agent_status':
+        // 處理代理狀態更新 (進度條等)
+        if (data.data) {
+          console.log('代理狀態更新:', data.data.agentId, data.data.status, data.data.progress)
+          // 可以通知 Realtime Store 或更新 UI 進度條
+        }
+        break
+        
+      case 'analysis_started':
+        console.log('分析已開始')
+        isProcessing.value = true
+        break
+        
+      case 'analysis_completed':
+        console.log('分析已完成')
+        isProcessing.value = false
+        break
+        
+      case 'analysis_error':
+        console.error('分析錯誤:', data.data?.message)
+        isProcessing.value = false
+        // 可以添加錯誤訊息到聊天
+        if (data.data?.message) {
+          const errorMessage: Message = {
+            id: `error-${Date.now()}`,
+            content: `錯誤: ${data.data.message}`,
+            sender: 'system',
+            timestamp: new Date().toISOString(),
+            type: MessageType.SYSTEM
+          }
+          messages.value.push(errorMessage)
+        }
         break
         
       default:

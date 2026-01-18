@@ -15,7 +15,7 @@ from config.settings import (
     AGENT_MODELS
 )
 from . import logger
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 from .core import WorkflowManager, LanguageModelManager
 from websocket_server import broadcast_agent_update
@@ -50,7 +50,12 @@ class MultiAgentSystem:
 
         Args:
             user_input: The user's input for analysis
-            websocket_callback: Optional callback function for WebSocket broadcasting
+            websocket_callback: Optional callback function for WebSocket broadcasting.
+                If provided, it should accept (msg_type: str, **kwargs) where msg_type is:
+                - "status": agent_id, status, progress, task
+                - "message": agent_name, content, message_type
+                - "decision": prompt, options
+                If not provided (CLI mode), output goes to stdout via print/pretty_print.
         """
         graph = self.workflow_manager.get_graph()
         events = graph.stream(
@@ -145,13 +150,52 @@ class MultiAgentSystem:
                 # 根據 websocket_callback 的存在決定輸出方式
                 if websocket_callback:
                     # 通過 WebSocket 廣播代理狀態
-                    websocket_callback(agent_name.lower().replace(" ", "_"), status, progress, task_description)
+                    websocket_callback(
+                        "status",
+                        agent_id=agent_name.lower().replace(" ", "_"),
+                        status=status,
+                        progress=progress,
+                        task=task_description
+                    )
                 else:
                     # 直接呼叫 WebSocket 廣播（保持向後兼容性）
                     broadcast_agent_update(agent_name.lower().replace(" ", "_"), status, progress, task_description)
 
+            # 處理訊息輸出
             message = event["messages"][-1]
+            
+            # 只推播 AI 訊息，跳過 HumanMessage
+            is_ai_message = isinstance(message, AIMessage) or (hasattr(message, 'type') and message.type == 'ai')
+            
             if isinstance(message, tuple):
-                print(message, end='', flush=True)
+                content = str(message)
+                if websocket_callback and is_ai_message:
+                    websocket_callback("message", agent_name=sender, content=content, message_type="text")
+                print(content, end='', flush=True)
             else:
+                # 獲取訊息內容
+                content = getattr(message, 'content', str(message))
+                agent_name = getattr(message, 'name', sender or 'assistant')
+                
+                # 透過 WebSocket 推播 AI 訊息 (若有 callback)，跳過 HumanMessage
+                if websocket_callback and content and is_ai_message:
+                    # 判斷訊息類型 (安全處理 agent_name 可能為 None 的情況)
+                    message_type = "text"
+                    agent_name_lower = (agent_name or "").lower()
+                    if "hypothesis" in agent_name_lower:
+                        message_type = "hypothesis"
+                    elif "report" in agent_name_lower:
+                        message_type = "report"
+                    
+                    websocket_callback("message", agent_name=agent_name, content=content, message_type=message_type)
+                    
+                    # 檢查是否需要決策 (訊息中包含選項提示)
+                    if "Please choose" in content or "請選擇" in content:
+                        options = [
+                            {"id": "1", "label": "Regenerate hypothesis", "value": "1"},
+                            {"id": "2", "label": "Continue the research process", "value": "2"}
+                        ]
+                        websocket_callback("decision", prompt=content, options=options)
+                
+                # CLI 模式保留原行為
                 message.pretty_print()
