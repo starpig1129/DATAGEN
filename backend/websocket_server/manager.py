@@ -152,6 +152,25 @@ class WebSocketManager:
 
         await self.broadcast(agent_msg)
 
+    async def send_state_update(self, state: Dict[str, Any], websocket=None):
+        """發送應用程式狀態更新 (matches frontend state_update handler).
+
+        Args:
+            state: Application state dict matching BackendState interface.
+            websocket: Optional specific client, otherwise broadcast to all.
+        """
+        state_msg = WebSocketMessage(
+            id=str(uuid.uuid4()),
+            type="state_update",
+            data=state,
+            timestamp=int(time.time() * 1000)
+        )
+
+        if websocket:
+            await self.send_to_client(websocket, state_msg)
+        else:
+            await self.broadcast(state_msg)
+
     async def send_data_update(self, data_type: str, data: Dict[str, Any]):
         """發送數據更新。"""
         data_msg = WebSocketMessage(

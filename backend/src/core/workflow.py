@@ -150,9 +150,14 @@ class WorkflowManager:
             }
         )
 
-        # Compile workflow
+        # Compile workflow with interrupts for human decision points
+        # This pauses the workflow BEFORE entering HumanChoice/HumanReview nodes
+        # allowing frontend to display decision buttons and wait for user input
         self.memory = MemorySaver()
-        self.graph = self.workflow.compile()
+        self.graph = self.workflow.compile(
+            checkpointer=self.memory,
+            interrupt_before=["HumanChoice", "HumanReview"]
+        )
 
     def get_graph(self):
         """Return the compiled workflow graph"""

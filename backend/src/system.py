@@ -19,6 +19,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from .core import WorkflowManager, LanguageModelManager
 from websocket_server import broadcast_agent_update
+from core.services.system_service import SystemService
 
 class MultiAgentSystem:
     def __init__(self):
@@ -55,8 +56,11 @@ class MultiAgentSystem:
                 - "status": agent_id, status, progress, task
                 - "message": agent_name, content, message_type
                 - "decision": prompt, options
+                - "state_update": state (full application state dict)
                 If not provided (CLI mode), output goes to stdout via print/pretty_print.
         """
+        # Clear previous state for new analysis
+        SystemService.clear_state()
         graph = self.workflow_manager.get_graph()
         events = graph.stream(
             {
@@ -167,10 +171,22 @@ class MultiAgentSystem:
             # 只推播 AI 訊息，跳過 HumanMessage
             is_ai_message = isinstance(message, AIMessage) or (hasattr(message, 'type') and message.type == 'ai')
             
+            # Check if workflow requires human decision (from LangGraph state)
+            needs_decision = event.get("needs_decision", False) or sender in ["human_choice", "human_review"]
+            
             if isinstance(message, tuple):
                 content = str(message)
                 if websocket_callback and is_ai_message:
+                    # Update state with new message
+                    msg_dict = {"content": content, "type": "assistant", "sender": sender or "assistant"}
+                    new_state = SystemService.update_state(
+                        sender=sender,
+                        message=msg_dict,
+                        needs_decision=needs_decision
+                    )
                     websocket_callback("message", agent_name=sender, content=content, message_type="text")
+                    # Broadcast full state update
+                    websocket_callback("state_update", state=new_state)
                 print(content, end='', flush=True)
             else:
                 # 獲取訊息內容
@@ -187,15 +203,60 @@ class MultiAgentSystem:
                     elif "report" in agent_name_lower:
                         message_type = "report"
                     
+                    # Update application state
+                    msg_dict = {"content": content, "type": "assistant", "sender": agent_name or "assistant"}
+                    new_state = SystemService.update_state(
+                        sender=sender,
+                        message=msg_dict,
+                        needs_decision=needs_decision,
+                        hypothesis=event.get("hypothesis", ""),
+                        process=event.get("process", ""),
+                        visualization_state=event.get("visualization_state", ""),
+                        code_state=event.get("code_state", ""),
+                        report_section=event.get("report_section", ""),
+                        quality_review=event.get("quality_review", ""),
+                        needs_revision=event.get("needs_revision", False)
+                    )
+                    
                     websocket_callback("message", agent_name=agent_name, content=content, message_type=message_type)
                     
-                    # 檢查是否需要決策 (訊息中包含選項提示)
-                    if "Please choose" in content or "請選擇" in content:
-                        options = [
-                            {"id": "1", "label": "Regenerate hypothesis", "value": "1"},
-                            {"id": "2", "label": "Continue the research process", "value": "2"}
-                        ]
-                        websocket_callback("decision", prompt=content, options=options)
+                    # Broadcast full state update for frontend sync
+                    websocket_callback("state_update", state=new_state)
                 
                 # CLI 模式保留原行為
                 message.pretty_print()
+        
+        # After stream ends, check if we're paused at an interrupt point (HumanChoice/HumanReview)
+        if websocket_callback:
+            config = {"configurable": {"thread_id": "1"}}
+            graph_state = graph.get_state(config)
+            
+            # Check if there are next nodes waiting (indicates we're at an interrupt)
+            if graph_state.next:
+                next_nodes = list(graph_state.next)
+                self.logger.info(f"Workflow paused at: {next_nodes}")
+                
+                if "HumanChoice" in next_nodes or "HumanReview" in next_nodes:
+                    # Signal frontend that decision is needed
+                    new_state = SystemService.update_state(
+                        sender="human_choice",
+                        needs_decision=True
+                    )
+                    
+                    # Determine prompt and options based on which node
+                    if "HumanChoice" in next_nodes:
+                        prompt = "請選擇下一步操作："
+                        options = [
+                            {"id": "1", "label": "重新生成假設", "value": "1"},
+                            {"id": "2", "label": "繼續研究流程", "value": "2"}
+                        ]
+                    else:  # HumanReview
+                        prompt = "是否需要額外分析或修改？"
+                        options = [
+                            {"id": "yes", "label": "是，繼續分析", "value": "yes"},
+                            {"id": "no", "label": "否，結束研究", "value": "no"}
+                        ]
+                    
+                    websocket_callback("state_update", state=new_state)
+                    websocket_callback("decision", prompt=prompt, options=options)
+                    self.logger.info("Decision required signal sent to frontend")

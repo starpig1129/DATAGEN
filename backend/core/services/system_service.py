@@ -2,9 +2,31 @@
 
 import sys
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from dataclasses import dataclass, field, asdict
 
 from fastapi import HTTPException
+
+
+@dataclass
+class ApplicationState:
+    """Application state matching frontend BackendState interface."""
+    messages: List[Dict[str, Any]] = field(default_factory=list)
+    needs_decision: bool = False
+    sender: str = ""
+    hypothesis: str = ""
+    process: str = ""
+    process_decision: str = ""
+    visualization_state: str = ""
+    searcher_state: str = ""
+    code_state: str = ""
+    report_section: str = ""
+    quality_review: str = ""
+    needs_revision: bool = False
+
+
+# Global application state (singleton pattern)
+_app_state = ApplicationState()
 
 
 class SystemService:
@@ -86,13 +108,54 @@ class SystemService:
             raise HTTPException(status_code=500, detail=f"獲取代理狀態失敗: {str(e)}")
 
     def get_state(self) -> Dict[str, Any]:
-        """獲取應用程式狀態。
+        """獲取應用程式狀態 (matches frontend BackendState interface).
 
         Returns:
-            包含應用程式狀態的字典。
+            包含應用程式狀態的字典，包括 messages, needs_decision 等。
         """
-        return {
-            "status": "ready",
-            "agent_models": [],
-            "version": "1.0.0"
-        }
+        return asdict(_app_state)
+
+    @staticmethod
+    def update_state(
+        sender: Optional[str] = None,
+        message: Optional[Dict[str, Any]] = None,
+        needs_decision: Optional[bool] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Update application state and return the new state.
+
+        Args:
+            sender: Current agent/sender name.
+            message: New message to append (format: {content, type, sender}).
+            needs_decision: Whether user decision is required.
+            **kwargs: Additional state fields to update.
+
+        Returns:
+            The updated application state.
+        """
+        global _app_state
+
+        if sender is not None:
+            _app_state.sender = sender
+        if message is not None:
+            _app_state.messages.append(message)
+        if needs_decision is not None:
+            _app_state.needs_decision = needs_decision
+
+        # Update any additional fields
+        for key, value in kwargs.items():
+            if hasattr(_app_state, key):
+                setattr(_app_state, key, value)
+
+        return asdict(_app_state)
+
+    @staticmethod
+    def clear_state() -> None:
+        """Reset application state to initial values."""
+        global _app_state
+        _app_state = ApplicationState()
+
+    @staticmethod
+    def get_current_state() -> Dict[str, Any]:
+        """Get current application state as dict."""
+        return asdict(_app_state)

@@ -40,5 +40,8 @@ class State(TypedDict):
     
     # The identifier of the agent who sent the last message
     sender: NotRequired[str]
+    
+    # A boolean flag indicating the workflow is waiting for human decision (Web mode)
+    needs_decision: NotRequired[bool]
 
 

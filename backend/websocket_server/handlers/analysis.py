@@ -94,6 +94,9 @@ async def run_analysis_async_fastapi(websocket, user_input: str):
         def run_analysis():
             nonlocal analysis_done
             try:
+                # Set Web mode flag so human_choice_node returns immediately
+                import os
+                os.environ["DATAGEN_WEB_MODE"] = "true"
                 system.run(user_input, websocket_callback=websocket_callback)
             finally:
                 analysis_done = True
@@ -137,6 +140,10 @@ async def run_analysis_async_fastapi(websocket, user_input: str):
                     prompt = kwargs.get("prompt", "請選擇下一步")
                     options = kwargs.get("options", [])
                     await ws_manager.send_decision_required(prompt, options, websocket=websocket)
+                    
+                elif msg_type == "state_update":
+                    state = kwargs.get("state", {})
+                    await ws_manager.send_state_update(state, websocket=websocket)
                     
             except Exception as e:
                 logger.error(f"處理訊息時發生錯誤: {e}")

@@ -64,31 +64,77 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
         }
 
 def human_choice_node(state: State) -> dict:
-    """Handle human input to choose the next step."""
-    print("Please choose the next step:")
-    print("1. Regenerate hypothesis")
-    print("2. Continue the research process")
+    """Handle human input to choose the next step.
     
-    while True:
-        choice = input("Please enter your choice (1 or 2): ")
-        if choice in ["1", "2"]:
-            break
-        print("Invalid input, please try again.")
+    In Web mode: Sets needs_decision=True and returns. The decision is provided
+    via process_decision from frontend when the workflow resumes.
     
-    updates = {
-        "messages": [],
-        "sender": "human"
-    }
+    In CLI mode: Uses blocking input() for terminal interaction.
+    """
+    # Check if we already have a decision from frontend (Web mode response)
+    process_decision = state.get("process_decision", "")
     
-    if choice == "1":
-        modification_areas = input("Specify areas to modify: ")
-        updates["messages"] = [HumanMessage(content=f"Regenerate hypothesis. Areas: {modification_areas}")]
-        updates["hypothesis"] = ""  # Clear hypothesis
+    # If process_decision contains a user choice, process it
+    if process_decision in ["1", "2"]:
+        updates = {
+            "messages": [],
+            "sender": "human_choice",
+            "needs_decision": False,  # Decision received, clear the flag
+            "process_decision": ""    # Clear for next decision
+        }
+        
+        if process_decision == "1":
+            updates["messages"] = [HumanMessage(content="Regenerate hypothesis")]
+            updates["hypothesis"] = ""  # Clear hypothesis
+        else:
+            updates["messages"] = [HumanMessage(content="Continue the research process")]
+            updates["process"] = "Continue the research process"
+        
+        return updates
+    
+    # Check if running in Web mode via environment variable
+    # This is more reliable than isatty() when uvicorn is started from terminal
+    import os
+    is_web_mode = os.environ.get("DATAGEN_WEB_MODE", "").lower() == "true"
+    
+    if not is_web_mode:
+        # CLI mode: use blocking input
+        print("Please choose the next step:")
+        print("1. Regenerate hypothesis")
+        print("2. Continue the research process")
+        
+        while True:
+            choice = input("Please enter your choice (1 or 2): ")
+            if choice in ["1", "2"]:
+                break
+            print("Invalid input, please try again.")
+        
+        updates = {
+            "messages": [],
+            "sender": "human_choice",
+            "needs_decision": False
+        }
+        
+        if choice == "1":
+            modification_areas = input("Specify areas to modify: ")
+            updates["messages"] = [HumanMessage(content=f"Regenerate hypothesis. Areas: {modification_areas}")]
+            updates["hypothesis"] = ""  # Clear hypothesis
+        else:
+            updates["messages"] = [HumanMessage(content="Continue the research process")]
+            updates["process"] = "Continue the research process"
+        
+        return updates
     else:
-        updates["messages"] = [HumanMessage(content="Continue the research process")]
-        updates["process"] = "Continue the research process"
-    
-    return updates
+        # Web mode: set needs_decision and return immediately
+        # Frontend will receive this state and show decision buttons
+        return {
+            "messages": [AIMessage(
+                content="請選擇下一步操作：\n1. 重新生成假設\n2. 繼續研究流程",
+                name="human_choice"
+            )],
+            "sender": "human_choice",
+            "needs_decision": True
+        }
 
 def create_message(message: BaseMessage, name: str) -> BaseMessage:
     """
