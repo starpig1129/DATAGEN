@@ -265,6 +265,25 @@ class AgentConfigLoader:
 
         return skills
 
+    def get_skill_content(self, skill_name: str) -> Optional[str]:
+        """Get the full content of a skill file (Level 2).
+
+        Args:
+            skill_name: Name of the skill.
+
+        Returns:
+            Content of the SKILL.md file or None if not found.
+        """
+        # Skills folder is at config/skills/ (sibling of agents/)
+        skills_dir = self.config_root.parent / "skills"
+        skill_path = skills_dir / skill_name / "SKILL.md"
+        
+        if not skill_path.exists():
+            logger.warning(f"Skill file not found: {skill_path}")
+            return None
+            
+        return skill_path.read_text(encoding="utf-8")
+
     def load_rules(self, agent_name: str) -> List[RuleConfig]:
         """Load applicable rules for an agent (Level 3).
 

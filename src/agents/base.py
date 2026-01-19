@@ -82,6 +82,17 @@ class BaseAgent(ABC):
         role_prompt = self._load_system_prompt()
         tools = self._get_tools()
 
+        # Check for skills and add LookupSkill tool if needed
+        try:
+            loader = self.get_config_loader()
+            metadata = loader.load_metadata(self.agent_name)
+            if metadata.skills:
+                from ..tools.skills import LookupSkill
+                tools.append(LookupSkill())
+                logger.info(f"Added LookupSkill tool for {self.agent_name}")
+        except Exception as e:
+            logger.warning(f"Failed to check skills for {self.agent_name}: {e}")
+
         # Create the agent executor using the common create_agent function
         self.agent = self._create_base_agent(
             self.model,
@@ -97,52 +108,52 @@ class BaseAgent(ABC):
         role_prompt: str,
         team_members: list[str],
         response_format: Any = None,
-        ):
-            """Create an agent with the given parameters.
+    ):
+        """Create an agent with the given parameters.
 
-            Args:
-                model: The language model to use for the agent.
-                tools: List of tools available to the agent.
-                role_prompt: The role prompt defining the agent's behavior.
-                team_members: List of team member roles for collaboration.
-                response_format: Optional format specification for structured output.
-            """
-            
-            # Prepare system prompt
-            tool_names = ", ".join([tool.name for tool in tools])
-            team_members_str = ", ".join(team_members)
+        Args:
+            model: The language model to use for the agent.
+            tools: List of tools available to the agent.
+            role_prompt: The role prompt defining the agent's behavior.
+            team_members: List of team member roles for collaboration.
+            response_format: Optional format specification for structured output.
+        """
+        
+        # Prepare system prompt
+        tool_names = ", ".join([tool.name for tool in tools])
+        team_members_str = ", ".join(team_members)
 
-            # Check if role_prompt contains a complete system prompt
-            if role_prompt.startswith(self.SYSTEM_PROMPT_PREFIX):
-                # Use the complete system prompt directly (remove the prefix)
-                system_prompt = role_prompt[len(self.SYSTEM_PROMPT_PREFIX):]
-            else:
-                # Use the existing system prompt composition logic
-                system_prompt = (
-                    "You are a specialized AI assistant in a data analysis team. "
-                    "Your role is to complete specific tasks in the research process. "
-                    "Use the provided tools to make progress on your task. "
-                    "If you can't fully complete a task, explain what you've done and what's needed next. "
-                    "Always aim for accurate and clear outputs. "
-                    f"You have access to the following tools: {tool_names}. "
-                    f"Your specific role: {role_prompt}\n"
-                    "Work autonomously according to your specialty, using the tools available to you. "
-                    "Do not ask for clarification. "
-                    "Your other team members (and other teams) will collaborate with you based on their specialties. "
-                    f"You are chosen for a reason! You are {self.agent_name} of the following team members: {team_members_str}.\n"
-                    "Use the ListDirectoryContents tool to check for updates in the directory contents when needed."
-                )
-
-            # Create agent
-            agent = create_agent(
-                model=model,
-                tools=tools,
-                system_prompt=system_prompt,
-                response_format=response_format
+        # Check if role_prompt contains a complete system prompt
+        if role_prompt.startswith(self.SYSTEM_PROMPT_PREFIX):
+            # Use the complete system prompt directly (remove the prefix)
+            system_prompt = role_prompt[len(self.SYSTEM_PROMPT_PREFIX):]
+        else:
+            # Use the existing system prompt composition logic
+            system_prompt = (
+                "You are a specialized AI assistant in a data analysis team. "
+                "Your role is to complete specific tasks in the research process. "
+                "Use the provided tools to make progress on your task. "
+                "If you can't fully complete a task, explain what you've done and what's needed next. "
+                "Always aim for accurate and clear outputs. "
+                f"You have access to the following tools: {tool_names}. "
+                f"Your specific role: {role_prompt}\n"
+                "Work autonomously according to your specialty, using the tools available to you. "
+                "Do not ask for clarification. "
+                "Your other team members (and other teams) will collaborate with you based on their specialties. "
+                f"You are chosen for a reason! You are {self.agent_name} of the following team members: {team_members_str}.\n"
+                "Use the ListDirectoryContents tool to check for updates in the directory contents when needed."
             )
 
-            logger.info(f"{self.agent_name} created successfully")
-            return agent
+        # Create agent
+        agent = create_agent(
+            model=model,
+            tools=tools,
+            system_prompt=system_prompt,
+            response_format=response_format
+        )
+
+        logger.info(f"{self.agent_name} created successfully")
+        return agent
 
     def _create_model(self) -> ChatOpenAI:
         """Create a model instance for this agent.
