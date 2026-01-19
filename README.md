@@ -181,16 +181,24 @@ agents:
 
 ## Advanced Configuration System
 
-DATAGEN implements a powerful **Progressive Disclosure** architecture for agent configuration, allowing for flexible and scalable agent management.
-
-### Key Features
-- **Skill-Based Architecture**: Reusable skills stored in `config/skills/`.
-- **Dynamic Tool Loading**: Tools configured via `config.yaml` using a centralized `ToolFactory`.
-- **Model Context Protocol (MCP)**: Seamless integration with external servers (FileSystem, GitHub, Web Search).
-- **Global Rules**: Centralized rule management injected into all agents.
+DATAGEN implements a powerful **Progressive Disclosure** architecture for agent configuration, inspired by [Claude Agent Skills](https://platform.claude.com/docs/agents-and-tools/agent-skills/overview).
 
 ### Documentation
-For a complete guide on defining agents, creating skills, and configuring tools, please refer to the **[System Architecture Guide](docs/SYSTEM_ARCHITECTURE.md)**.
+
+| Guide | Description |
+|-------|-------------|
+| [System Architecture](docs/SYSTEM_ARCHITECTURE.md) | High-level overview and core concepts |
+| [Quick Start](docs/QUICKSTART.md) | Create a new agent in 5 minutes |
+| [Agent Config Reference](docs/AGENT_CONFIG.md) | AGENT.md and config.yaml full reference |
+| [Tool Configuration](docs/TOOL_CONFIG.md) | Available tools and custom tool creation |
+| [Skill Configuration](docs/SKILL_CONFIG.md) | Create and use reusable knowledge modules |
+| [MCP Configuration](docs/MCP_CONFIG.md) | Model Context Protocol server setup |
+
+### Key Features
+- **Skill-Based Architecture**: Reusable skills stored in `config/skills/`
+- **Dynamic Tool Loading**: Tools configured via `config.yaml` using `ToolFactory`
+- **Model Context Protocol (MCP)**: External server integration (Filesystem, GitHub, Web Search)
+- **Progressive Disclosure**: Three-level loading strategy for Context Window optimization
 
 ## Notes
 
