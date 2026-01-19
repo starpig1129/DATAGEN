@@ -41,7 +41,7 @@ class AgentFactory:
         agent_mapping = {
             "visualization_agent": VisualizationAgent,
             "code_agent": CodeAgent,
-            "searcher_agent": SearchAgent,
+            "search_agent": SearchAgent,
             "report_agent": ReportAgent,
             "quality_review_agent": QualityReviewAgent,
             "refiner_agent": RefinerAgent,

@@ -19,7 +19,7 @@ agents:
     model_config:
       model: claude-haiku-4-5
       temperature: 1.0
-  searcher_agent:
+  search_agent:
     provider: google
     model_config:
       model: gemini-2.5-flash

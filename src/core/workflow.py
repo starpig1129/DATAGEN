@@ -48,7 +48,7 @@ class WorkflowManager:
 
         agents["code_agent"] = agent_factory.create_agent("code_agent")
 
-        agents["searcher_agent"] = agent_factory.create_agent("searcher_agent")
+        agents["search_agent"] = agent_factory.create_agent("search_agent")
 
         agents["report_agent"] = agent_factory.create_agent("report_agent")
 
@@ -88,7 +88,7 @@ class WorkflowManager:
         self.workflow.add_node("Hypothesis", _wrap_agent_node(self.agents["hypothesis_agent"], "hypothesis_agent"))
         self.workflow.add_node("Process", _wrap_agent_node(self.agents["process_agent"], "process_agent"))
         self.workflow.add_node("Visualization", _wrap_agent_node(self.agents["visualization_agent"], "visualization_agent"))
-        self.workflow.add_node("Search", _wrap_agent_node(self.agents["searcher_agent"], "searcher_agent"))
+        self.workflow.add_node("Search", _wrap_agent_node(self.agents["search_agent"], "search_agent"))
         self.workflow.add_node("Coder", _wrap_agent_node(self.agents["code_agent"], "code_agent"))
         self.workflow.add_node("Report", _wrap_agent_node(self.agents["report_agent"], "report_agent"))
         self.workflow.add_node("QualityReview", _wrap_agent_node(self.agents["quality_review_agent"], "quality_review_agent"))

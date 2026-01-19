@@ -45,7 +45,7 @@ def QualityReview_router(state: State) -> str:
         previous_node = messages[-2].name if len(messages) >= 2 else "NoteTaker"
         revision_routes = {
             "visualization_agent": "Visualization",
-            "searcher_agent": "Search",
+            "search_agent": "Search",
             "code_agent": "Coder",
             "report_agent": "Report"
         }

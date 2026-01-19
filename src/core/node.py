@@ -39,7 +39,7 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
             updates["process_decision"] = output.next
         elif name == "visualization_agent":
             updates["visualization_state"] = output
-        elif name == "searcher_agent":
+        elif name == "search_agent":
             updates["searcher_state"] = output
         elif name == "report_agent":
             updates["report_section"] = output
