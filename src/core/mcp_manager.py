@@ -32,6 +32,11 @@ from ..logger import setup_logger
 logger = setup_logger()
 
 
+
+# Constants
+MCP_SERVER_STOP_TIMEOUT = 5
+
+
 @dataclass
 class MCPServerConfig:
     """Configuration for an MCP server.
@@ -262,7 +267,7 @@ class MCPManager:
         process = self._server_processes.pop(name)
         process.terminate()
         try:
-            process.wait(timeout=5)
+            process.wait(timeout=MCP_SERVER_STOP_TIMEOUT)
         except subprocess.TimeoutExpired:
             process.kill()
         logger.info(f"Stopped MCP server: {name}")

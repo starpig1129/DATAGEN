@@ -33,6 +33,10 @@ class BaseAgent(ABC):
         response_format: Optional format specification for structured output.
     """
 
+
+    # Constants
+    SYSTEM_PROMPT_PREFIX = "SYSTEM_PROMPT:"
+
     # Class-level config loader (shared across all agents)
     _config_loader: Optional["AgentConfigLoader"] = None
 
@@ -109,9 +113,9 @@ class BaseAgent(ABC):
             team_members_str = ", ".join(team_members)
 
             # Check if role_prompt contains a complete system prompt
-            if role_prompt.startswith("SYSTEM_PROMPT:"):
+            if role_prompt.startswith(self.SYSTEM_PROMPT_PREFIX):
                 # Use the complete system prompt directly (remove the prefix)
-                system_prompt = role_prompt[len("SYSTEM_PROMPT:"):]
+                system_prompt = role_prompt[len(self.SYSTEM_PROMPT_PREFIX):]
             else:
                 # Use the existing system prompt composition logic
                 system_prompt = (
