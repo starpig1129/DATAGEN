@@ -1,11 +1,13 @@
-from typing import Literal, List
+from typing import Literal, List, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, edit_document
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
-from ..core.language_models import LanguageModelManager
+
+if TYPE_CHECKING:
+    from ..core.language_models import LanguageModelManager
 
 class QualityOutput(BaseModel):
     """Pydantic model for quality review output."""
@@ -19,7 +21,7 @@ class QualityOutput(BaseModel):
 class QualityReviewAgent(BaseAgent):
     """Agent responsible for reviewing and ensuring the quality of research outputs."""
 
-    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the QualityReviewAgent.
 

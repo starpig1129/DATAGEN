@@ -7,14 +7,16 @@ supports fallback to hardcoded prompts for backward compatibility.
 
 import os
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional
+from typing import Any, List, Optional, TYPE_CHECKING
 
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 
 from ..logger import setup_logger
-from ..core.language_models import LanguageModelManager
 from ..config import WORKING_DIRECTORY
+
+if TYPE_CHECKING:
+    from ..core.language_models import LanguageModelManager
 
 logger = setup_logger()
 
@@ -55,7 +57,7 @@ class BaseAgent(ABC):
     def __init__(
         self,
         agent_name: str,
-        language_model_manager: LanguageModelManager,
+        language_model_manager: "LanguageModelManager",
         team_members: List[str],
         working_directory: str = WORKING_DIRECTORY,
         response_format: Any = None
@@ -80,7 +82,22 @@ class BaseAgent(ABC):
 
         # Get agent-specific configuration - try external config first, fallback to hardcoded
         role_prompt = self._load_system_prompt()
-        tools = self._get_tools()
+        
+        # Load tools from config or fallback
+        tools = self._load_tools_from_config()
+        if not tools:
+            # Fallback to hardcoded tools if config yields empty list (and not explicitly empty in config)
+            # However, if config has "tools: []", we might want that. 
+            # But here we assume if metadata has tools, we use them.
+            # If metadata has no tools, we use _get_tools().
+            # Let's check if the metadata actually had a 'tools' key defined?
+            # The AgentMetadata defaults 'tools' to empty list. 
+            # So if it's empty, we should fallback.
+            tools = self._get_tools()
+            if tools:
+                logger.debug(f"Using hardcoded tools for {self.agent_name}")
+        else:
+            logger.info(f"Loaded {len(tools)} tools from external config for {self.agent_name}")
 
         # Check for skills and add LookupSkill tool if needed
         try:
@@ -101,6 +118,26 @@ class BaseAgent(ABC):
             team_members,
             response_format,
         )
+
+    def _load_tools_from_config(self) -> List:
+        """Load tools from external configuration.
+
+        Returns:
+            List of tool instances, or empty list if no tools configured.
+        """
+        try:
+            loader = self.get_config_loader()
+            metadata = loader.load_metadata(self.agent_name)
+            
+            if not metadata.tools:
+                return []
+                
+            from ..tools.factory import ToolFactory
+            tools = ToolFactory.get_tools(metadata.tools)
+            return tools
+        except Exception as e:
+            logger.warning(f"Failed to load tools from config for {self.agent_name}: {e}")
+            return []
     def _create_base_agent(
         self,
         model,

@@ -4,5 +4,9 @@ mcp_servers:
   - filesystem
 
 skills: []
-
+tools:
+  - create_document
+  - read_document
+  - edit_document
+  - list_directory
 rules: _shared/rules.md

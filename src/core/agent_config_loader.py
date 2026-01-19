@@ -56,6 +56,7 @@ class AgentMetadata:
     version: str = "1.0.0"
     model: Dict[str, Any] = field(default_factory=dict)
     skills: List[str] = field(default_factory=list)
+    tools: List[str] = field(default_factory=list)
     rules: Any = ""  # Can be str or List[str]
     mcp_servers: List[str] = field(default_factory=list)
     use_complete_prompt: bool = False
@@ -188,6 +189,7 @@ class AgentConfigLoader:
             model=frontmatter.get("model", {}),
             # Read skills/rules/mcp from agent_config.yaml, not frontmatter
             skills=ext_config.get("skills", []),
+            tools=ext_config.get("tools", []),
             rules=ext_config.get("rules", []),
             mcp_servers=ext_config.get("mcp_servers", []),
             use_complete_prompt=frontmatter.get("use_complete_prompt", False),
@@ -541,19 +543,20 @@ class AgentConfigLoader:
         config_path = self.config_root / agent_name / "config.yaml"
         if not config_path.exists():
             logger.debug(f"No config.yaml for agent: {agent_name}")
-            return {"skills": [], "rules": [], "mcp_servers": []}
+            return {"skills": [], "tools": [], "rules": [], "mcp_servers": []}
 
         try:
             content = config_path.read_text(encoding="utf-8")
             config = yaml.safe_load(content) or {}
             return {
                 "skills": config.get("skills", []),
+                "tools": config.get("tools", []),
                 "rules": config.get("rules", []),
                 "mcp_servers": config.get("mcp_servers", []),
             }
         except yaml.YAMLError as e:
             logger.error(f"Failed to parse config.yaml for {agent_name}: {e}")
-            return {"skills": [], "rules": [], "mcp_servers": []}
+            return {"skills": [], "tools": [], "rules": [], "mcp_servers": []}
 
     def _get_agent_extended_config(self, agent_name: str) -> Dict[str, Any]:
         """Get extended configuration (skills/rules/mcp) for an agent.

@@ -81,6 +81,6 @@ class ProcessAgent(BaseAgent):
         Ensure that the final report delivers a clear, insightful analysis, addressing all aspects of the hypothesis and meeting the highest academic standards.
         """
 
-    def _get_tools(self):
+    def _get_tools(self) -> List:
         """Not used in this agent."""
         return []

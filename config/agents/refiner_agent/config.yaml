@@ -5,5 +5,13 @@ mcp_servers:
   - web-search
 
 skills: []
-
+tools:
+  - create_document
+  - read_document
+  - edit_document
+  - wikipedia
+  - google_search
+  - scrape_webpages
+  - list_directory
+  - arxiv
 rules: _shared/rules.md

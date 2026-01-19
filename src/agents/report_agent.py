@@ -1,16 +1,17 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 
-from ..core.language_models import LanguageModelManager
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, edit_document
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
 
+if TYPE_CHECKING:
+    from ..core.language_models import LanguageModelManager
 
 class ReportAgent(BaseAgent):
     """Agent responsible for drafting comprehensive research reports."""
 
-    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the ReportAgent.
 
@@ -43,6 +44,6 @@ class ReportAgent(BaseAgent):
         - Cite all sources using APA style and ensure that all findings are supported by evidence.
         '''
 
-    def _get_tools(self):
+    def _get_tools(self) -> List:
         """Get the list of tools for report writing."""
         return [create_document, read_document, edit_document,list_directory]

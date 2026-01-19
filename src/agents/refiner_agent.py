@@ -1,20 +1,22 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_community.agent_toolkits.load_tools import load_tools
 
-from ..core.language_models import LanguageModelManager
 from .base import BaseAgent
 from  ..tools.basetool import list_directory
 from ..tools.internet import google_search, scrape_webpages
 from ..tools.FileEdit import create_document, read_document, edit_document
 from ..config import WORKING_DIRECTORY
 
+if TYPE_CHECKING:
+    from ..core.language_models import LanguageModelManager
+
 class RefinerAgent(BaseAgent):
     """Agent responsible for optimizing and enhancing research reports."""
 
-    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the RefinerAgent.
 
@@ -52,7 +54,7 @@ class RefinerAgent(BaseAgent):
         After refining the report, submit it for final human review, ensuring it is ready for publication or presentation.
         '''
 
-    def _get_tools(self):
+    def _get_tools(self) -> List:
         """Get the list of tools for report refinement."""
         api_wrapper = WikipediaAPIWrapper(wiki_client=None)
         wikipedia = WikipediaQueryRun(api_wrapper=api_wrapper)

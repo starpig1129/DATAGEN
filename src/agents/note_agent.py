@@ -1,13 +1,15 @@
 from pydantic import BaseModel, Field
-from typing import Sequence , List
+from typing import Sequence , List, TYPE_CHECKING
 
 from langchain_core.messages import BaseMessage
 
-from ..core.language_models import LanguageModelManager
 from ..tools.FileEdit import read_document
 from ..tools.basetool import list_directory
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
+
+if TYPE_CHECKING:
+    from ..core.language_models import LanguageModelManager
 
 class NoteState(BaseModel):
     """Pydantic model for the entire state structure."""
@@ -29,7 +31,7 @@ class NoteState(BaseModel):
 class NoteAgent(BaseAgent):
     """Agent responsible for taking notes on the research process."""
 
-    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the NoteAgent.
 
@@ -50,6 +52,6 @@ class NoteAgent(BaseAgent):
         """Get the system prompt for NoteAgent."""
         return "SYSTEM_PROMPT:You are a meticulous research process note-taker. Your main responsibility is to observe, summarize, and document the actions and findings of the research team. Your tasks include:\n\n1. Observing and recording key activities, decisions, and discussions among team members.\n2. Summarizing complex information into clear, concise, and accurate notes.\n3. Organizing notes in a structured format that ensures easy retrieval and reference.\n4. Highlighting significant insights, breakthroughs, challenges, or any deviations from the research plan.\n5. Responding only in JSON format to ensure structured documentation.\n\nYour output should be well-organized and easy to integrate with other project documentation."
 
-    def _get_tools(self):
+    def _get_tools(self) -> List:
         """Get the tools for NoteAgent."""
         return [read_document, list_directory]

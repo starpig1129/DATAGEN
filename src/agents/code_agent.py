@@ -1,15 +1,17 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from ..tools.basetool import execute_code, execute_command, list_directory
 from ..tools.FileEdit import read_document
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
-from ..core.language_models import LanguageModelManager
+
+if TYPE_CHECKING:
+    from ..core.language_models import LanguageModelManager
 
 class CodeAgent(BaseAgent):
     """Agent responsible for writing and executing Python code for data processing."""
 
-    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the CodeAgent.
 
@@ -41,6 +43,6 @@ class CodeAgent(BaseAgent):
         - Avoid unnecessary complexity; prioritize readability and efficiency.
         '''
 
-    def _get_tools(self):
+    def _get_tools(self) -> List:
         """Get the list of tools for code generation and execution."""
         return [read_document, execute_code, execute_command, list_directory]

@@ -1,15 +1,17 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 
-from ..core.language_models import LanguageModelManager
 from ..tools.basetool import execute_code, execute_command, list_directory
 from ..tools.FileEdit import read_document
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
 
+if TYPE_CHECKING:
+    from ..core.language_models import LanguageModelManager
+
 class VisualizationAgent(BaseAgent):
     """Agent responsible for creating data visualizations."""
 
-    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the VisualizationAgent.
 
@@ -47,6 +49,6 @@ class VisualizationAgent(BaseAgent):
         - Avoid over-complicating visualizations; aim for clarity and simplicity.
         '''
 
-    def _get_tools(self):
+    def _get_tools(self) -> List:
         """Get the list of tools for data visualization."""
         return [read_document, execute_code, execute_command, list_directory]

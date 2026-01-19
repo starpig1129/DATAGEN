@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
@@ -9,12 +9,14 @@ from ..tools.basetool import list_directory
 from ..tools.FileEdit import collect_data
 from ..tools.internet import google_search, scrape_webpages
 from ..config import WORKING_DIRECTORY
-from ..core.language_models import LanguageModelManager
+
+if TYPE_CHECKING:
+    from ..core.language_models import LanguageModelManager
 
 class HypothesisAgent(BaseAgent):
     """Agent responsible for generating research hypotheses."""
 
-    def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
+    def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the HypothesisAgent.
 
@@ -45,7 +47,7 @@ class HypothesisAgent(BaseAgent):
         Just answer a research hypothesis.
         '''
 
-    def _get_tools(self):
+    def _get_tools(self) -> List:
         """Get the list of tools for hypothesis generation."""
         api_wrapper = WikipediaAPIWrapper(wiki_client=None)
         wikipedia = WikipediaQueryRun(api_wrapper=api_wrapper)
