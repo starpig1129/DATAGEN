@@ -179,6 +179,19 @@ agents:
   - `model`: The specific model name to use
   - `temperature`: Controls the randomness of model output (range: 0.0-2.0)
 
+## Advanced Configuration System
+
+DATAGEN implements a powerful **Progressive Disclosure** architecture for agent configuration, allowing for flexible and scalable agent management.
+
+### Key Features
+- **Skill-Based Architecture**: Reusable skills stored in `config/skills/`.
+- **Dynamic Tool Loading**: Tools configured via `config.yaml` using a centralized `ToolFactory`.
+- **Model Context Protocol (MCP)**: Seamless integration with external servers (FileSystem, GitHub, Web Search).
+- **Global Rules**: Centralized rule management injected into all agents.
+
+### Documentation
+For a complete guide on defining agents, creating skills, and configuring tools, please refer to the **[System Architecture Guide](docs/SYSTEM_ARCHITECTURE.md)**.
+
 ## Notes
 
 - Ensure you have sufficient API credits, as the system will make multiple API calls.
