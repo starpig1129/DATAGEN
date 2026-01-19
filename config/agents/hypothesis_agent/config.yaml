@@ -1,0 +1,9 @@
+# Hypothesis Agent Configuration
+
+mcp_servers:
+  - filesystem
+  - web-search
+
+skills: []
+
+rules: _shared/rules.md

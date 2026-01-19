@@ -1,0 +1,8 @@
+# Quality Review Agent Configuration
+
+mcp_servers:
+  - filesystem
+
+skills: []
+
+rules: _shared/rules.md
