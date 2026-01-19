@@ -5,8 +5,6 @@
 ## 關於 DATAGEN
 DATAGEN 是一個強大的品牌名稱，代表我們利用人工智慧技術進行數據生成和分析的願景。這個名稱結合了 "DATA" 和 "GEN"（generation），完美體現了本專案的核心功能——通過多代理系統進行自動化數據分析和研究。
 
-請訪問 [DATAGEN Digital](https://datagen.digital/)（網站開發中）以了解更多關於我們的願景和服務。
-
 ![系統架構](../../docs/Architecture.png)
 
 ## 概述
