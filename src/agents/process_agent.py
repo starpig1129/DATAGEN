@@ -6,7 +6,12 @@ from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
 
 class ProcessRouteSchema(BaseModel):
-    """Select the next role and assign a task."""
+    """Select the next role and assign a task.
+    
+    Attributes:
+        next: The next role to act (Visualization, Search, Coder, Report, or FINISH).
+        task: The detailed task description to be performed by the selected agent.
+    """
     next: Literal["FINISH", "Visualization", "Search", "Coder", "Report"] = Field(
         description="The next role to act"
     )
@@ -18,13 +23,13 @@ class ProcessAgent(BaseAgent):
     """Agent responsible for overseeing and coordinating the data analysis project."""
 
     def __init__(self, language_model_manager: LanguageModelManager, team_members: List[str], working_directory: str = WORKING_DIRECTORY):
-        """
-        Initialize the ProcessAgent.
+        """Initialize the ProcessAgent.
 
         Args:
             language_model_manager: Manager for language model configuration.
             team_members: List of team member roles for collaboration.
             working_directory: The directory where the agent's data will be stored.
+                               Defaults to WORKING_DIRECTORY config.
         """
         super().__init__(
             agent_name="process_agent",
@@ -35,7 +40,12 @@ class ProcessAgent(BaseAgent):
         )
 
     def _get_system_prompt(self) -> str:
-        """Get the system prompt for ProcessAgent."""
+        """Get the system prompt for ProcessAgent.
+
+        Returns:
+            The complete system prompt string defining the Process Agent's role,
+            workflow, and completion criteria.
+        """
         return """SYSTEM_PROMPT:You are a research supervisor responsible for overseeing and coordinating a comprehensive data analysis project, resulting in a complete and cohesive research report. Your primary tasks include:
 
         1. Validating and refining the research hypothesis to ensure it is clear, specific, and testable.

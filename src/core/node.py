@@ -11,7 +11,17 @@ from ..config import WORKING_DIRECTORY
 logger = logging.getLogger(__name__)
 
 def agent_node(state: State, agent: Any, name: str) -> dict:
-    """Process an agent's action and update the state accordingly."""
+    """Process an agent's action and update the state accordingly.
+    
+    Args:
+        state: The current state of the workflow.
+        agent: The agent instance to invoke.
+        name: The name of the agent, used for routing and logging.
+        
+    Returns:
+        A dictionary containing state updates, including messages and 
+        agent-specific output keys.
+    """
     logger.info(f"Processing agent: {name}")
     try:
         result = agent.invoke(state)
@@ -57,7 +67,14 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
         }
 
 def human_choice_node(state: State) -> dict:
-    """Handle human input to choose the next step."""
+    """Handle human input to choose the next step.
+
+    Args:
+        state: The current state of the workflow.
+
+    Returns:
+        A dictionary containing state updates based on user choice.
+    """
     print("Please choose the next step:")
     print("1. Regenerate hypothesis")
     print("2. Continue the research process")
@@ -94,8 +111,18 @@ def create_message(message: BaseMessage, name: str) -> BaseMessage:
     return HumanMessage(content=content) if message_type == "human" else AIMessage(content=content, name=name)
 
 def note_agent_node(state: State, agent: Any, name: str) -> State:
-    """
-    Process the note agent's action and update the entire state.
+    """Process the note agent's action and update the entire state.
+    
+    Args:
+        state: The current state of the workflow.
+        agent: The note agent instance.
+        name: The name of the agent.
+
+    Returns:
+        The fully updated State object.
+    
+    Raises:
+        Exception: If an unexpected error occurs, returns an error state.
     """
     logger.info(f"Processing note agent: {name}")
     output = ""
@@ -163,9 +190,15 @@ def _create_error_state(state: State, error_message: AIMessage, name: str, error
     return error_state
 
 def human_review_node(state: State) -> dict:
-    """
-    Display current state to the user and update the state based on user input.
+    """Display current state to the user and update the state based on user input.
+
     Includes error handling for robustness.
+
+    Args:
+        state: The current state of the workflow.
+
+    Returns:
+        A dictionary containing state updates representing the user's decision.
     """
     try:
         print("Current research progress:")
@@ -198,11 +231,20 @@ def human_review_node(state: State) -> dict:
         return {"messages": [AIMessage(content=f"Error: {str(e)}", name="human_review")]}
 
 def refiner_node(state: State, agent: Any, name: str) -> dict:
-    """
+    """Read contents of report materials and process with the refiner agent.
+
     Read MD file contents and PNG file names from the specified storage path,
     add them as report materials to a new message,
     then process with the agent and update the original state.
     If token limit is exceeded, use only MD file names instead of full content.
+
+    Args:
+        state: The current state of the workflow.
+        agent: The refiner agent instance.
+        name: The name of the agent.
+
+    Returns:
+        A dictionary containing the refiner agent's response message.
     """
     try:
         # Get storage path
