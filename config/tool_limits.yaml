@@ -1,0 +1,74 @@
+# Tool Resource Limits Configuration
+# Users can override these values to control tool behavior
+
+# === Code Execution Limits ===
+execution:
+  # Timeout in seconds. Set to null for no limit.
+  # For ML/DL training, use progress_timeout_seconds instead.
+  timeout_seconds: null
+
+  # Memory limit in MB (Linux only). Set to null for no limit.
+  max_memory_mb: null
+
+  # Maximum output characters to return (prevents memory issues)
+  max_output_chars: 50000
+
+  # Progress-based timeout: timeout only if no stdout for N seconds.
+  # Useful for long-running tasks that print progress.
+  # Set to null to disable.
+  progress_timeout_seconds: null
+
+  # Security: code patterns to block (substring match)
+  blocked_patterns:
+    - os.system
+    - subprocess.call
+    - subprocess.run
+    - subprocess.Popen
+    - shutil.rmtree
+    - "eval("
+    - "exec("
+    - __import__
+
+# === File Operation Limits ===
+file_operations:
+  # Maximum file size to read (bytes). Default: 5MB
+  max_read_bytes: 5242880
+
+  # Maximum lines to return from read_document
+  max_read_lines: 10000
+
+  # Maximum content size to write (bytes). Default: 10MB
+  max_write_bytes: 10485760
+
+  # Allowed file extensions (whitelist)
+  allowed_extensions:
+    - .py
+    - .md
+    - .txt
+    - .csv
+    - .json
+    - .yaml
+    - .yml
+    - .log
+    - .html
+    - .css
+    - .js
+    - .png
+    - .jpg
+    - .jpeg
+
+  # Paths that cannot be accessed (security)
+  blocked_paths:
+    - /etc
+    - /sys
+    - /proc
+    - /root
+    - ~/.ssh
+    - /var/log
+
+# === Global Switches ===
+# Enable AST-based security scanning before code execution
+enable_security_scan: true
+
+# Enable content validation before file writes (warns on TODO/FIXME)
+enable_write_validation: true

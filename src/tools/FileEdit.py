@@ -85,29 +85,59 @@ def create_document(
 @tool
 def read_document(
     file_name: Annotated[str, "Name of the file to read"],
-    start: Annotated[int, "Starting line number (use 0 for beginning)"],
-    end: Annotated[int, "Ending line number (use -1 for end of file)"]
+    start: Annotated[int, "Starting line number (use 0 for beginning)"] = 0,
+    end: Annotated[int, "Ending line number (use -1 for end of file)"] = -1
 ) -> Annotated[str, "Content of the document"]:
     """
-    Read the specified document.
+    Read the specified document with security validation.
 
     This function reads a document from the specified file and returns its content.
+    Security features:
+    - Path validation (blocked paths check)
+    - File size validation
+    - Line count limiting
 
+    Args:
+        file_name: Name of the file to read.
+        start: Starting line number (0-indexed, default: 0).
+        end: Ending line number (-1 for end of file, default: -1).
+
+    Returns:
+        Content of the document or error message.
     """
+    from .validators import PathValidator
+    from .tool_config import TOOL_CONFIG
+
     try:
         file_path = normalize_path(file_name)
+        
+        # === VALIDATION ===
+        try:
+            PathValidator.validate_read(file_path)
+        except (PermissionError, ValueError) as e:
+            logger.warning(f"Read validation failed for {file_path}: {e}")
+            return f"Error: {e}"
+
         with open(file_path, "r", encoding='utf-8') as file:
             lines = file.readlines()
         
+        # Apply line limit
+        max_lines = TOOL_CONFIG.file_ops.max_read_lines
+        if len(lines) > max_lines:
+            lines = lines[:max_lines]
+            truncated_notice = f"\n\n... [TRUNCATED: showing first {max_lines} lines]"
+        else:
+            truncated_notice = ""
+        
         # Handle special values
         if start == 0 and end == -1:
-            content = "\n".join(lines)
+            content = "".join(lines)
         elif end == -1:
-            content = "\n".join(lines[start:])
+            content = "".join(lines[start:])
         else:
-            content = "\n".join(lines[start:end])
+            content = "".join(lines[start:end])
             
-        return content
+        return content + truncated_notice
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -117,17 +147,47 @@ def write_document(
     file_name: Annotated[str, "Name of the file to save the document"]
 ) -> Annotated[str, "Message indicating where the document was saved"]:
     """
-    Create and save a Markdown document.
+    Create and save a Markdown document with validation.
 
     This function takes a string of content and writes it to a file.
+    Security features:
+    - Path validation (blocked paths check)
+    - Content size validation
+    - Content quality warnings (TODO/FIXME detection)
+
+    Args:
+        content: Content to write to the file.
+        file_name: Name of the file to save.
+
+    Returns:
+        Success message or error.
     """
+    from .validators import PathValidator, ContentValidator
+
     try:
         file_path = normalize_path(file_name)
+        
+        # === PATH VALIDATION ===
+        try:
+            PathValidator.validate_write(file_path)
+        except PermissionError as e:
+            logger.warning(f"Write path validation failed: {e}")
+            return f"Error: {e}"
+
+        # === CONTENT VALIDATION ===
+        is_valid, message = ContentValidator.validate_and_log(content, file_path)
+        if not is_valid:
+            return f"Error: {message}"
+
         logger.info(f"Writing document: {file_path}")
         with open(file_path, "w", encoding='utf-8') as file:
             file.write(content)
         logger.info(f"Document written successfully: {file_path}")
-        return f"Document saved to {file_path}"
+        
+        result = f"Document saved to {file_path}"
+        if message:  # Warnings
+            result += f" ({message})"
+        return result
     except Exception as e:
         logger.error(f"Error while saving document: {str(e)}")
         return f"Error while saving document: {str(e)}"

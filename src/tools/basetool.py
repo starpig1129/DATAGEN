@@ -32,7 +32,10 @@ def get_platform_specific_command(command: str) -> tuple:
 @tool
 def execute_code(
     input_code: Annotated[str, "The Python code to execute."],
-    codefile_name: Annotated[str, "The Python code file name or full path."] = 'code.py'
+    codefile_name: Annotated[str, "The Python code file name or full path."] = 'code.py',
+    timeout: Annotated[int | None, "Execution timeout in seconds. None = no limit."] = None,
+    memory_mb: Annotated[int | None, "Memory limit in MB (Linux only). None = no limit."] = None,
+    progress_timeout: Annotated[int | None, "Timeout only if no output for N seconds. Good for ML/DL."] = None,
 ) -> Annotated[dict, "Execution result including output and file path"]:
     """
     Execute Python code in a specified conda environment and return the result.
@@ -40,9 +43,39 @@ def execute_code(
     This function takes Python code as input, writes it to a file, executes it in the specified
     conda environment, and returns the output or any errors encountered during execution.
 
+    Security features:
+    - Code is scanned for dangerous patterns before execution
+    - Optional timeout and memory limits
+    - Output is truncated if too large
+
+    Args:
+        input_code: The Python code to execute.
+        codefile_name: File name to save the code (default: code.py).
+        timeout: Fixed timeout in seconds. None = no limit.
+        memory_mb: Memory limit in MB (Linux only). None = no limit.
+        progress_timeout: Timeout only if no stdout for N seconds (for long-running ML/DL).
+
+    Returns:
+        Dictionary with result status, output/error, and file path.
     """
+    from .tool_config import TOOL_CONFIG
+    from .security import SecurityScanner, ResourceLimiter
+
     code_file_path = None
     try:
+        # === SECURITY SCAN ===
+        if TOOL_CONFIG.enable_security_scan:
+            scan_result = SecurityScanner.scan_code(input_code)
+            if not scan_result.is_safe:
+                logger.warning(f"Security scan blocked code: {scan_result.violations}")
+                return {
+                    "result": "Security violation",
+                    "error": f"Code blocked: {'; '.join(scan_result.violations)}",
+                    "file_path": None
+                }
+            if scan_result.warnings:
+                logger.info(f"Security scan warnings: {scan_result.warnings}")
+
         # Ensure WORKING_DIRECTORY exists
         os.makedirs(WORKING_DIRECTORY, exist_ok=True)
         
@@ -72,15 +105,27 @@ def execute_code(
         
         logger.info(f"Executing command: {full_command}")
         
-        # Execute the code
-        result = subprocess.run(
-            full_command,
-            shell=shell,
-            capture_output=True,
-            text=True,
-            executable=executable,
-            cwd=WORKING_DIRECTORY
+        # === EXECUTE WITH RESOURCE LIMITS ===
+        limiter = ResourceLimiter(
+            timeout=timeout,
+            memory_mb=memory_mb,
+            progress_timeout=progress_timeout,
         )
+        
+        try:
+            result = limiter.execute(
+                command=full_command,
+                cwd=WORKING_DIRECTORY,
+                shell=shell,
+                executable=executable,
+            )
+        except TimeoutError as e:
+            logger.error(f"Execution timeout: {e}")
+            return {
+                "result": "Timeout",
+                "error": str(e),
+                "file_path": code_file_path
+            }
         
         # Capture standard output and error output
         output = result.stdout
