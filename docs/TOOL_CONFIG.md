@@ -44,7 +44,72 @@ Tools are capabilities that allow agents to interact with the external world. Al
 
 ---
 
-## Configuration
+## Security & Resource Limits
+
+### Configuration File
+
+Tool limits are configured in `config/tool_limits.yaml`:
+
+```yaml
+# Execution limits
+execution:
+  timeout_seconds: 60              # Fixed timeout (null = no limit)
+  max_memory_mb: 512               # Memory limit (Linux only)
+  max_output_chars: 50000          # Truncate output
+  progress_timeout_seconds: 300    # For ML/DL tasks
+
+# File operation limits  
+file_operations:
+  max_read_bytes: 5242880          # 5MB
+  max_read_lines: 10000
+  max_write_bytes: 10485760        # 10MB
+  allowed_extensions: [.py, .md, .txt, .csv, .json]
+  blocked_paths: [/etc, /sys, ~/.ssh]
+
+# Global switches
+enable_security_scan: true
+enable_write_validation: true
+```
+
+### execute_code Parameters
+
+```python
+execute_code(
+    input_code="...",
+    codefile_name="code.py",
+    timeout=60,              # Fixed timeout in seconds
+    memory_mb=512,           # Memory limit (Linux)
+    progress_timeout=300     # Timeout only if no output
+)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `timeout` | `int \| None` | Kill after N seconds |
+| `memory_mb` | `int \| None` | Memory limit in MB (Linux only) |
+| `progress_timeout` | `int \| None` | Timeout only if no stdout for N seconds |
+
+> **Tip**: For ML/DL training, use `progress_timeout` instead of `timeout` to allow long-running tasks that print progress.
+
+### Security Features
+
+| Feature | Description |
+|---------|-------------|
+| **Code Scanning** | AST analysis blocks dangerous patterns (`eval`, `os.system`, etc.) |
+| **Path Validation** | Blocks access to sensitive paths (`/etc`, `~/.ssh`) |
+| **Content Validation** | Warns on incomplete markers (TODO, FIXME) |
+| **Size Limits** | Prevents reading/writing excessively large files |
+
+### Blocked Patterns (Default)
+
+```
+os.system, subprocess.call, subprocess.run, subprocess.Popen,
+shutil.rmtree, eval(, exec(, __import__
+```
+
+---
+
+## Agent Configuration
 
 ### Specify in config.yaml
 
@@ -113,6 +178,21 @@ tools:
 
 ---
 
+## Programmatic Access
+
+```python
+from src.tools.factory import ToolFactory
+
+# Get current configuration
+config = ToolFactory.get_config()
+
+# Get limits only
+limits = ToolFactory.get_limits()
+print(limits["execution"]["timeout_seconds"])
+```
+
+---
+
 ## Fallback Mechanism
 
 If `tools` is not defined in `config.yaml`, the system falls back to the agent class's `_get_tools()` method.
@@ -122,3 +202,4 @@ If `tools` is not defined in `config.yaml`, the system falls back to the agent c
 ## Related Documentation
 - [Quick Start](QUICKSTART.md)
 - [Agent Configuration Reference](AGENT_CONFIG.md)
+
