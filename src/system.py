@@ -1,9 +1,7 @@
 import logging
-# from dotenv import load_dotenv
+from . import config
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
-
-from . import config
 from .core.workflow import WorkflowManager
 from .core.language_models import LanguageModelManager
 from .core.state import create_initial_state

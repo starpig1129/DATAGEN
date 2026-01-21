@@ -1,4 +1,4 @@
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Dict
 
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
@@ -9,6 +9,7 @@ from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, collect_data
 from ..tools.internet import google_search, scrape_webpages
 from ..config import WORKING_DIRECTORY
+from ..core.schemas import ArtifactSchema
 
 if TYPE_CHECKING:
     from ..core.language_models import LanguageModelManager
@@ -19,33 +20,14 @@ class SearchAgent(BaseAgent):
     def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
         Initialize the SearchAgent.
-
-        Args:
-            language_model_manager: Manager for language model configuration.
-            team_members: List of team member roles for collaboration.
-            working_directory: The directory where the agent's data will be stored.
         """
         super().__init__(
             agent_name="search_agent",
             language_model_manager=language_model_manager,
             team_members=team_members,
-            working_directory=working_directory
+            working_directory=working_directory,
+            response_format=ArtifactSchema
         )
-
-    def _get_system_prompt(self) -> str:
-        """Get the system prompt for information retrieval and summarization."""
-        return '''
-        You are a skilled research assistant responsible for gathering and summarizing relevant information. Your main tasks include:
-
-        1. Conducting thorough literature reviews using academic databases and reputable online sources.
-        2. Summarizing key findings in a clear, concise manner.
-        3. Providing citations for all sources, prioritizing peer-reviewed and academically reputable materials.
-
-        Constraints:
-        - Focus exclusively on information retrieval and summarization; do not engage in data analysis or processing.
-        - Present information in an organized format, with clear attributions to sources.
-        - Evaluate the credibility of sources and prioritize high-quality, reliable information.
-        '''
 
     def _get_tools(self) -> List:
         """Get the list of tools for information retrieval and summarization."""
