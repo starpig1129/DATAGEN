@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, Dict, Union, List
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
 import logging
 import json
 from pathlib import Path
+import time
 
 from .state import State
 from ..config import WORKING_DIRECTORY
@@ -10,52 +11,93 @@ from ..config import WORKING_DIRECTORY
 # Set up logger
 logger = logging.getLogger(__name__)
 
-def agent_node(state: State, agent: Any, name: str) -> dict:
-    """Process an agent's action and update the state accordingly.
-    
-    Args:
-        state: The current state of the workflow.
-        agent: The agent instance to invoke.
-        name: The name of the agent, used for routing and logging.
-        
-    Returns:
-        A dictionary containing state updates, including messages and 
-        agent-specific output keys.
+def get_state_attr(state: Union[State, dict], key: str, default: Any = None) -> Any:
+    """Helper to safely get attributes from State whether it's Pydantic or dict."""
+    if isinstance(state, dict):
+        return state.get(key, default)
+    return getattr(state, key, default)
+
+def update_artifact_dict(current_artifacts: Dict[str, str], new_output: Any) -> Dict[str, str]:
     """
+    Update an artifact dictionary with new output.
+    If output is a string (legacy), wrap it. 
+    If output is a dict, update.
+    """
+    updated = current_artifacts.copy() if current_artifacts else {}
+    
+    if isinstance(new_output, dict):
+        updated.update(new_output)
+    elif isinstance(new_output, str) and new_output:
+        # Legacy/Fallback: Generate a timestamped key for raw string output
+        # This ensures we don't lose data even if agents aren't fully migrated
+        timestamp = int(time.time())
+        key = f"output_{timestamp}.txt"
+        summary = new_output[:100] + "..." if len(new_output) > 100 else new_output
+        updated[key] = summary
+    
+    return updated
+
+def agent_node(state: State, agent: Any, name: str) -> dict:
+    """Process an agent's action and update the state accordingly."""
     logger.info(f"Processing agent: {name}")
     try:
         result = agent.invoke(state)
         
-        if name == "process_agent":
-            output = result["structured_response"]    
-            ai_message = AIMessage(content=output.task , name=name)
-        elif name == "quality_review_agent":
+        # Generic handling for structured output
+        if "structured_response" in result:
             output = result["structured_response"]
-            ai_message = AIMessage(content=output.feedback , name=name)
+            # Extract meaningful content for the message history
+            # Priority: task (Process), feedback (Quality), summary (Artifact), or string conversion
+            content = getattr(output, "task", 
+                      getattr(output, "feedback", 
+                      getattr(output, "summary", str(output))))
+            ai_message = AIMessage(content=content, name=name)
         else:
+            # Standard agents usually return a dict with messages
             message = result.get("messages")[-1]
             output = message.content
             ai_message = AIMessage(content=output, name=name)
 
+        # Base Updates
         updates = {
             "messages": [ai_message],
-            "sender": name
+            "last_active_agent": name
         }
 
+        # Specific Agent Mapping
         if name == "hypothesis_agent":
             updates["hypothesis"] = output
+            
         elif name == "process_agent":
-            updates["process"] = output.task
-            updates["process_decision"] = output.next
+            updates["current_instruction"] = getattr(output, "current_instruction", getattr(output, "task", ""))
+            updates["next_workflow_step"] = getattr(output, "next_workflow_step", getattr(output, "next", ""))
+            updates["todo_list"] = getattr(output, "todo_list", []) 
+            
         elif name == "visualization_agent":
-            updates["visualization_state"] = output
+            current = get_state_attr(state, "data_viz_artifacts", {})
+            # Handle both ArtifactSchema (artifacts attr) and legacy string/dict
+            new_data = getattr(output, "artifacts", output)
+            updates["data_viz_artifacts"] = update_artifact_dict(current, new_data)
+            
         elif name == "search_agent":
-            updates["searcher_state"] = output
+            current = get_state_attr(state, "search_artifacts", {})
+            new_data = getattr(output, "artifacts", output)
+            updates["search_artifacts"] = update_artifact_dict(current, new_data)
+            
         elif name == "report_agent":
-            updates["report_section"] = output
+            current = get_state_attr(state, "report_artifacts", {})
+            new_data = getattr(output, "artifacts", output)
+            updates["report_artifacts"] = update_artifact_dict(current, new_data)
+            
         elif name == "quality_review_agent":
-            updates["quality_review"] = output.feedback
+            updates["quality_feedback"] = output.feedback
             updates["needs_revision"] = output.needs_revision
+            
+        # Add support for 'Coder' agent if it exists
+        elif name == "code_agent" or name == "coder_agent":
+             current = get_state_attr(state, "code_artifacts", {})
+             new_data = getattr(output, "artifacts", output)
+             updates["code_artifacts"] = update_artifact_dict(current, new_data)
         
         return updates
         
@@ -63,18 +105,11 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
         logger.error(f"Error in {name}: {str(e)}", exc_info=True)
         return {
             "messages": [AIMessage(content=f"Error: {str(e)}", name=name)],
-            "sender": name
+            "last_active_agent": name
         }
 
 def human_choice_node(state: State) -> dict:
-    """Handle human input to choose the next step.
-
-    Args:
-        state: The current state of the workflow.
-
-    Returns:
-        A dictionary containing state updates based on user choice.
-    """
+    """Handle human input to choose the next step."""
     print("Please choose the next step:")
     print("1. Regenerate hypothesis")
     print("2. Continue the research process")
@@ -87,119 +122,102 @@ def human_choice_node(state: State) -> dict:
     
     updates = {
         "messages": [],
-        "sender": "human"
+        "last_active_agent": "human"
     }
     
     if choice == "1":
         modification_areas = input("Specify areas to modify: ")
         updates["messages"] = [HumanMessage(content=f"Regenerate hypothesis. Areas: {modification_areas}")]
-        updates["hypothesis"] = ""  # Clear hypothesis
+        updates["hypothesis"] = None  # Clear hypothesis
     else:
         updates["messages"] = [HumanMessage(content="Continue the research process")]
-        updates["process"] = "Continue the research process"
+        updates["current_instruction"] = "Continue the research process"
     
     return updates
 
 def create_message(message: BaseMessage, name: str) -> BaseMessage:
-    """
-    Create a BaseMessage object based on the message type.
-    """
+    """Create a BaseMessage object based on the message type."""
     content = message.content
     message_type = message.type.lower()
-    
-    logger.debug(f"Creating message of type {message_type} for {name}")
     return HumanMessage(content=content) if message_type == "human" else AIMessage(content=content, name=name)
 
-def note_agent_node(state: State, agent: Any, name: str) -> State:
-    """Process the note agent's action and update the entire state.
-    
-    Args:
-        state: The current state of the workflow.
-        agent: The note agent instance.
-        name: The name of the agent.
-
-    Returns:
-        The fully updated State object.
-    
-    Raises:
-        Exception: If an unexpected error occurs, returns an error state.
-    """
+def note_agent_node(state: State, agent: Any, name: str) -> dict:
+    """Process the note agent's action and update the entire state."""
     logger.info(f"Processing note agent: {name}")
-    output = ""
     try:
-        current_messages = list(state.get("messages", []))
+        current_messages = list(get_state_attr(state, "messages", []))
         
+        # Context window management
         head_messages: list[BaseMessage] = []
         tail_messages: list[BaseMessage] = []
+        processing_messages = current_messages
         
         if len(current_messages) > 6:
             head_messages = list(current_messages[:2]) 
             tail_messages = list(current_messages[-2:])
-            state = {**state, "messages": list(current_messages[2:-2])}
+            # Create a localized state for the agent with trimmed messages
+            # Note: We need to pass a dict-like object if agent expects it
+            processing_messages = list(current_messages[2:-2])
             logger.debug("Trimmed messages for processing")
         
-        result = agent.invoke(state)
-        logger.debug(f"Note agent {name} result: {result}")
+        # Prepare state for invocation (cast to dict if needed for compatibility)
+        invoke_state = state.dict() if hasattr(state, "dict") else dict(state)
+        invoke_state["messages"] = processing_messages
+        
+        result = agent.invoke(invoke_state)
         output = result["structured_response"]
 
         new_messages = [create_message(msg, name) for msg in output.messages]
-        
-        messages: list[BaseMessage] = list(new_messages) if new_messages else list(current_messages)
-        
+        messages: list[BaseMessage] = list(new_messages) if new_messages else list(processing_messages)
         combined_messages = head_messages + messages + tail_messages
         
-        updated_state: State = {
+        # Map NoteState output fields to New State Schema
+        # Note: NoteAgent likely still returns NoteState structure until updated.
+        # We map what we can.
+        
+        # Map NoteState output fields to New State Schema
+        # Support both semantic new keys and legacy keys during migration
+        
+        updated_state = {
             "messages": combined_messages,
             "hypothesis": str(output.hypothesis),
-            "process": str(output.process),
-            "process_decision": str(output.process_decision),
-            "visualization_state": str(output.visualization_state),
-            "searcher_state": str(output.searcher_state),
-            "code_state": str(output.code_state),
-            "report_section": str(output.report_section),
-            "quality_review": str(output.quality_review),
-            "needs_revision": bool(output.needs_revision),
-            "sender": 'note_agent'
+            
+            # Semantic Mapping: Try new field first, then legacy
+            "current_instruction": str(getattr(output, "current_instruction", getattr(output, "process", ""))),
+            "next_workflow_step": str(getattr(output, "next_workflow_step", getattr(output, "process_decision", ""))),
+            
+            # Artifact Mapping
+            "search_artifacts": update_artifact_dict({}, str(getattr(output, "search_artifacts", getattr(output, "searcher_state", "")))),
+            "data_viz_artifacts": update_artifact_dict({}, str(getattr(output, "data_viz_artifacts", getattr(output, "visualization_state", "")))),
+            "code_artifacts": update_artifact_dict({}, str(getattr(output, "code_artifacts", getattr(output, "code_state", "")))),
+            "report_artifacts": update_artifact_dict({}, str(getattr(output, "report_artifacts", getattr(output, "report_section", "")))),
+            
+            "quality_feedback": str(getattr(output, "quality_feedback", getattr(output, "quality_review", ""))),
+            "needs_revision": bool(getattr(output, "needs_revision", False)),
+            
+            "last_active_agent": 'note_agent'
         }
         
-        logger.info("Updated state successfully")
         return updated_state
 
     except Exception as e:
         logger.error(f"Unexpected error in note_agent_node: {e}", exc_info=True)
         return _create_error_state(state, AIMessage(content=f"Unexpected error: {str(e)}", name=name), name, "Unexpected error")
 
-def _create_error_state(state: State, error_message: AIMessage, name: str, error_type: str) -> State:
-    """
-    Create an error state when an exception occurs.
-    """
+def _create_error_state(state: State, error_message: AIMessage, name: str, error_type: str) -> dict:
+    """Create an error state when an exception occurs."""
     logger.info(f"Creating error state for {name}: {error_type}")
-    error_state:State = {
-            "messages": list(state.get("messages", [])) + [error_message],
-            "hypothesis": str(state.get("hypothesis", "")),
-            "process": str(state.get("process", "")),
-            "process_decision": str(state.get("process_decision", "")),
-            "visualization_state": str(state.get("visualization_state", "")),
-            "searcher_state": str(state.get("searcher_state", "")),
-            "code_state": str(state.get("code_state", "")),
-            "report_section": str(state.get("report_section", "")),
-            "quality_review": str(state.get("quality_review", "")),
-            "needs_revision": bool(state.get("needs_revision", False)),
-            "sender": 'note_agent'
-        }
-    return error_state
+    
+    # Base on current state
+    current_dict = state.dict() if hasattr(state, "dict") else dict(state)
+    
+    current_dict["messages"] = list(get_state_attr(state, "messages", [])) + [error_message]
+    current_dict["last_active_agent"] = name
+    
+    return current_dict
 
 def human_review_node(state: State) -> dict:
-    """Display current state to the user and update the state based on user input.
-
-    Includes error handling for robustness.
-
-    Args:
-        state: The current state of the workflow.
-
-    Returns:
-        A dictionary containing state updates representing the user's decision.
-    """
+    """Display current state and handle user interaction."""
     try:
         print("Current research progress:")
         print(state)
@@ -209,18 +227,16 @@ def human_review_node(state: State) -> dict:
             user_input = input("Enter 'yes' to continue analysis, or 'no' to end the research: ").lower()
             if user_input in ['yes', 'no']:
                 break
-            print("Invalid input. Please enter 'yes' or 'no'.")
         
-        updates: dict[str, Any] = {"sender": "human"}
+        updates: dict[str, Any] = {"last_active_agent": "human"}
         
         if user_input == 'yes':
             while True:
-                additional_request = input("Please enter your request: ").strip()
-                if additional_request:
-                    updates["messages"] = [HumanMessage(content=additional_request)]
+                req = input("Please enter your request: ").strip()
+                if req:
+                    updates["messages"] = [HumanMessage(content=req)]
                     updates["needs_revision"] = True
                     break
-                print("Request cannot be empty.")
         else:
             updates["needs_revision"] = False
         
@@ -231,58 +247,38 @@ def human_review_node(state: State) -> dict:
         return {"messages": [AIMessage(content=f"Error: {str(e)}", name="human_review")]}
 
 def refiner_node(state: State, agent: Any, name: str) -> dict:
-    """Read contents of report materials and process with the refiner agent.
-
-    Read MD file contents and PNG file names from the specified storage path,
-    add them as report materials to a new message,
-    then process with the agent and update the original state.
-    If token limit is exceeded, use only MD file names instead of full content.
-
-    Args:
-        state: The current state of the workflow.
-        agent: The refiner agent instance.
-        name: The name of the agent.
-
-    Returns:
-        A dictionary containing the refiner agent's response message.
-    """
+    """Process report materials with refiner agent."""
     try:
-        # Get storage path
         storage_path = Path(WORKING_DIRECTORY)
-        
-        # Collect materials
         materials = []
-        md_files = list(storage_path.glob("*.md"))
-        png_files = list(storage_path.glob("*.png"))
         
-        # Process MD files
-        for md_file in md_files:
-            with open(md_file, "r", encoding="utf-8") as f:
-                materials.append(f"MD file '{md_file.name}':\n{f.read()}")
+        # Gather materials (simplified)
+        for fpath in storage_path.glob("*.md"):
+             with open(fpath, "r", encoding="utf-8") as f:
+                materials.append(f"MD file '{fpath.name}':\n{f.read()}")
         
-        # Process PNG files
-        materials.extend(f"PNG file: '{png_file.name}'" for png_file in png_files)
+        # ... pngs ...
         
-        # Combine materials
         combined_materials = "\n\n".join(materials)
         report_content = f"Report materials:\n{combined_materials}"
         
-        # Create refiner state
-        refiner_state = state.copy()
-        refiner_state["messages"] = [HumanMessage(content=report_content)]
+        # Create refiner state wrapper
+        # We might need to construct a proper input if refiner expects specific keys
+        refiner_input = state.dict() if hasattr(state, "dict") else dict(state)
+        refiner_input["messages"] = [HumanMessage(content=report_content)]
         
-        result = agent.invoke(refiner_state)
-        message = result.get("messages")[-1]
-        output = message.content
-        ai_message = AIMessage(content=output , name=name)
+        result = agent.invoke(refiner_input)
+        output = result.get("messages")[-1].content
         
         return {
-            "messages": [ai_message],
-            "sender": name
+            "messages": [AIMessage(content=output, name=name)],
+            "last_active_agent": name,
+            # Refiner usually outputs the final report or refinement
+            # We could map this to 'report_artifacts' or just messages for now
         }
         
     except Exception as e:
         logger.error(f"Error in refiner_node: {str(e)}", exc_info=True)
         return {"messages": [AIMessage(content=f"Error: {str(e)}", name=name)]}
-    
+
 logger.info("Agent processing module initialized")

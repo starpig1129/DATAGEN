@@ -1,48 +1,35 @@
-import os
-from typing import Dict, Any
-from . import config, logger
+import logging
+# from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
+from langgraph.checkpoint.memory import MemorySaver
 
-from .core import WorkflowManager, LanguageModelManager
+from . import config
+from .core.workflow import WorkflowManager
+from .core.language_models import LanguageModelManager
+from .core.state import create_initial_state
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class MultiAgentSystem:
     def __init__(self):
-        self.logger = logger.setup_logger()
-        self.setup_environment()
+        # Config is already loaded on import
+        self.memory = MemorySaver()
         self.lm_manager = LanguageModelManager()
         self.workflow_manager = WorkflowManager(
             lm_manager=self.lm_manager,
             working_directory=config.WORKING_DIRECTORY
         )
 
-    def setup_environment(self):
-        """Initialize environment variables"""
-        os.environ["OPENAI_API_KEY"] = config.OPENAI_API_KEY
-        os.environ["LANGCHAIN_API_KEY"] = config.LANGCHAIN_API_KEY
-        os.environ["LANGCHAIN_TRACING_V2"] = "true"
-        os.environ["LANGCHAIN_PROJECT"] = "Multi-Agent Data Analysis System"
-
-        if not os.path.exists(config.WORKING_DIRECTORY):
-            os.makedirs(config.WORKING_DIRECTORY)
-            self.logger.info(f"Created working directory: {config.WORKING_DIRECTORY}")
-
     def run(self, user_input: str) -> None:
-        """Run the multi-agent system with user input"""
         graph = self.workflow_manager.get_graph()
+        
+        # Use factory function for consistent state initialization
+        initial_state = create_initial_state(user_input)
+        
         events = graph.stream(
-            {
-                "messages": [HumanMessage(content=user_input)],
-                "hypothesis": "",
-                "process_decision": "",
-                "process": "",
-                "visualization_state": "",
-                "searcher_state": "",
-                "code_state": "",
-                "report_section": "",
-                "quality_review": "",
-                "needs_revision": False,
-                "last_sender": "",
-            },
+            initial_state,
             {"configurable": {"thread_id": "1"}, "recursion_limit": 3000},
             stream_mode="values",
             debug=False
@@ -54,3 +41,8 @@ class MultiAgentSystem:
                 print(message, end='', flush=True)
             else:
                 message.pretty_print()
+
+if __name__ == "__main__":
+    system = MultiAgentSystem()
+    user_input = input("Please enter your research topic: ")
+    system.run(user_input)

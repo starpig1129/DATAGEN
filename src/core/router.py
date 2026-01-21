@@ -1,5 +1,5 @@
 from .state import State
-from typing import Literal, Union, Dict, List, Optional, cast
+from typing import Literal, Union, Dict, List, Optional, cast, Any
 from langchain_core.messages import AIMessage
 import logging
 import json
@@ -11,18 +11,21 @@ logger = logging.getLogger(__name__)
 NodeType = Literal['Visualization', 'Search', 'Coder', 'Report', 'Process', 'NoteTaker', 'Hypothesis', 'QualityReview']
 ProcessNodeType = Literal['Coder', 'Search', 'Visualization', 'Report', 'Process', 'Refiner']
 
+def get_state_attr(state: Union[State, dict], key: str, default: Any = None) -> Any:
+    """Helper to safely get attributes from State whether it's Pydantic or dict."""
+    if isinstance(state, dict):
+        return state.get(key, default)
+    return getattr(state, key, default)
+
 def hypothesis_router(state: State) -> NodeType:
     """
     Route based on the presence of a hypothesis in the state.
-
-    Args:
-        state (State): The current state of the system.
-
-    Returns:
-        NodeType: 'Hypothesis' if no hypothesis exists, otherwise 'Process'.
     """
     logger.info("Entering hypothesis_router")
-    if state.get("process") == "Continue the research process":
+    # Semantic change: check 'current_instruction' instead of 'process'
+    current_instruction = get_state_attr(state, "current_instruction")
+    
+    if current_instruction == "Continue the research process":
         return "Process"
     else:
         return "Hypothesis"
@@ -30,18 +33,13 @@ def hypothesis_router(state: State) -> NodeType:
 def QualityReview_router(state: State) -> str:
     """
     Route based on the quality review outcome and process decision.
-
-    Args:
-    state (State): The current state of the system.
-
-    Returns:
-    NodeType: The next node to route to based on the quality review and process decision.
     """
     logger.info("Entering QualityReview_router")
-    messages = state.get("messages", [])
+    messages = get_state_attr(state, "messages", [])
+    needs_revision = get_state_attr(state, "needs_revision", False)
     
     # Check if revision is needed
-    if state.get("needs_revision", False):
+    if needs_revision:
         previous_node = messages[-2].name if len(messages) >= 2 else "NoteTaker"
         revision_routes = {
             "visualization_agent": "Visualization",
@@ -60,25 +58,20 @@ def QualityReview_router(state: State) -> str:
 def process_router(state: State) -> ProcessNodeType:
     """
     Route based on the process decision in the state.
-
-    Args:
-        state (State): The current state of the system.
-
-    Returns:
-        ProcessNodeType: The next process node to route to based on the process decision.
     """
     logger.info("Entering process_router")
-    process_decision = state.get("process_decision", "")
+    # Semantic change: 'next_workflow_step' instead of 'process_decision'
+    next_step = get_state_attr(state, "next_workflow_step", "")
     
     valid_decisions = {"Coder", "Search", "Visualization", "Report"}
     
-    if process_decision in valid_decisions:
-        return cast(ProcessNodeType, process_decision)
+    if next_step in valid_decisions:
+        return cast(ProcessNodeType, next_step)
     
-    if process_decision == "FINISH":
+    if next_step == "FINISH":
         return "Refiner"
     
-    logger.warning(f"Invalid decision: {process_decision}. Defaulting to 'Process'.")
+    logger.warning(f"Invalid decision: {next_step}. Defaulting to 'Process'.")
     return "Process"
 
 logger.info("Router module initialized")
