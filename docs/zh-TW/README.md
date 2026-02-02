@@ -86,13 +86,14 @@ pip install -r requirements.txt
 **將 `.env Example` 重命名為 `.env` 並填入所有值**
 ```sh
 # 您的數據存儲路徑（必需）
-DATA_STORAGE_PATH =./data/
+# 同時供 filesystem MCP 伺服器使用
+WORKING_DIRECTORY = ./data/
 
 # Conda 環境名稱（必需）
 CONDA_ENV = datagen
 
 # ChromeDriver 執行檔路徑（必需）
-CHROMEDRIVER_PATH =./chromedriver-linux64/chromedriver
+CHROMEDRIVER_PATH = ./chromedriver-linux64/chromedriver
 
 # Firecrawl API 金鑰（可選）
 # 注意：如果缺少此金鑰，查詢功能可能會受限
@@ -108,6 +109,12 @@ GOOGLE_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 # LangChain API 金鑰（可選）
 # 用於監控處理過程
 LANGCHAIN_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# MCP (Model Context Protocol) 設定（可選）
+# Tavily API 金鑰，供 web-search MCP 伺服器使用
+TAVILY_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# GitHub Token，供 github MCP 伺服器使用
+GITHUB_TOKEN = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
 ## 使用方法
