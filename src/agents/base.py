@@ -110,6 +110,10 @@ class BaseAgent(ABC):
         except Exception as e:
             logger.warning(f"Failed to check skills for {self.agent_name}: {e}")
 
+        # Get agent-specific configuration
+        agent_config = self.language_model_manager.get_agent_config(self.agent_name)
+        self.max_iterations = agent_config.get('max_iterations', 15)  # Default to 15 if not specified
+
         # Create the agent executor using the common create_agent function
         self.agent = self._create_base_agent(
             self.model,
@@ -117,6 +121,7 @@ class BaseAgent(ABC):
             role_prompt,
             team_members,
             response_format,
+            max_iterations=self.max_iterations,
         )
 
     def _load_tools_from_config(self) -> List:
@@ -145,6 +150,7 @@ class BaseAgent(ABC):
         role_prompt: str,
         team_members: list[str],
         response_format: Any = None,
+        max_iterations: int = 15,
     ):
         """Create an agent with the given parameters.
 
@@ -186,8 +192,17 @@ class BaseAgent(ABC):
             model=model,
             tools=tools,
             system_prompt=system_prompt,
-            response_format=response_format
+            response_format=response_format,
         )
+
+        # Iterate limits configuration
+        # Verify if the agent supports max_iterations (e.g. AgentExecutor)
+        if hasattr(agent, "max_iterations"):
+            agent.max_iterations = max_iterations
+            logger.info(f"Set max_iterations={max_iterations} for {self.agent_name}")
+        else:
+             # If it's a Runnable/Graph, we might need another way, but for now log warning if not settable
+             logger.warning(f"Agent {self.agent_name} does not support max_iterations attribute")
 
         logger.info(f"{self.agent_name} created successfully")
         return agent
@@ -212,7 +227,9 @@ class BaseAgent(ABC):
         Returns:
             The agent's response (type may vary).
         """
-        return self.agent.invoke(state)
+        # Pass max_iterations as recursion_limit in config
+        config = {"recursion_limit": self.max_iterations}
+        return self.agent.invoke(state, config=config)
 
     def _load_system_prompt(self) -> str:
         """Load system prompt from external config or fallback to hardcoded.

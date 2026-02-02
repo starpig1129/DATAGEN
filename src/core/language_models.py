@@ -21,3 +21,7 @@ class LanguageModelManager:
         if not config:
             raise ValueError(f"No model config configured for agent '{agent_name}'")
         return config
+
+    def get_agent_config(self, agent_name: str) -> dict:
+        """Get the full configuration for the given agent."""
+        return AGENT_MODELS.get_agent_config(agent_name)

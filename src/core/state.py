@@ -82,6 +82,10 @@ class State(BaseModel):
         default=False, 
         description="Flag to trigger revision loop"
     )
+    revision_count: int = Field(
+        default=0,
+        description="Counter for consecutive revision attempts"
+    )
     
     # === Legacy Compatibility (Optional) ===
     # Using properties or aliases if needed, but we are doing a hard break as requested.
@@ -101,5 +105,6 @@ def create_initial_state(user_input: str) -> dict:
         "data_viz_artifacts": {},
         "code_artifacts": {},
         "report_artifacts": {},
-        "needs_revision": False
+        "needs_revision": False,
+        "revision_count": 0
     }

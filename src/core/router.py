@@ -37,9 +37,16 @@ def QualityReview_router(state: State) -> str:
     logger.info("Entering QualityReview_router")
     messages = get_state_attr(state, "messages", [])
     needs_revision = get_state_attr(state, "needs_revision", False)
+    revision_count = get_state_attr(state, "revision_count", 0)
+    MAX_REVISIONS = 3
     
     # Check if revision is needed
     if needs_revision:
+        # Check for infinite loop / max revisions
+        if revision_count > MAX_REVISIONS:
+            logger.warning(f"Max revisions ({MAX_REVISIONS}) reached. Forcing progression to NoteTaker.")
+            return "NoteTaker"
+
         previous_node = messages[-2].name if len(messages) >= 2 else "NoteTaker"
         revision_routes = {
             "visualization_agent": "Visualization",

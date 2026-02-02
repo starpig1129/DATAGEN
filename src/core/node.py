@@ -93,6 +93,13 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
             updates["quality_feedback"] = output.feedback
             updates["needs_revision"] = output.needs_revision
             
+            # Manage revision count
+            current_count = get_state_attr(state, "revision_count", 0)
+            if output.needs_revision:
+                updates["revision_count"] = current_count + 1
+            else:
+                updates["revision_count"] = 0
+            
         # Add support for 'Coder' agent if it exists
         elif name == "code_agent" or name == "coder_agent":
              current = get_state_attr(state, "code_artifacts", {})
@@ -239,6 +246,7 @@ def human_review_node(state: State) -> dict:
                     break
         else:
             updates["needs_revision"] = False
+            updates["revision_count"] = 0
         
         return updates
         
