@@ -115,3 +115,34 @@ class ToolFactory:
             "security_scan_enabled": TOOL_CONFIG.enable_security_scan,
             "write_validation_enabled": TOOL_CONFIG.enable_write_validation,
         }
+
+    @classmethod
+    async def get_mcp_tools_async(
+        cls, server_names: List[str]
+    ) -> List[BaseTool]:
+        """Get LangChain tools from MCP servers asynchronously.
+
+        Args:
+            server_names: List of MCP server names to get tools from.
+
+        Returns:
+            List of LangChain tool instances from MCP servers.
+        """
+        from .mcp_tools import get_mcp_tools_async
+        return await get_mcp_tools_async(server_names)
+
+    @classmethod
+    def get_mcp_tools(cls, server_names: List[str]) -> List[BaseTool]:
+        """Get LangChain tools from MCP servers synchronously.
+
+        This is a convenience wrapper for sync contexts.
+
+        Args:
+            server_names: List of MCP server names to get tools from.
+
+        Returns:
+            List of LangChain tool instances from MCP servers.
+        """
+        from .mcp_tools import get_mcp_tools_sync
+        return get_mcp_tools_sync(server_names)
+

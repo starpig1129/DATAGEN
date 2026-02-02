@@ -1,28 +1,32 @@
-"""MCP (Model Context Protocol) server manager.
+"""MCP (Model Context Protocol) server manager with real client integration.
 
 This module provides management of MCP server connections and tool exposure
-for agents. It follows the MCP specification for connecting to external
-tools and resources.
+for agents. It uses the official MCP Python SDK for real server communication
+via stdio transport.
 
 Reference: https://modelcontextprotocol.io/
 
 Example:
-    manager = MCPManager()
+    manager = get_mcp_manager()
     
-    # Get tools for an agent
-    tools = manager.get_tools_for_agent("process_agent")
+    # Discover tools from a server
+    tools = await manager.discover_tools("filesystem")
     
-    # List resources from a server
-    resources = manager.list_resources("filesystem")
+    # Call a tool
+    result = await manager.call_tool("filesystem", "read_file", {"path": "README.md"})
+    
+    # Close all connections when done
+    await manager.close_all()
 """
 
 from __future__ import annotations
 
+import asyncio
 import os
-import subprocess
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
@@ -32,9 +36,9 @@ from ..logger import setup_logger
 logger = setup_logger()
 
 
-
 # Constants
 MCP_SERVER_STOP_TIMEOUT = 5
+CONNECTION_TIMEOUT = 30
 
 
 @dataclass
@@ -87,13 +91,28 @@ class MCPTool:
     server_name: str = ""
 
 
+@dataclass
+class MCPServerConnection:
+    """Active connection to an MCP server.
+
+    Attributes:
+        name: Server name identifier.
+        session: The MCP ClientSession for communication.
+        cleanup: Async cleanup function to call on disconnect.
+    """
+    name: str
+    session: Any  # mcp.ClientSession
+    cleanup: Any  # Coroutine to cleanup connection
+
+
 class MCPManager:
     """Manages MCP server connections and tool exposure.
 
     This manager handles:
     - Loading MCP server configurations
-    - Starting and stopping MCP servers
+    - Starting and stopping MCP servers via stdio transport
     - Discovering tools and resources from servers
+    - Calling tools on connected servers
     - Providing tools to agents based on their configuration
 
     Attributes:
@@ -109,7 +128,9 @@ class MCPManager:
         self.config_path = Path(config_path)
         self._config: Optional[Dict[str, Any]] = None
         self._servers: Dict[str, MCPServerConfig] = {}
-        self._server_processes: Dict[str, subprocess.Popen] = {}
+        self._connections: Dict[str, MCPServerConnection] = {}
+        self._connection_locks: Dict[str, asyncio.Lock] = {}
+        self._global_lock = asyncio.Lock()
 
     @property
     def config(self) -> Dict[str, Any]:
@@ -172,11 +193,283 @@ class MCPManager:
 
         return servers
 
-    def get_tools_for_agent(self, agent_name: str) -> List[MCPTool]:
-        """Get all tools from MCP servers enabled for an agent.
+    async def connect(self, server_name: str) -> bool:
+        """Connect to an MCP server via stdio transport.
 
-        Note: This is a placeholder that returns tool metadata.
-        Actual tool invocation requires running MCP servers.
+        Args:
+            server_name: Name of the server to connect to.
+
+        Returns:
+            True if connection successful, False otherwise.
+        """
+        # Get or create lock for this server
+        async with self._global_lock:
+            if server_name not in self._connection_locks:
+                self._connection_locks[server_name] = asyncio.Lock()
+
+        async with self._connection_locks[server_name]:
+            # Already connected?
+            if server_name in self._connections:
+                logger.debug(f"Already connected to MCP server: {server_name}")
+                return True
+
+            config = self.get_server_config(server_name)
+            if not config:
+                return False
+
+            try:
+                # Import MCP SDK
+                from mcp import ClientSession, StdioServerParameters
+                from mcp.client.stdio import stdio_client
+
+                # Prepare environment
+                env = os.environ.copy()
+                for key, value in config.env.items():
+                    env[key] = value
+
+                # Create server parameters
+                server_params = StdioServerParameters(
+                    command=config.command,
+                    args=config.args,
+                    env=env,
+                )
+
+                logger.info(f"Connecting to MCP server: {server_name}")
+                logger.debug(f"  Command: {config.command} {' '.join(config.args)}")
+
+                # Create the connection context
+                # Note: We need to manage the context manually for long-lived connections
+                client_context = stdio_client(server_params)
+                read_stream, write_stream = await client_context.__aenter__()
+
+                session_context = ClientSession(read_stream, write_stream)
+                session = await session_context.__aenter__()
+
+                # Initialize the session
+                await asyncio.wait_for(
+                    session.initialize(),
+                    timeout=CONNECTION_TIMEOUT
+                )
+
+                # Store cleanup function
+                async def cleanup():
+                    try:
+                        await session_context.__aexit__(None, None, None)
+                        await client_context.__aexit__(None, None, None)
+                    except Exception as e:
+                        logger.warning(f"Error during MCP cleanup: {e}")
+
+                self._connections[server_name] = MCPServerConnection(
+                    name=server_name,
+                    session=session,
+                    cleanup=cleanup,
+                )
+
+                logger.info(f"Connected to MCP server: {server_name}")
+                return True
+
+            except ImportError as e:
+                logger.error(f"MCP SDK not installed: {e}")
+                logger.error("Please install: pip install mcp")
+                return False
+            except asyncio.TimeoutError:
+                logger.error(f"Timeout connecting to MCP server: {server_name}")
+                return False
+            except Exception as e:
+                logger.error(f"Failed to connect to MCP server {server_name}: {e}")
+                return False
+
+    async def disconnect(self, server_name: str) -> None:
+        """Disconnect from an MCP server.
+
+        Args:
+            server_name: Name of the server to disconnect from.
+        """
+        if server_name not in self._connections:
+            return
+
+        async with self._connection_locks.get(
+            server_name, asyncio.Lock()
+        ):
+            if server_name not in self._connections:
+                return
+
+            conn = self._connections.pop(server_name)
+            try:
+                await conn.cleanup()
+                logger.info(f"Disconnected from MCP server: {server_name}")
+            except Exception as e:
+                logger.warning(f"Error disconnecting from {server_name}: {e}")
+
+    async def close_all(self) -> None:
+        """Disconnect from all MCP servers."""
+        server_names = list(self._connections.keys())
+        for name in server_names:
+            await self.disconnect(name)
+        logger.info("All MCP connections closed")
+
+    async def _get_or_create_connection(
+        self, server_name: str
+    ) -> Optional[MCPServerConnection]:
+        """Get existing connection or create a new one.
+
+        Args:
+            server_name: Name of the server.
+
+        Returns:
+            MCPServerConnection or None if connection failed.
+        """
+        if server_name not in self._connections:
+            success = await self.connect(server_name)
+            if not success:
+                return None
+
+        return self._connections.get(server_name)
+
+    async def discover_tools(self, server_name: str) -> List[MCPTool]:
+        """Discover tools from an MCP server.
+
+        Args:
+            server_name: Name of the MCP server.
+
+        Returns:
+            List of MCPTool objects discovered from the server.
+        """
+        conn = await self._get_or_create_connection(server_name)
+        if not conn:
+            logger.error(f"Cannot discover tools: not connected to {server_name}")
+            return []
+
+        try:
+            tools_response = await conn.session.list_tools()
+            tools = []
+            for tool in tools_response.tools:
+                tools.append(MCPTool(
+                    name=tool.name,
+                    description=tool.description or "",
+                    input_schema=tool.inputSchema if hasattr(tool, 'inputSchema') else {},
+                    server_name=server_name,
+                ))
+            logger.info(f"Discovered {len(tools)} tools from {server_name}")
+            return tools
+        except Exception as e:
+            logger.error(f"Failed to discover tools from {server_name}: {e}")
+            return []
+
+    async def list_resources(self, server_name: str) -> List[MCPResource]:
+        """List available resources from an MCP server.
+
+        Args:
+            server_name: Name of the MCP server.
+
+        Returns:
+            List of MCPResource objects.
+        """
+        conn = await self._get_or_create_connection(server_name)
+        if not conn:
+            logger.error(f"Cannot list resources: not connected to {server_name}")
+            return []
+
+        try:
+            resources_response = await conn.session.list_resources()
+            resources = []
+            for resource in resources_response.resources:
+                resources.append(MCPResource(
+                    uri=str(resource.uri),
+                    name=resource.name or str(resource.uri),
+                    mime_type=resource.mimeType if hasattr(resource, 'mimeType') else "text/plain",
+                    description=resource.description if hasattr(resource, 'description') else "",
+                ))
+            logger.info(f"Found {len(resources)} resources from {server_name}")
+            return resources
+        except Exception as e:
+            logger.error(f"Failed to list resources from {server_name}: {e}")
+            return []
+
+    async def call_tool(
+        self, 
+        server_name: str, 
+        tool_name: str, 
+        arguments: Dict[str, Any]
+    ) -> str:
+        """Call a tool on an MCP server.
+
+        Args:
+            server_name: Name of the MCP server.
+            tool_name: Name of the tool to call.
+            arguments: Arguments to pass to the tool.
+
+        Returns:
+            Tool execution result as a string.
+        """
+        conn = await self._get_or_create_connection(server_name)
+        if not conn:
+            return f"Error: Not connected to MCP server {server_name}"
+
+        try:
+            from mcp import types as mcp_types
+
+            result = await conn.session.call_tool(tool_name, arguments=arguments)
+            
+            # Extract content from result
+            contents = []
+            for content in result.content:
+                if isinstance(content, mcp_types.TextContent):
+                    contents.append(content.text)
+                elif hasattr(content, 'text'):
+                    contents.append(content.text)
+                elif hasattr(content, 'data'):
+                    contents.append(f"[Binary data: {len(content.data)} bytes]")
+                else:
+                    contents.append(str(content))
+
+            return "\n".join(contents)
+
+        except Exception as e:
+            error_msg = f"Error calling tool {tool_name}: {e}"
+            logger.error(error_msg)
+            return error_msg
+
+    async def read_resource(self, server_name: str, uri: str) -> str:
+        """Read a resource from an MCP server.
+
+        Args:
+            server_name: Name of the MCP server.
+            uri: URI of the resource to read.
+
+        Returns:
+            Resource content as a string.
+        """
+        conn = await self._get_or_create_connection(server_name)
+        if not conn:
+            return f"Error: Not connected to MCP server {server_name}"
+
+        try:
+            from mcp import types as mcp_types
+
+            result = await conn.session.read_resource(uri)
+            
+            contents = []
+            for content in result.contents:
+                if isinstance(content, mcp_types.TextContent):
+                    contents.append(content.text)
+                elif hasattr(content, 'text'):
+                    contents.append(content.text)
+                else:
+                    contents.append(str(content))
+
+            return "\n".join(contents)
+
+        except Exception as e:
+            error_msg = f"Error reading resource {uri}: {e}"
+            logger.error(error_msg)
+            return error_msg
+
+    def get_tools_for_agent(self, agent_name: str) -> List[MCPTool]:
+        """Get all tools from MCP servers enabled for an agent (sync wrapper).
+
+        This is a synchronous wrapper that runs the async version.
+        For new code, prefer using discover_tools() directly.
 
         Args:
             agent_name: Name of the agent.
@@ -185,97 +478,29 @@ class MCPManager:
             List of MCPTool objects.
         """
         servers = self.get_enabled_servers(agent_name)
-        tools = []
-
-        for server in servers:
-            # Add placeholder tools based on server type
-            # In production, this would query the actual MCP server
-            if server.name == "filesystem":
-                tools.extend(self._get_filesystem_tools(server))
-            elif server.name == "web-search":
-                tools.extend(self._get_web_search_tools(server))
-            elif server.name == "github":
-                tools.extend(self._get_github_tools(server))
-
-        return tools
-
-    def list_resources(self, server_name: str) -> List[MCPResource]:
-        """List available resources from an MCP server.
-
-        Note: This is a placeholder. Actual resource listing requires
-        a running MCP server connection.
-
-        Args:
-            server_name: Name of the MCP server.
-
-        Returns:
-            List of MCPResource objects.
-        """
-        config = self.get_server_config(server_name)
-        if not config:
+        if not servers:
             return []
 
-        # Placeholder - in production, query the actual server
-        logger.info(f"Would list resources from {server_name}")
-        return []
-
-    def start_server(self, name: str) -> bool:
-        """Start an MCP server process.
-
-        Args:
-            name: Server name.
-
-        Returns:
-            True if server started successfully.
-        """
-        if name in self._server_processes:
-            logger.warning(f"MCP server already running: {name}")
-            return True
-
-        config = self.get_server_config(name)
-        if not config:
-            return False
+        async def _gather_tools():
+            all_tools = []
+            for server in servers:
+                tools = await self.discover_tools(server.name)
+                all_tools.extend(tools)
+            return all_tools
 
         try:
-            env = os.environ.copy()
-            env.update(config.env)
-
-            cmd = [config.command] + config.args
-            process = subprocess.Popen(
-                cmd,
-                env=env,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            self._server_processes[name] = process
-            logger.info(f"Started MCP server: {name}")
-            return True
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # We're in an async context, create a new task
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, _gather_tools())
+                    return future.result(timeout=60)
+            else:
+                return loop.run_until_complete(_gather_tools())
         except Exception as e:
-            logger.error(f"Failed to start MCP server {name}: {e}")
-            return False
-
-    def stop_server(self, name: str) -> None:
-        """Stop an MCP server process.
-
-        Args:
-            name: Server name.
-        """
-        if name not in self._server_processes:
-            return
-
-        process = self._server_processes.pop(name)
-        process.terminate()
-        try:
-            process.wait(timeout=MCP_SERVER_STOP_TIMEOUT)
-        except subprocess.TimeoutExpired:
-            process.kill()
-        logger.info(f"Stopped MCP server: {name}")
-
-    def stop_all_servers(self) -> None:
-        """Stop all running MCP server processes."""
-        for name in list(self._server_processes.keys()):
-            self.stop_server(name)
+            logger.warning(f"Failed to get tools for {agent_name}: {e}")
+            return []
 
     def _load_config(self) -> Dict[str, Any]:
         """Load MCP configuration from YAML file.
@@ -304,8 +529,6 @@ class MCPManager:
         Returns:
             Object with environment variables expanded.
         """
-        import re
-
         if isinstance(obj, dict):
             return {k: self._expand_env_vars(v) for k, v in obj.items()}
         elif isinstance(obj, list):
@@ -317,117 +540,6 @@ class MCPManager:
                 return os.environ.get(var_name, match.group(0))
             return pattern.sub(replace, obj)
         return obj
-
-    def _get_filesystem_tools(self, server: MCPServerConfig) -> List[MCPTool]:
-        """Get placeholder tools for filesystem server.
-
-        Args:
-            server: Server configuration.
-
-        Returns:
-            List of filesystem tools.
-        """
-        return [
-            MCPTool(
-                name="read_file",
-                description="Read contents of a file",
-                input_schema={
-                    "type": "object",
-                    "properties": {
-                        "path": {"type": "string", "description": "File path"}
-                    },
-                    "required": ["path"]
-                },
-                server_name=server.name,
-            ),
-            MCPTool(
-                name="write_file",
-                description="Write contents to a file",
-                input_schema={
-                    "type": "object",
-                    "properties": {
-                        "path": {"type": "string", "description": "File path"},
-                        "content": {"type": "string", "description": "File content"}
-                    },
-                    "required": ["path", "content"]
-                },
-                server_name=server.name,
-            ),
-            MCPTool(
-                name="list_directory",
-                description="List contents of a directory",
-                input_schema={
-                    "type": "object",
-                    "properties": {
-                        "path": {"type": "string", "description": "Directory path"}
-                    },
-                    "required": ["path"]
-                },
-                server_name=server.name,
-            ),
-        ]
-
-    def _get_web_search_tools(self, server: MCPServerConfig) -> List[MCPTool]:
-        """Get placeholder tools for web search server.
-
-        Args:
-            server: Server configuration.
-
-        Returns:
-            List of web search tools.
-        """
-        return [
-            MCPTool(
-                name="web_search",
-                description="Search the web for information",
-                input_schema={
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "Search query"}
-                    },
-                    "required": ["query"]
-                },
-                server_name=server.name,
-            ),
-        ]
-
-    def _get_github_tools(self, server: MCPServerConfig) -> List[MCPTool]:
-        """Get placeholder tools for GitHub server.
-
-        Args:
-            server: Server configuration.
-
-        Returns:
-            List of GitHub tools.
-        """
-        return [
-            MCPTool(
-                name="search_repositories",
-                description="Search GitHub repositories",
-                input_schema={
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "Search query"}
-                    },
-                    "required": ["query"]
-                },
-                server_name=server.name,
-            ),
-            MCPTool(
-                name="get_file_contents",
-                description="Get contents of a file from a repository",
-                input_schema={
-                    "type": "object",
-                    "properties": {
-                        "owner": {"type": "string", "description": "Repository owner"},
-                        "repo": {"type": "string", "description": "Repository name"},
-                        "path": {"type": "string", "description": "File path"}
-                    },
-                    "required": ["owner", "repo", "path"]
-                },
-                server_name=server.name,
-            ),
-        ]
 
 
 # Singleton instance
@@ -444,3 +556,20 @@ def get_mcp_manager() -> MCPManager:
     if _default_manager is None:
         _default_manager = MCPManager()
     return _default_manager
+
+
+def reset_mcp_manager() -> None:
+    """Reset the MCPManager singleton.
+    
+    Useful for testing or when reconfiguration is needed.
+    """
+    global _default_manager
+    if _default_manager is not None:
+        # Try to cleanup connections
+        try:
+            loop = asyncio.get_event_loop()
+            if not loop.is_running():
+                loop.run_until_complete(_default_manager.close_all())
+        except Exception:
+            pass
+    _default_manager = None

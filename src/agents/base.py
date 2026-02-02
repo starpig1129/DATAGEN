@@ -110,6 +110,12 @@ class BaseAgent(ABC):
         except Exception as e:
             logger.warning(f"Failed to check skills for {self.agent_name}: {e}")
 
+        # Load MCP tools from agent configuration
+        mcp_tools = self._load_mcp_tools()
+        if mcp_tools:
+            tools.extend(mcp_tools)
+            logger.info(f"Loaded {len(mcp_tools)} MCP tools for {self.agent_name}")
+
         # Create the agent executor using the common create_agent function
         self.agent = self._create_base_agent(
             self.model,
@@ -138,6 +144,31 @@ class BaseAgent(ABC):
         except Exception as e:
             logger.warning(f"Failed to load tools from config for {self.agent_name}: {e}")
             return []
+
+    def _load_mcp_tools(self) -> List:
+        """Load MCP tools based on agent configuration.
+
+        Reads the agent's MCP server configuration and creates LangChain
+        tool adapters for all tools exposed by the configured MCP servers.
+
+        Returns:
+            List of MCP tool adapters, or empty list if no MCP servers configured.
+        """
+        try:
+            loader = self.get_config_loader()
+            mcp_config = loader.load_mcp_config(self.agent_name)
+            server_names = list(mcp_config.get("servers", {}).keys())
+
+            if not server_names:
+                return []
+
+            from ..tools.factory import ToolFactory
+            mcp_tools = ToolFactory.get_mcp_tools(server_names)
+            return mcp_tools
+        except Exception as e:
+            logger.warning(f"Failed to load MCP tools for {self.agent_name}: {e}")
+            return []
+
     def _create_base_agent(
         self,
         model,
