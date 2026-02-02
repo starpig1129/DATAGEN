@@ -81,14 +81,15 @@ pip install -r requirements.txt
 4. Set up environment variables:
 **Rename `.env Example` to `.env` and fill all the values**
 ```sh
-# Your data storage path(required)
-DATA_STORAGE_PATH =./data/
+# Your data storage path (required)
+# Also used by filesystem MCP server
+WORKING_DIRECTORY = ./data/
 
-# Conda environment name(required)
+# Conda environment name (required)
 CONDA_ENV = datagen
 
-# ChromeDriver executable path(required)
-CHROMEDRIVER_PATH =./chromedriver-linux64/chromedriver
+# ChromeDriver executable path (required)
+CHROMEDRIVER_PATH = ./chromedriver-linux64/chromedriver
 
 # Firecrawl API key (optional)
 # Note: If this key is missing, query capabilities may be reduced
@@ -104,7 +105,14 @@ GOOGLE_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 # LangChain API key (optional)
 # Used for monitoring the processing
 LANGCHAIN_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# MCP (Model Context Protocol) Settings (optional)
+# Tavily API key for web-search MCP server
+TAVILY_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# GitHub token for github MCP server
+GITHUB_TOKEN = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
+
 ## Usage
 
 ### Using Python Script
