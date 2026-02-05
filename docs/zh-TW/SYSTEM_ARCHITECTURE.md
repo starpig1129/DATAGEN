@@ -86,6 +86,9 @@ config/
 | ToolFactory | `src/tools/factory.py` | 工具註冊與動態載入 |
 | MCPManager | `src/core/mcp_manager.py` | MCP 服務生命週期管理 |
 | BaseAgent | `src/agents/base.py` | Agent 基底類別與配置整合 |
+| State | `src/core/state.py` | 基於 Pydantic 的工作流狀態（語義化欄位） |
+| StateUpdater | `src/core/state_updater.py` | 解耦 Agent 狀態更新邏輯的協議 |
+| agent_node | `src/core/node.py` | 處理 Agent 動作並更新狀態 |
 
 ---
 
