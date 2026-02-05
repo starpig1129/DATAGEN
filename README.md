@@ -230,9 +230,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Other Projects
 Here are some of my other notable projects:
-### ShareLMAPI
-ShareLMAPI is a local language model sharing API that uses FastAPI to provide interfaces, allowing different programs or device to share the same local model, thereby reducing resource consumption. It supports streaming generation and various model configuration methods.
-- GitHub: [ShareLMAPI](https://github.com/starpig1129/ShareLMAPI)
+### PheroPath
+PheroPath is a filesystem-based stigmergy communication protocol that allows agents and humans to leave invisible "pheromones" (signals) on files. It enables communicating context, risks (DANGER), or status (TODO, SAFE) without modifying the file content itself, facilitating better multi-agent collaboration.
+- GitHub: [PheroPath](https://github.com/starpig1129/PheroPath)
 ### PigPig: Advanced Multi-modal LLM Discord Bot: 
 A powerful Discord bot based on multi-modal Large Language Models (LLM), designed to interact with users through natural language. 
 It combines advanced AI capabilities with practical features, offering a rich experience for Discord communities.

@@ -236,9 +236,9 @@ DATAGEN 實現了強大的**漸進式揭露**架構用於代理配置，靈感�
 ## 其他專案
 以下是我其他值得注意的專案：
 
-### ShareLMAPI
-ShareLMAPI 是一個本地語言模型共享 API，使用 FastAPI 提供接口，允許不同程式或設備共享同一個本地模型，從而減少資源消耗。它支持流式生成和各種模型配置方法。
-- GitHub: [ShareLMAPI](https://github.com/starpig1129/ShareLMAPI)
+### PheroPath
+PheroPath 是一個基於檔案系統的共識主動性（Stigmergy）通訊協議，允許代理和人類在檔案上留下不可見的「費洛蒙」（信號）。它使得在不修改檔案內容的情況下溝通上下文、風險（DANGER）或狀態（TODO, SAFE）成為可能，從而促進更好的多代理協作。
+- GitHub: [PheroPath](https://github.com/starpig1129/PheroPath)
 
 ### PigPig：進階多模態 LLM Discord 機器人
 一個基於多模態大型語言模型（LLM）的強大 Discord 機器人，設計用於通過自然語言與用戶互動。它結合了先進的 AI 功能和實用功能，為 Discord 社群提供豐富的體驗。
