@@ -37,6 +37,30 @@ def update_artifact_dict(current_artifacts: Dict[str, str], new_output: Any) -> 
     
     return updated
 
+
+def safe_get_content(output: Any, keys: List[str], default: str = "") -> str:
+    """Safely extract content from output (Pydantic, dict, or str).
+    
+    Args:
+        output: The agent output (Pydantic model, dict, or string).
+        keys: Priority list of attribute/key names to try.
+        default: Default value if no key found.
+        
+    Returns:
+        Extracted string content.
+    """
+    if isinstance(output, str):
+        return output
+    for key in keys:
+        if isinstance(output, dict):
+            if key in output:
+                return str(output[key])
+        elif hasattr(output, key):
+            val = getattr(output, key, None)
+            if val is not None:
+                return str(val)
+    return str(output) if output else default
+
 def agent_node(state: State, agent: Any, name: str) -> dict:
     """Process an agent's action and update the state accordingly."""
     logger.info(f"Processing agent: {name}")
@@ -46,11 +70,8 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
         # Generic handling for structured output
         if "structured_response" in result:
             output = result["structured_response"]
-            # Extract meaningful content for the message history
-            # Priority: task (Process), feedback (Quality), summary (Artifact), or string conversion
-            content = getattr(output, "task", 
-                      getattr(output, "feedback", 
-                      getattr(output, "summary", str(output))))
+            # Extract meaningful content for the message history using safe helper
+            content = safe_get_content(output, ["task", "feedback", "summary"])
             ai_message = AIMessage(content=content, name=name)
         else:
             # Standard agents usually return a dict with messages
@@ -66,7 +87,9 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
 
         # Specific Agent Mapping
         if name == "hypothesis_agent":
-            updates["hypothesis"] = output
+            # Ensure hypothesis is stored as string for serialization
+            hypothesis_text = safe_get_content(output, ["hypothesis", "content", "summary"])
+            updates["hypothesis"] = hypothesis_text if hypothesis_text else str(output)
             
         elif name == "process_agent":
             updates["current_instruction"] = getattr(output, "current_instruction", getattr(output, "task", ""))
@@ -90,14 +113,16 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
             updates["report_artifacts"] = update_artifact_dict(current, new_data)
             
         elif name == "quality_review_agent":
-            updates["quality_feedback"] = output.feedback
             updates["needs_revision"] = output.needs_revision
             
-            # Manage revision count
+            # Manage revision count and quality_feedback lifecycle
             current_count = get_state_attr(state, "revision_count", 0)
             if output.needs_revision:
+                updates["quality_feedback"] = output.feedback
                 updates["revision_count"] = current_count + 1
             else:
+                # 審核通過：清除 feedback 並重置計數
+                updates["quality_feedback"] = None
                 updates["revision_count"] = 0
             
         # Add support for 'Coder' agent if it exists
@@ -105,6 +130,26 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
              current = get_state_attr(state, "code_artifacts", {})
              new_data = getattr(output, "artifacts", output)
              updates["code_artifacts"] = update_artifact_dict(current, new_data)
+        
+        # StateUpdater Protocol: allow agents to provide custom state updates
+        # This enables new agents to define their own state mappings without
+        # modifying this function
+        if hasattr(agent, "get_state_updates"):
+            agent_updates = agent.get_state_updates(state, output)
+            if agent_updates:
+                updates.update(agent_updates)
+        
+        # Increment workflow step counter
+        current_step = get_state_attr(state, "step_count", 0)
+        updates["step_count"] = current_step + 1
+        
+        # Track completed tasks for workflow progress monitoring
+        current_instruction = get_state_attr(state, "current_instruction", None)
+        if current_instruction:
+            completed = list(get_state_attr(state, "completed_tasks", []))
+            if current_instruction not in completed:
+                completed.append(current_instruction)
+                updates["completed_tasks"] = completed
         
         return updates
         

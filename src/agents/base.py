@@ -278,3 +278,21 @@ class BaseAgent(ABC):
             A list of tools the agent can use.
         """
         pass
+
+    def get_state_updates(self, state: Any, output: Any) -> dict:
+        """Return state field updates based on agent output.
+        
+        Default implementation returns empty dict (no custom updates).
+        Subclasses can override to provide custom state mapping.
+        
+        This method implements the StateUpdater protocol, allowing agents
+        to decouple their state update logic from the central agent_node.
+        
+        Args:
+            state: The current workflow state.
+            output: The agent's structured or raw output.
+            
+        Returns:
+            Dict mapping state field names to their new values.
+        """
+        return {}
