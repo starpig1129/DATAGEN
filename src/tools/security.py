@@ -76,13 +76,13 @@ class SecurityScanner:
         violations = []
         warnings = []
 
-        # 1. Pattern-based detection (fast, using pre-compiled regex)
+        # Pattern-based detection (fast, using pre-compiled regex)
         pattern = cls._get_blocked_pattern()
         matches = pattern.findall(code)
         for match in matches:
             violations.append(f"Blocked pattern detected: '{match}'")
 
-        # 2. AST-based detection (more accurate, catches actual usage)
+        # AST-based detection (more accurate, catches actual usage)
         try:
             tree = ast.parse(code)
             ast_violations, ast_warnings = cls._analyze_ast(tree)

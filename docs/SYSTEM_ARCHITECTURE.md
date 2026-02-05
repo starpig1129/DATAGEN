@@ -86,6 +86,9 @@ config/
 | ToolFactory | `src/tools/factory.py` | Tool registration and dynamic loading |
 | MCPManager | `src/core/mcp_manager.py` | MCP server lifecycle management |
 | BaseAgent | `src/agents/base.py` | Agent base class with config integration |
+| State | `src/core/state.py` | Pydantic-based workflow state with semantic fields |
+| StateUpdater | `src/core/state_updater.py` | Protocol for decoupled agent state update logic |
+| agent_node | `src/core/node.py` | Process agent actions and update state |
 
 ---
 

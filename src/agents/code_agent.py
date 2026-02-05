@@ -1,12 +1,15 @@
-from typing import List, TYPE_CHECKING
+from typing import Any, Dict, List, TYPE_CHECKING
 
 from ..tools.basetool import execute_code, execute_command, list_directory
 from ..tools.FileEdit import read_document
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
+from ..core.schemas import ArtifactSchema
+from ..core.node import update_artifact_dict, get_state_attr
 
 if TYPE_CHECKING:
     from ..core.language_models import LanguageModelManager
+    from ..core.state import State
 
 class CodeAgent(BaseAgent):
     """Agent responsible for writing and executing Python code for data processing."""
@@ -26,23 +29,23 @@ class CodeAgent(BaseAgent):
             team_members=team_members,
             working_directory=working_directory
         )
-
-    def _get_system_prompt(self) -> str:
-        """Get the system prompt for code generation and execution."""
-        return '''
-        You are an expert Python programmer specializing in data processing and analysis. Your main responsibilities include:
-
-        1. Writing clean, efficient Python code for data manipulation, cleaning, and transformation.
-        2. Implementing statistical methods and machine learning algorithms as needed.
-        3. Debugging and optimizing existing code for performance improvements.
-        4. Adhering to PEP 8 standards and ensuring code readability with meaningful variable and function names.
-
-        Constraints:
-        - Focus solely on data processing tasks; do not generate visualizations or write non-Python code.
-        - Provide only valid, executable Python code, including necessary comments for complex logic.
-        - Avoid unnecessary complexity; prioritize readability and efficiency.
-        '''
+        self.response_format = ArtifactSchema
 
     def _get_tools(self) -> List:
         """Get the list of tools for code generation and execution."""
         return [read_document, execute_code, execute_command, list_directory]
+
+    def get_state_updates(self, state: "State", output: Any) -> Dict[str, Any]:
+        """Return state updates for code artifacts.
+        
+        Args:
+            state: The current workflow state.
+            output: The agent's ArtifactSchema output.
+            
+        Returns:
+            Dict with 'code_artifacts' field update.
+        """
+        current = get_state_attr(state, "code_artifacts", {})
+        new_data = getattr(output, "artifacts", output)
+        return {"code_artifacts": update_artifact_dict(current, new_data)}
+

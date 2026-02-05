@@ -166,7 +166,7 @@ class ContentValidator:
         """
         warnings = []
 
-        # 1. Check size limit
+        # Check size limit
         content_bytes = len(content.encode('utf-8'))
         max_bytes = TOOL_CONFIG.file_ops.max_write_bytes
 
@@ -180,19 +180,19 @@ class ContentValidator:
         if not TOOL_CONFIG.enable_write_validation:
             return True, []
 
-        # 2. Check for incomplete markers
+        # Check for incomplete markers
         for marker in cls.INCOMPLETE_MARKERS:
             if marker in content:
                 warnings.append(f"Found incomplete marker: '{marker}'")
                 break  # Only report first marker
 
-        # 3. Check for sensitive data patterns
+        # Check for sensitive data patterns
         for pattern, description in cls.SENSITIVE_PATTERNS:
             if re.search(pattern, content):
                 warnings.append(f"Potential {description} detected - review before commit")
                 break  # Only report first match
 
-        # 4. Check for empty or nearly empty content
+        # Check for empty or nearly empty content
         stripped = content.strip()
         if not stripped:
             warnings.append("Content is empty")

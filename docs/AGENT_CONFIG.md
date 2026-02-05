@@ -110,8 +110,40 @@ The system uses a three-level loading strategy to optimize Context Window:
 
 ---
 
+## State Extension (Advanced)
+
+Agents can customize how their outputs update the workflow state by implementing the `StateUpdater` protocol.
+
+### Implementing Custom State Updates
+
+Override `get_state_updates()` in your agent class:
+
+```python
+from src.agents.base import BaseAgent
+
+class MyCustomAgent(BaseAgent):
+    def get_state_updates(self, state, output):
+        """Define custom state field mappings."""
+        return {
+            "my_custom_field": output.some_value,
+            "another_field": output.other_value,
+        }
+```
+
+### Built-in State Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `step_count` | int | Auto-incremented on each agent execution |
+| `completed_tasks` | List[str] | Automatically tracks completed instructions |
+| `revision_count` | int | Tracks consecutive revision requests |
+| `quality_feedback` | Optional[str] | Cleared when review passes |
+
+---
+
 ## Related Documentation
 - [Quick Start](QUICKSTART.md)
 - [Tool Configuration](TOOL_CONFIG.md)
 - [Skill Configuration](SKILL_CONFIG.md)
 - [MCP Configuration](MCP_CONFIG.md)
+

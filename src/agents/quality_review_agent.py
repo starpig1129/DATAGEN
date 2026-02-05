@@ -1,13 +1,15 @@
-from typing import Literal, List, TYPE_CHECKING
+from typing import Any, Dict, Literal, List, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, edit_document
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
+from ..core.node import get_state_attr
 
 if TYPE_CHECKING:
     from ..core.language_models import LanguageModelManager
+    from ..core.state import State
 
 class QualityOutput(BaseModel):
     """Pydantic model for quality review output."""
@@ -38,22 +40,33 @@ class QualityReviewAgent(BaseAgent):
             response_format=QualityOutput
         )
 
-    def _get_system_prompt(self) -> str:
-        """Get the system prompt for the QualityReviewAgent."""
-        return '''
-        You are a meticulous quality control expert responsible for reviewing and ensuring the high standard of all research outputs.
-        
-        Your tasks include:
-
-        1. Critically evaluating the content, methodology, and conclusions of research reports.
-        2. Checking for consistency, accuracy, and clarity in all documents.
-        3. Identifying areas that need improvement or further elaboration.
-        4. Ensuring adherence to scientific writing standards and ethical guidelines.
-        5. Collaborating with other agents to gather necessary information for a comprehensive review.
-        6. Provide detailed feedback on any deficiencies found and recommend specific revisions to enhance the overall quality of the research outputs.
-        '''
-
     def _get_tools(self) -> List:
         """Get the list of tools for the QualityReviewAgent."""
         return [create_document, read_document, edit_document, list_directory]
 
+    def get_state_updates(self, state: "State", output: Any) -> Dict[str, Any]:
+        """Return state updates for quality review decisions.
+        
+        Manages revision count and quality_feedback lifecycle:
+        - When needs_revision=True: stores feedback and increments revision_count
+        - When needs_revision=False: clears feedback and resets revision_count
+        
+        Args:
+            state: The current workflow state.
+            output: The agent's QualityOutput.
+            
+        Returns:
+            Dict with revision control fields.
+        """
+        updates: Dict[str, Any] = {"needs_revision": output.needs_revision}
+        
+        current_count = get_state_attr(state, "revision_count", 0)
+        if output.needs_revision:
+            updates["quality_feedback"] = output.feedback
+            updates["revision_count"] = current_count + 1
+        else:
+            # Review passed: clear feedback and reset counter
+            updates["quality_feedback"] = None
+            updates["revision_count"] = 0
+        
+        return updates

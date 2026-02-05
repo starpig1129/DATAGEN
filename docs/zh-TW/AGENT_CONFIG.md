@@ -110,8 +110,40 @@ mcp_servers:
 
 ---
 
+## 狀態擴展（進階）
+
+Agent 可以透過實作 `StateUpdater` 協議來自定義其輸出如何更新工作流狀態。
+
+### 實作自定義狀態更新
+
+在您的 Agent 類別中覆寫 `get_state_updates()` 方法：
+
+```python
+from src.agents.base import BaseAgent
+
+class MyCustomAgent(BaseAgent):
+    def get_state_updates(self, state, output):
+        """定義自定義狀態欄位映射。"""
+        return {
+            "my_custom_field": output.some_value,
+            "another_field": output.other_value,
+        }
+```
+
+### 內建狀態欄位
+
+| 欄位 | 類型 | 說明 |
+|------|------|------|
+| `step_count` | int | 每次 Agent 執行後自動遞增 |
+| `completed_tasks` | List[str] | 自動追蹤已完成的指令 |
+| `revision_count` | int | 追蹤連續修訂請求次數 |
+| `quality_feedback` | Optional[str] | 審核通過時自動清除 |
+
+---
+
 ## 相關文檔
 - [快速入門](QUICKSTART.md)
 - [工具配置](TOOL_CONFIG.md)
 - [技能配置](SKILL_CONFIG.md)
 - [MCP 服務配置](MCP_CONFIG.md)
+

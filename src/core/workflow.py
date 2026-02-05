@@ -41,21 +41,13 @@ class WorkflowManager:
 
         # Create each agent using the factory
         agents["hypothesis_agent"] = agent_factory.create_agent("hypothesis_agent")
-
         agents["process_agent"] = agent_factory.create_agent("process_agent")
-
         agents["visualization_agent"] = agent_factory.create_agent("visualization_agent")
-
         agents["code_agent"] = agent_factory.create_agent("code_agent")
-
         agents["search_agent"] = agent_factory.create_agent("search_agent")
-
         agents["report_agent"] = agent_factory.create_agent("report_agent")
-
         agents["quality_review_agent"] = agent_factory.create_agent("quality_review_agent")
-
         agents["note_agent"] = agent_factory.create_agent("note_agent")
-
         agents["refiner_agent"] = agent_factory.create_agent("refiner_agent")
 
         return agents
@@ -66,6 +58,7 @@ class WorkflowManager:
         model_class = provider.get_model_class()
         config = self.lm_manager.get_model_config(agent_name)
         return model_class(**config)
+
     def setup_workflow(self):
         """Set up the workflow graph"""
         self.workflow = StateGraph(State)
@@ -143,7 +136,8 @@ class WorkflowManager:
         
         self.workflow.add_conditional_edges(
             "HumanReview",
-            lambda state: "Process" if state and state.get("needs_revision", False) else "END",
+            # Fix: Use getattr for robustness with Pydantic state
+            lambda state: "Process" if state and getattr(state, "needs_revision", False) else "END",
             {
                 "Process": "Process",
                 "END": END

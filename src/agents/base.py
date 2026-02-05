@@ -77,29 +77,53 @@ class BaseAgent(ABC):
         self.working_directory = working_directory
         self.response_format = response_format
 
-        # Create the language model using the manager
+        # Create the language model
         self.model = self._create_model()
 
-        # Get agent-specific configuration - try external config first, fallback to hardcoded
+        # Load system prompt (external config → fallback to hardcoded)
         role_prompt = self._load_system_prompt()
         
-        # Load tools from config or fallback
-        tools = self._load_tools_from_config()
-        if not tools:
-            # Fallback to hardcoded tools if config yields empty list (and not explicitly empty in config)
-            # However, if config has "tools: []", we might want that. 
-            # But here we assume if metadata has tools, we use them.
-            # If metadata has no tools, we use _get_tools().
-            # Let's check if the metadata actually had a 'tools' key defined?
-            # The AgentMetadata defaults 'tools' to empty list. 
-            # So if it's empty, we should fallback.
-            tools = self._get_tools()
-            if tools:
-                logger.debug(f"Using hardcoded tools for {self.agent_name}")
-        else:
-            logger.info(f"Loaded {len(tools)} tools from external config for {self.agent_name}")
+        # Load all tools in priority order
+        tools = self._load_all_tools()
 
-        # Check for skills and add LookupSkill tool if needed
+        # Get agent-specific runtime config
+        agent_config = self.language_model_manager.get_agent_config(self.agent_name)
+        self.max_iterations = agent_config.get('max_iterations', 15)
+
+        # Create the agent executor
+        self.agent = self._create_base_agent(
+            self.model,
+            tools,
+            role_prompt,
+            team_members,
+            response_format,
+            max_iterations=self.max_iterations,
+        )
+
+    def _load_all_tools(self) -> List:
+        """Load all tools from various sources in priority order.
+        
+        Attempts external config tools first, falls back to hardcoded tools
+        if config is empty, then appends skill tools and MCP tools.
+        
+        Returns:
+            Combined list of all available tools.
+        """
+        tools: List = []
+        
+        # Load from external config first
+        config_tools = self._load_tools_from_config()
+        if config_tools:
+            tools.extend(config_tools)
+            logger.info(f"Loaded {len(config_tools)} tools from config for {self.agent_name}")
+        else:
+            # Fallback to hardcoded tools
+            hardcoded_tools = self._get_tools()
+            if hardcoded_tools:
+                tools.extend(hardcoded_tools)
+                logger.debug(f"Using {len(hardcoded_tools)} hardcoded tools for {self.agent_name}")
+
+        # Append skill tools if configured
         try:
             loader = self.get_config_loader()
             metadata = loader.load_metadata(self.agent_name)
@@ -110,20 +134,13 @@ class BaseAgent(ABC):
         except Exception as e:
             logger.warning(f"Failed to check skills for {self.agent_name}: {e}")
 
-        # Load MCP tools from agent configuration
+        # Append MCP tools if configured
         mcp_tools = self._load_mcp_tools()
         if mcp_tools:
             tools.extend(mcp_tools)
             logger.info(f"Loaded {len(mcp_tools)} MCP tools for {self.agent_name}")
-
-        # Create the agent executor using the common create_agent function
-        self.agent = self._create_base_agent(
-            self.model,
-            tools,
-            role_prompt,
-            team_members,
-            response_format,
-        )
+        
+        return tools
 
     def _load_tools_from_config(self) -> List:
         """Load tools from external configuration.
@@ -176,6 +193,7 @@ class BaseAgent(ABC):
         role_prompt: str,
         team_members: list[str],
         response_format: Any = None,
+        max_iterations: int = 15,
     ):
         """Create an agent with the given parameters.
 
@@ -217,8 +235,17 @@ class BaseAgent(ABC):
             model=model,
             tools=tools,
             system_prompt=system_prompt,
-            response_format=response_format
+            response_format=response_format,
         )
+
+        # Iterate limits configuration
+        # Verify if the agent supports max_iterations (e.g. AgentExecutor)
+        if hasattr(agent, "max_iterations"):
+            agent.max_iterations = max_iterations
+            logger.info(f"Set max_iterations={max_iterations} for {self.agent_name}")
+        else:
+             # If it's a Runnable/Graph, we might need another way, but for now log warning if not settable
+             logger.warning(f"Agent {self.agent_name} does not support max_iterations attribute")
 
         logger.info(f"{self.agent_name} created successfully")
         return agent
@@ -243,7 +270,9 @@ class BaseAgent(ABC):
         Returns:
             The agent's response (type may vary).
         """
-        return self.agent.invoke(state)
+        # Pass max_iterations as recursion_limit in config
+        config = {"recursion_limit": self.max_iterations}
+        return self.agent.invoke(state, config=config)
 
     def _load_system_prompt(self) -> str:
         """Load system prompt from external config or fallback to hardcoded.
@@ -292,3 +321,21 @@ class BaseAgent(ABC):
             A list of tools the agent can use.
         """
         pass
+
+    def get_state_updates(self, state: Any, output: Any) -> dict:
+        """Return state field updates based on agent output.
+        
+        Default implementation returns empty dict (no custom updates).
+        Subclasses can override to provide custom state mapping.
+        
+        This method implements the StateUpdater protocol, allowing agents
+        to decouple their state update logic from the central agent_node.
+        
+        Args:
+            state: The current workflow state.
+            output: The agent's structured or raw output.
+            
+        Returns:
+            Dict mapping state field names to their new values.
+        """
+        return {}
