@@ -85,55 +85,8 @@ def agent_node(state: State, agent: Any, name: str) -> dict:
             "last_active_agent": name
         }
 
-        # Specific Agent Mapping
-        if name == "hypothesis_agent":
-            # Ensure hypothesis is stored as string for serialization
-            hypothesis_text = safe_get_content(output, ["hypothesis", "content", "summary"])
-            updates["hypothesis"] = hypothesis_text if hypothesis_text else str(output)
-            
-        elif name == "process_agent":
-            updates["current_instruction"] = getattr(output, "current_instruction", getattr(output, "task", ""))
-            updates["next_workflow_step"] = getattr(output, "next_workflow_step", getattr(output, "next", ""))
-            updates["todo_list"] = getattr(output, "todo_list", []) 
-            
-        elif name == "visualization_agent":
-            current = get_state_attr(state, "data_viz_artifacts", {})
-            # Handle both ArtifactSchema (artifacts attr) and legacy string/dict
-            new_data = getattr(output, "artifacts", output)
-            updates["data_viz_artifacts"] = update_artifact_dict(current, new_data)
-            
-        elif name == "search_agent":
-            current = get_state_attr(state, "search_artifacts", {})
-            new_data = getattr(output, "artifacts", output)
-            updates["search_artifacts"] = update_artifact_dict(current, new_data)
-            
-        elif name == "report_agent":
-            current = get_state_attr(state, "report_artifacts", {})
-            new_data = getattr(output, "artifacts", output)
-            updates["report_artifacts"] = update_artifact_dict(current, new_data)
-            
-        elif name == "quality_review_agent":
-            updates["needs_revision"] = output.needs_revision
-            
-            # Manage revision count and quality_feedback lifecycle
-            current_count = get_state_attr(state, "revision_count", 0)
-            if output.needs_revision:
-                updates["quality_feedback"] = output.feedback
-                updates["revision_count"] = current_count + 1
-            else:
-                # 審核通過：清除 feedback 並重置計數
-                updates["quality_feedback"] = None
-                updates["revision_count"] = 0
-            
-        # Add support for 'Coder' agent if it exists
-        elif name == "code_agent" or name == "coder_agent":
-             current = get_state_attr(state, "code_artifacts", {})
-             new_data = getattr(output, "artifacts", output)
-             updates["code_artifacts"] = update_artifact_dict(current, new_data)
-        
-        # StateUpdater Protocol: allow agents to provide custom state updates
-        # This enables new agents to define their own state mappings without
-        # modifying this function
+        # StateUpdater Protocol: call agent's get_state_updates if available
+        # All agents should implement this method for their specific state mappings
         if hasattr(agent, "get_state_updates"):
             agent_updates = agent.get_state_updates(state, output)
             if agent_updates:

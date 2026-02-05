@@ -1,13 +1,15 @@
-from typing import List, TYPE_CHECKING
+from typing import Any, Dict, List, TYPE_CHECKING
 
 from ..tools.basetool import list_directory
 from ..tools.FileEdit import create_document, read_document, edit_document
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
 from ..core.schemas import ArtifactSchema
+from ..core.node import update_artifact_dict, get_state_attr
 
 if TYPE_CHECKING:
     from ..core.language_models import LanguageModelManager
+    from ..core.state import State
 
 class ReportAgent(BaseAgent):
     """Agent responsible for drafting comprehensive research reports."""
@@ -31,4 +33,19 @@ class ReportAgent(BaseAgent):
 
     def _get_tools(self) -> List:
         """Get the list of tools for report writing."""
-        return [create_document, read_document, edit_document,list_directory]
+        return [create_document, read_document, edit_document, list_directory]
+
+    def get_state_updates(self, state: "State", output: Any) -> Dict[str, Any]:
+        """Return state updates for report artifacts.
+        
+        Args:
+            state: The current workflow state.
+            output: The agent's ArtifactSchema output.
+            
+        Returns:
+            Dict with 'report_artifacts' field update.
+        """
+        current = get_state_attr(state, "report_artifacts", {})
+        new_data = getattr(output, "artifacts", output)
+        return {"report_artifacts": update_artifact_dict(current, new_data)}
+

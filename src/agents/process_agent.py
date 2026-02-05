@@ -1,9 +1,12 @@
 from pydantic import BaseModel, Field
-from typing import Literal ,List
+from typing import Any, Dict, Literal, List, TYPE_CHECKING
 
 from ..core.language_models import LanguageModelManager
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
+
+if TYPE_CHECKING:
+    from ..core.state import State
 
 class ProcessRouteSchema(BaseModel):
     """Select the next role and assign a task.
@@ -47,3 +50,19 @@ class ProcessAgent(BaseAgent):
     def _get_tools(self) -> List:
         """Not used in this agent."""
         return []
+
+    def get_state_updates(self, state: "State", output: Any) -> Dict[str, Any]:
+        """Return state updates for process routing decisions.
+        
+        Args:
+            state: The current workflow state.
+            output: The agent's ProcessRouteSchema output.
+            
+        Returns:
+            Dict with workflow routing fields.
+        """
+        return {
+            "current_instruction": getattr(output, "current_instruction", getattr(output, "task", "")),
+            "next_workflow_step": getattr(output, "next_workflow_step", getattr(output, "next", "")),
+            "todo_list": getattr(output, "todo_list", [])
+        }

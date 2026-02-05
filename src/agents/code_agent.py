@@ -1,13 +1,15 @@
-from typing import List, TYPE_CHECKING
+from typing import Any, Dict, List, TYPE_CHECKING
 
 from ..tools.basetool import execute_code, execute_command, list_directory
 from ..tools.FileEdit import read_document
 from .base import BaseAgent
 from ..config import WORKING_DIRECTORY
 from ..core.schemas import ArtifactSchema
+from ..core.node import update_artifact_dict, get_state_attr
 
 if TYPE_CHECKING:
     from ..core.language_models import LanguageModelManager
+    from ..core.state import State
 
 class CodeAgent(BaseAgent):
     """Agent responsible for writing and executing Python code for data processing."""
@@ -32,3 +34,18 @@ class CodeAgent(BaseAgent):
     def _get_tools(self) -> List:
         """Get the list of tools for code generation and execution."""
         return [read_document, execute_code, execute_command, list_directory]
+
+    def get_state_updates(self, state: "State", output: Any) -> Dict[str, Any]:
+        """Return state updates for code artifacts.
+        
+        Args:
+            state: The current workflow state.
+            output: The agent's ArtifactSchema output.
+            
+        Returns:
+            Dict with 'code_artifacts' field update.
+        """
+        current = get_state_attr(state, "code_artifacts", {})
+        new_data = getattr(output, "artifacts", output)
+        return {"code_artifacts": update_artifact_dict(current, new_data)}
+

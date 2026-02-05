@@ -1,4 +1,4 @@
-from typing import List, TYPE_CHECKING, Dict
+from typing import Any, Dict, List, TYPE_CHECKING
 
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
@@ -10,9 +10,11 @@ from ..tools.FileEdit import create_document, read_document, collect_data
 from ..tools.internet import google_search, scrape_webpages
 from ..config import WORKING_DIRECTORY
 from ..core.schemas import ArtifactSchema
+from ..core.node import update_artifact_dict, get_state_attr
 
 if TYPE_CHECKING:
     from ..core.language_models import LanguageModelManager
+    from ..core.state import State
 
 class SearchAgent(BaseAgent):
     """Agent responsible for gathering and summarizing research information."""
@@ -44,3 +46,18 @@ class SearchAgent(BaseAgent):
         ] + load_tools(["arxiv"])
 
         return base_tools
+
+    def get_state_updates(self, state: "State", output: Any) -> Dict[str, Any]:
+        """Return state updates for search artifacts.
+        
+        Args:
+            state: The current workflow state.
+            output: The agent's ArtifactSchema output.
+            
+        Returns:
+            Dict with 'search_artifacts' field update.
+        """
+        current = get_state_attr(state, "search_artifacts", {})
+        new_data = getattr(output, "artifacts", output)
+        return {"search_artifacts": update_artifact_dict(current, new_data)}
+
